@@ -60,7 +60,19 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             case "ls": case "left_stick": return "left stick";
             case "rs": case "right_stick": return "right stick";
         }
-        if (t.StartsWith("button_")) return t.Substring(7).ToUpperInvariant() + " button";
+        if (t.StartsWith("button_")) t = t.Substring(7);
+        switch (t)
+        {
+            case "a": case "b": case "x": case "y": return t.ToUpperInvariant();
+            case "lb": return "left bumper";
+            case "rb": return "right bumper";
+            case "lt": return "left trigger";
+            case "rt": return "right trigger";
+            case "lstick": return "L3";
+            case "rstick": return "R3";
+            case "menu": case "start": return "Start";
+            case "view": case "back": case "select": return "View";
+        }
         if (t.StartsWith("dpad_")) return "D-pad " + t.Substring(5).Replace('_', ' ');
         return t.Replace('_', ' ');
     }
@@ -386,6 +398,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("resources", () => PollResources(now));
             Guard("dialogue", () => PollDialogue(now));
             Guard("world map", () => PollWorldMap(now));
+            Guard("control hints", () => PollControlHints(now));
             if (_nav != null)
             {
                 _nav.AnnounceNearby = Settings.AnnounceNearby.Value;
@@ -504,7 +517,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 break;
             case ControllerInput.Command.Hold:
                 // In menus: the whole tooltip.
-                if (uiBusy && !TooltipAll() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
+                // Nothing to read there: the window's controls.
+                if (uiBusy && !TooltipAll() && !SayControlsAgain() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
                 break;
             case ControllerInput.Command.LongHold:
                 // In the inventory: every item in the bag, or every equipment slot when the
@@ -1454,6 +1468,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _nextPanelPollMs = now + 400;
 
         var visible = FindVisiblePanels();
+        _visiblePanels = visible;
         _inventoryPanel = visible.FirstOrDefault(p => p.Title == "Inventory").E;
         _characterPanel = visible.FirstOrDefault(p => p.Title == "Character").E;
         _skillsPanel = visible.FirstOrDefault(p => p.Title == "Skills").E;

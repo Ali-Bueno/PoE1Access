@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore.PoEMemory;
+using ExileCore.PoEMemory.MemoryObjects;
+using BaseComp = ExileCore.PoEMemory.Components.Base;
+using SocketsComp = ExileCore.PoEMemory.Components.Sockets;
 
 namespace PoE1Access;
 
@@ -39,28 +42,114 @@ public partial class PoE1AccessCore
                 }
                 else _charIndex = Math.Min(_charIndex, lines.Count - 1);
             }
+            _skillsSig = "";
+        }
+        else if (_skillsPanel != null && _skillsPanel.Address != 0 && Try(() => UiText.Visible(Mem, _skillsPanel), false))
+        {
+            // The Skills panel opens with the inventory beside it, and the controller moves in the
+            // inventory, so the panel's own selection cannot be used to read it. Every skill on
+            // your skill bar is read from your character's data instead and stepped through with
+            // the same keys as the character sheet: left and right for each skill, up and down
+            // for its details.
+            _characterSig = "";
+            var lines = ReadSkillSheet();
+            string sig = string.Join("|", lines.Select(l => l.Section + ":" + l.Text));
+            if (sig != _skillsSig && lines.Count > 0)
+            {
+                bool first = _skillsSig.Length == 0;
+                _skillsSig = sig;
+                _charLines = lines;
+                if (first)
+                {
+                    _charIndex = -1;
+                    var names = lines.Select(l => l.Section).Distinct().ToList();
+                    Say("Skills: " + string.Join(", ", names) + ". Hold L3 and move the right stick: left and right for each skill, up and down for its details", false);
+                }
+                else _charIndex = Math.Min(_charIndex, lines.Count - 1);
+            }
         }
         else
         {
             _characterSig = "";
+            _skillsSig = "";
             _charLines = new List<(string, string)>();
         }
+    }
 
-        if (_skillsPanel != null && _skillsPanel.Address != 0 && Try(() => UiText.Visible(Mem, _skillsPanel), false))
+    // Every skill on the skill bar, in bar order: its description, how fast it is, its cost and
+    // cooldown, its damage per second, and the support gems linked to it.
+    private List<(string Section, string Text)> ReadSkillSheet()
+    {
+        var lines = new List<(string, string)>();
+        var actor = GetComp<ExileCore.PoEMemory.Components.Actor>(GameController.Player);
+        if (actor == null) return lines;
+        var skills = Try(() => actor.ActorSkills.Where(s => s.IsOnSkillBar).OrderBy(s => s.SkillSlotIndex).ToList(), null);
+        if (skills == null) return lines;
+
+        foreach (var s in skills)
         {
-            var lines = ReadSkillsPanel(_skillsPanel);
-            string sig = lines.Count > 0 ? lines[0] + "|" + (lines.Count > 1 ? lines[^1] : "") : "";
-            if (sig != _skillsSig && lines.Count > 0)
-            {
-                _skillsSig = sig;
-                _tipLines = lines;
-                _tipIndex = 0;
-                _tipItemAddr = 0;
-                // The skill's name, then the lines above its stat table (cost, time, description).
-                Say(JoinSpeech(lines.Take(_skillsHeaderCount).ToList()), false);
-            }
+            var active = Try(() => s.EffectsPerLevel?.SkillGemWrapper?.ActiveSkill, null);
+            string name = CleanText(Try(() => active?.DisplayName, "") ?? "");
+            if (name.Length == 0) name = CleanText(Try(() => s.Name, "") ?? "");
+            if (name.Length == 0) continue;
+            string section = name;
+            if (lines.Any(l => l.Item1 == section)) section += " " + (Try(() => s.SkillSlotIndex, 0) + 1);
+
+            void Add(string t) { if (!string.IsNullOrWhiteSpace(t)) lines.Add((section, t)); }
+            Add(CleanText(Try(() => active?.Description, "") ?? ""));
+
+            bool attack = Try(() => s.IsAttack, false);
+            int aps100 = Try(() => s.HundredTimesAttacksPerSecond, 0);
+            double cast = Try(() => s.CastTime.TotalSeconds, 0d);
+            if (attack && aps100 > 0) Add((aps100 / 100.0).ToString("0.##") + " attacks per second");
+            else if (cast > 0) Add("Cast time " + cast.ToString("0.##") + " seconds");
+
+            int mana = Try(() => s.Cost, 0), life = Try(() => s.LifeCost, 0), es = Try(() => s.EsCost, 0);
+            var cost = new List<string>();
+            if (mana > 0) cost.Add(mana + " mana");
+            if (life > 0) cost.Add(life + " life");
+            if (es > 0) cost.Add(es + " energy shield");
+            Add(cost.Count > 0 ? "Costs " + string.Join(" and ", cost) : "No cost");
+
+            double cd = Try(() => (double)s.Cooldown, 0d);   // seconds
+            if (cd > 0) Add("Cooldown " + cd.ToString("0.##") + " seconds");
+            float dps = Try(() => s.Dps, 0f);
+            if (dps > 0) Add("About " + Math.Round(dps) + " damage per second");
+
+            var supports = LinkedSupports(name);
+            if (supports.Count > 0) Add("Supported by " + string.Join(", ", supports));
         }
-        else _skillsSig = "";
+        return lines;
+    }
+
+    // The support gems linked with the socketed gem called `skill` in your worn gear.
+    private List<string> LinkedSupports(string skill)
+    {
+        var result = new List<string>();
+        ServerData server = GetServerData();
+        if (server == null) return result;
+        foreach (var (slot, _) in EquipmentSlots)
+            foreach (var it in Slots(server, slot))
+            {
+                var sockets = GetComp<SocketsComp>(it.Item);
+                if (sockets == null) continue;
+                var groups = Try(() => sockets.SocketGroup, null);
+                var gems = Try(() => sockets.SocketedGems, null);
+                if (groups == null || gems == null) continue;
+                var byIndex = new Dictionary<int, Entity>();
+                foreach (var g in gems) { var e = Try(() => g.GemEntity, null); if (e != null) byIndex[Try(() => g.SocketIndex, -1)] = e; }
+                int start = 0;
+                foreach (string grp in groups)
+                {
+                    var members = Enumerable.Range(start, grp.Length).Where(byIndex.ContainsKey).Select(i => byIndex[i]).ToList();
+                    start += grp.Length;
+                    var named = members.Select(e => (E: e, Name: CleanText(Try(() => GetComp<BaseComp>(e)?.Name, "") ?? ""))).ToList();
+                    if (!named.Any(n => n.Name == skill)) continue;
+                    foreach (var n in named)
+                        if (n.Name != skill && n.Name.EndsWith("Support")) result.Add(n.Name);
+                }
+            }
+        return result.Distinct().ToList();
     }
 
     private int _skillsHeaderCount = 1;

@@ -68,6 +68,8 @@ In game (controller, L3 = left stick click / keyboard):
   how much you have explored
 - On the character sheet, hold L3 + right stick: up and down for each stat, left and right for
   each section
+- In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
+  up and down for its details (description, speed, cost, cooldown, damage, linked supports)
 - Hold L3 + click the right stick / Delete: guide to the chosen thing on or off
 - F9: repeat the last thing said
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment

@@ -54,6 +54,10 @@ internal sealed class ControllerInput
     private bool _pendingTap;
     private bool _flickArmed = true;
 
+    /// <summary>While the mod's settings menu is open: right stick flicks move in it without
+    /// holding L3 (they come out as the Scan commands).</summary>
+    public bool MenuMode;
+
     public Vector2 LeftStick { get; private set; }
     public Vector2 RightStick { get; private set; }
     public bool Connected => _pad >= 0;
@@ -99,6 +103,20 @@ internal sealed class ControllerInput
         Command cmd = Command.None;
 
         if (l3 && !_l3Down) { _l3DownAtMs = now; _l3Used = false; }
+
+        if (MenuMode && !l3)
+        {
+            float mm = RightStick.Length();
+            if (mm < 0.3f) _flickArmed = true;
+            else if (mm > 0.65f && _flickArmed)
+            {
+                _flickArmed = false;
+                Vector2 v = RightStick;
+                cmd = Math.Abs(v.Y) >= Math.Abs(v.X)
+                    ? (v.Y > 0 ? Command.ScanUp : Command.ScanDown)
+                    : (v.X > 0 ? Command.ScanRight : Command.ScanLeft);
+            }
+        }
 
         if (l3)
         {

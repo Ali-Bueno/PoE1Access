@@ -442,6 +442,34 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("guide", Settings.GuideHotkey, Keys.Delete)) cmd = ControllerInput.Command.Guide;
         if (Pressed("status", Settings.StatusHotkey, Keys.F1)) cmd = ControllerInput.Command.DoubleTap;
 
+        // The mod's settings menu: while open it takes the mod's gestures and the arrow keys.
+        if (MenuOpen)
+        {
+            if (_keys.PressedOnce(Keys.Up)) cmd = ControllerInput.Command.ScanUp;
+            if (_keys.PressedOnce(Keys.Down)) cmd = ControllerInput.Command.ScanDown;
+            if (_keys.PressedOnce(Keys.Left)) cmd = ControllerInput.Command.ScanLeft;
+            if (_keys.PressedOnce(Keys.Right)) cmd = ControllerInput.Command.ScanRight;
+            bool back = _keys.PressedOnce(Keys.Back);
+            if (_openPanels != null && _openPanels.Count > 0) { CloseMenu(); return; }   // a game panel opened
+            switch (cmd)
+            {
+                case ControllerInput.Command.ScanUp: Guard("menu", () => MenuStep(-1, 0)); break;
+                case ControllerInput.Command.ScanDown: Guard("menu", () => MenuStep(1, 0)); break;
+                case ControllerInput.Command.ScanLeft: Guard("menu", () => MenuStep(0, -1)); break;
+                case ControllerInput.Command.ScanRight: Guard("menu", () => MenuStep(0, 1)); break;
+                case ControllerInput.Command.Tap: Guard("menu", MenuBack); break;
+                case ControllerInput.Command.DoubleTap:
+                case ControllerInput.Command.LongHold: Guard("menu", CloseMenu); break;
+            }
+            if (back) Guard("menu", MenuBack);
+            return;
+        }
+        if (!uiBusy && cmd == ControllerInput.Command.LongHold)
+        {
+            Guard("menu", OpenMenu);
+            return;
+        }
+
         // Character sheet open: L3 held + right stick (or PageUp/PageDown/Home/End) moves through
         // its stats: up/down one stat, left/right one section. The controller itself moves in the
         // inventory beside it, so the sheet has its own keys.
@@ -623,6 +651,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         return true;
     }
 
+    private long _f3DownAtMs = -1;
+    private bool _f3Held;
+
     private void HandleHotkeys()
     {
         if (Pressed("repeat", Settings.RepeatHotkey, Keys.F9))
@@ -638,7 +669,30 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("dump items", Settings.DumpItemsHotkey, Keys.F8)) Guard("dump items", DumpItems);
         if (Pressed("dump panels", Settings.DumpPanelsHotkey, Keys.F10)) Guard("dump panels", DumpPanels);
         if (Pressed("dump hover", Settings.DumpHoverHotkey, Keys.F11)) Guard("dump hover", DumpHovered);
-        if (Pressed("text probe", Settings.TextProbeHotkey, Keys.F3)) Guard("text probe", RunTextProbe);
+        // F3: hold a second for the mod's settings menu (Poe2Access); a short press is the text
+        // probe (developer). A different key chosen for the probe works as before.
+        Keys probeKey = Try(() => Settings.TextProbeHotkey.Value.Key, Keys.F3);
+        if (probeKey == Keys.None) probeKey = Keys.F3;
+        if (probeKey != Keys.F3 && Pressed("text probe", Settings.TextProbeHotkey, Keys.F3)) Guard("text probe", RunTextProbe);
+        bool f3 = _keys.IsDown(Keys.F3);
+        long nowMs = _clock.ElapsedMilliseconds;
+        if (f3 && _f3DownAtMs < 0) { _f3DownAtMs = nowMs; _f3Held = false; }
+        if (f3 && !_f3Held && nowMs - _f3DownAtMs >= 1000)
+        {
+            _f3Held = true;
+            if (_lastInGame == true) Guard("menu", () => { if (MenuOpen) CloseMenu(); else OpenMenu(); });
+        }
+        if (!f3 && _f3DownAtMs >= 0)
+        {
+            if (!_f3Held && nowMs - _f3DownAtMs < 600 && probeKey == Keys.F3)
+            {
+                PluginLog.Write("Hotkey text probe (F3) pressed.");
+                Guard("text probe", RunTextProbe);
+            }
+            _f3DownAtMs = -1;
+        }
+        AudioEngine.Master = Settings.MasterVolume.Value / 100f;
+        ApplySpeechRate(false);
         if (Pressed("focus snapshot", Settings.FocusProbeHotkey, Keys.F2)) Guard("focus snapshot", StartFocusSnapshot);
         if (_focusPendingSnap != null && _clock.ElapsedMilliseconds >= _focusPendingDueMs) Guard("focus snapshot", FinishFocusSnapshot);
 

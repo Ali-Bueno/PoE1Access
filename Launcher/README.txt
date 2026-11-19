@@ -71,6 +71,16 @@ In game (controller, L3 = left stick click / keyboard):
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.
 
+MOD SETTINGS MENU (spoken, as in Poe2Access)
+- Open: hold L3 for a second and a half in play, or hold F3 for a second.
+- Right stick up and down (or the arrow keys): move. Right stick left and right: open a submenu,
+  turn a switch on or off, or change a value in steps of 5; a volume plays its sound.
+- Tap L3 (or Backspace): back up one level. Double tap L3, or hold F3 again: close.
+- Submenus: Sound volumes (master, enemies and combat, loot, radar, guide), Speech (speech speed
+  and what is announced), Sounds on or off, Reading.
+- Speech speed applies to the Windows voice; NVDA and JAWS keep the speed set in the screen
+  reader.
+
 LICENSE
 Path of Exile Access is free software under the GNU General Public License, version 3 (see
 LICENSE.txt). Prism keeps its own licenses (licenses\prism).

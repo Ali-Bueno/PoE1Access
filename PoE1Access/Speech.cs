@@ -45,6 +45,23 @@ public sealed class PrismSpeech : ISpeech
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate IntPtr NameFn(IntPtr backend);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int OutputFn(IntPtr backend, byte[] utf8, [MarshalAs(UnmanagedType.U1)] bool interrupt);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void FreeFn(IntPtr backend);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int SetRateFn(IntPtr backend, float rate);
+
+    private SetRateFn _setRate;
+    private float _rate = -1f;
+
+    /// <summary>Speech speed, 0 (slowest) to 1 (fastest). False when the output keeps its own
+    /// speed (NVDA, JAWS and other screen readers).</summary>
+    public bool SetRate(float rate)
+    {
+        lock (_lock)
+        {
+            _rate = rate;
+            if (_setRate == null || _backend == IntPtr.Zero) return false;
+            try { return _setRate(_backend, rate) == 0; }
+            catch { return false; }
+        }
+    }
 
     private readonly object _lock = new object();
     private readonly InitFn _init;
@@ -69,6 +86,8 @@ public sealed class PrismSpeech : ISpeech
         _name = Fn<NameFn>("prism_backend_name");
         _output = Fn<OutputFn>("prism_backend_output");
         _free = Fn<FreeFn>("prism_backend_free");
+        if (NativeLibrary.TryGetExport(lib, "prism_backend_set_rate", out IntPtr pRate))
+            _setRate = Marshal.GetDelegateForFunctionPointer<SetRateFn>(pRate);
 
         _ctx = _init(IntPtr.Zero);
         if (_ctx == IntPtr.Zero) throw new InvalidOperationException("prism_init failed");
@@ -116,6 +135,7 @@ public sealed class PrismSpeech : ISpeech
         if (_backend != IntPtr.Zero) _free(_backend);
         _backend = best;
         _backendName = name;
+        if (_rate >= 0 && _setRate != null) { try { _setRate(_backend, _rate); } catch { } }   // keep the chosen speed
     }
 
     public void Speak(string text, bool interrupt = false)

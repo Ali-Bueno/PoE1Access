@@ -24,6 +24,9 @@ internal sealed class AudioEngine : IDisposable
     private const int MaxVoices = 24;
 
     public bool Available => _xa != null;
+
+    /// <summary>Master volume for every cue (1 = as is), set from the settings menu.</summary>
+    public static float Master = 1f;
     public string Error { get; private set; } = "";
 
     public AudioEngine()
@@ -43,6 +46,7 @@ internal sealed class AudioEngine : IDisposable
     /// <summary>Plays a cached cue. `make` builds the samples (interleaved stereo, -1..1) once.</summary>
     public void Play(string key, Func<float[]> make, float volume)
     {
+        volume *= Master;
         if (_xa == null || volume <= 0f) return;
         try
         {
@@ -57,7 +61,7 @@ internal sealed class AudioEngine : IDisposable
 
             var data = DataStream.Create(pcm, true, false);
             var buffer = new AudioBuffer { Stream = data, AudioBytes = pcm.Length * 2, Flags = BufferFlags.EndOfStream };
-            voice.SetVolume(Math.Min(2f, volume));
+            voice.SetVolume(Math.Min(4f, volume));
             voice.SubmitSourceBuffer(buffer, null);
             voice.Start();
 

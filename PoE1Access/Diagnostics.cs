@@ -59,6 +59,9 @@ internal sealed class KeyWatcher
 
     private readonly Dictionary<Keys, bool> _wasDown = new Dictionary<Keys, bool>();
 
+    public bool IsDown(Keys key) =>
+        key != Keys.None && (GetAsyncKeyState((int)(key & Keys.KeyCode)) & 0x8000) != 0;
+
     public bool PressedOnce(Keys key)
     {
         if (key == Keys.None) return false;

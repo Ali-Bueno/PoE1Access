@@ -37,6 +37,10 @@ public class PoE1AccessSettings : ISettings
     // Wall radar: tock = wall, breath = open way, tin = exit, on each screen side.
     public ToggleNode Radar { get; set; } = new ToggleNode(true);
     public RangeNode<int> RadarVolume { get; set; } = new RangeNode<int>(100, 0, 200);
+    // Every sound of the mod, on top of each kind's own volume.
+    public RangeNode<int> MasterVolume { get; set; } = new RangeNode<int>(100, 0, 300);
+    // Speech speed for voices the mod can set (the Windows voice); screen readers keep their own.
+    public RangeNode<int> SpeechRate { get; set; } = new RangeNode<int>(50, 0, 100);
     public RangeNode<int> GuideVolume { get; set; } = new RangeNode<int>(100, 0, 200);
 
     // Radar: two pips after an open way or exit that leads to ground you have not seen yet,

@@ -8,7 +8,7 @@ It runs on [Exile API](https://github.com/exApiTools/ExileApi-Compiled), which r
 memory. The mod only reads: it never changes the game and never presses anything for you.
 
 > **Warning:** this is in beta, it could be unstable, and not all menus may read properly.   Grinding Gear Games has not approved it. Use it at
-> your own risk. it can fail, especially right after a game patch.
+> your own risk. It can fail, especially right after a game patch.
 
 ## What it does
 

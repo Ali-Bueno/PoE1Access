@@ -332,6 +332,7 @@ internal sealed class Navigator
         if (p.X < 0) return;
         TrackSpeed(now, p);
         Reveal(p);
+        TrackDeath(p);
 
         if (uiBusy)
         {
@@ -1011,13 +1012,13 @@ internal sealed class Navigator
     // Scanner
     // ===================================================================
 
-    public enum Cat { Quest, Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
+    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
 
-    private static readonly Cat[] Order = { Cat.Quest, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
+    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
 
     private static readonly Dictionary<Cat, string> CatNames = new Dictionary<Cat, string>
     {
-        { Cat.Quest, "Quest" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" },
+        { Cat.Quest, "Quest" }, { Cat.Death, "Where you died" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" },
         { Cat.Enemies, "Enemies" }, { Cat.Items, "Items" }, { Cat.Chests, "Chests" }, { Cat.Objects, "Objects" },
     };
 
@@ -1057,6 +1058,42 @@ internal sealed class Navigator
         ICollection<Entity> list = null;
         try { list = _gc.EntityListWrapper.OnlyValidEntities; } catch { }
         return list ?? (IEnumerable<Entity>)Array.Empty<Entity>();
+    }
+
+    // ---- Where you died: the spot of your last death in each area (the scanner's "Where you
+    // died" category, there while you are back in that same area) ----
+
+    private readonly Dictionary<long, (Vector2 At, DateTime When)> _deaths = new Dictionary<long, (Vector2, DateTime)>();
+    private bool _wasDead;
+    private Vector2 _lastAlivePos = new Vector2(-1, -1);
+
+    private void TrackDeath(Vector2 p)
+    {
+        bool dead;
+        try
+        {
+            var life = _gc.Player.GetComponent<Life>();
+            dead = life != null && life.MaxHP > 0 && life.CurHP <= 0;
+        }
+        catch { return; }
+        if (!dead) _lastAlivePos = p;
+        if (dead && !_wasDead)
+        {
+            long area = Try(() => (long)_gc.Area.CurrentArea.Hash, 0L);
+            Vector2 at = _lastAlivePos.X >= 0 ? _lastAlivePos : p;
+            _deaths[area] = (at, DateTime.Now);
+            PluginLog.Write("Death noted at " + at + " in " + Try(() => _gc.Area.CurrentArea.DisplayName, "?"));
+        }
+        _wasDead = dead;
+    }
+
+    private List<ScanItem> DeathList()
+    {
+        long area = Try(() => (long)_gc.Area.CurrentArea.Hash, 0L);
+        if (!_deaths.TryGetValue(area, out var d)) return new List<ScanItem>();
+        int mins = (int)(DateTime.Now - d.When).TotalMinutes;
+        string ago = mins < 1 ? "just now" : mins == 1 ? "1 minute ago" : mins + " minutes ago";
+        return new List<ScanItem> { new ScanItem { Pos = d.At, Label = "Where you died, " + ago, Cat = Cat.Death } };
     }
 
     /// <summary>The game shows a quest icon for it on the minimap (shown, not hidden).</summary>
@@ -1141,6 +1178,7 @@ internal sealed class Navigator
     private List<ScanItem> List(Cat cat, Vector2 p)
     {
         if (cat == Cat.Unexplored) return UnexploredList(p);
+        if (cat == Cat.Death) return DeathList();
         var list = Entities().Where(e => Category(e) == cat);
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
         return list.OrderBy(e => (e.GridPosNum - p).LengthSquared()).Take(40).Select(Of).ToList();

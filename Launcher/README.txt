@@ -60,7 +60,8 @@ When you close the game, the mod closes too.
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category (Quest lists only what
-  the game itself marks with a quest icon on the minimap; it is skipped when there is none)
+  the game itself marks with a quest icon on the minimap; it is skipped when there is none;
+  "Where you died" holds the spot of your last death in the area you are in, to guide you back)
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
 - Tap L3 / Insert: where the chosen thing is now
 - Double tap L3 / F1: level and how far you are to the next, life, mana, energy shield, area,

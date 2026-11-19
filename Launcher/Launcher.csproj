@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- PoE1Access.exe: one file that sets up and starts everything (game, ExileApi, the plugin).
+       Self-contained, so it runs without .NET installed and can say what is missing. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Not "PoE1Access", which is the plugin's name. build.ps1 names the file PoE1Access.exe. -->
+    <AssemblyName>PoE1AccessLauncher</AssemblyName>
+    <RootNamespace>PoE1AccessLauncher</RootNamespace>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The same speech code as the plugin: NVDA, else the Windows voice. -->
+    <Compile Include="..\PoE1Access\Speech.cs" Link="Speech.cs" />
+  </ItemGroup>
+</Project>

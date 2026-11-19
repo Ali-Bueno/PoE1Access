@@ -1,0 +1,2 @@
+﻿Prism v0.18.3 (prism-windows-x64.zip, dynamic/release/bin/prism.dll) from https://github.com/ethindp/prism/releases/tag/v0.18.3
+Licensed under MPL-2.0 (LICENSES\prism\mpl-2.0.txt). Unmodified.

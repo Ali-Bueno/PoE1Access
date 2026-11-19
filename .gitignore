@@ -1,0 +1,8 @@
+bin/
+obj/
+dist/
+Logs/
+*.log
+PoE1Access_dumps/
+*.user
+.vs/

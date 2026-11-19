@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- ExileCore itself asks for net10.0-windows ("try updating its TargetFramework
+         to net10.0-windows"). The official template still says net8.0, which is outdated. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <DebugType>embedded</DebugType>
+    <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
+    <EmbedAllSources>true</EmbedAllSources>
+    <!-- Do not set an output path. The HUD does that when this folder is inside Plugins/Source. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- $(exapiPackage) is supplied by the HUD when it compiles the plugin.
+         These are the exact DLLs ExileApi runs with, so types always match. -->
+    <Reference Include="ExileCore">
+      <HintPath>$(exapiPackage)\ExileCore.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="GameOffsets">
+      <HintPath>$(exapiPackage)\GameOffsets.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SharpDX">
+      <HintPath>$(exapiPackage)\SharpDX.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SharpDX.XAudio2">
+      <HintPath>$(exapiPackage)\SharpDX.XAudio2.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SharpDX.Mathematics">
+      <HintPath>$(exapiPackage)\SharpDX.Mathematics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Hexa.NET.ImGui">
+      <HintPath>$(exapiPackage)\Hexa.NET.ImGui.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ImGui.NET">
+      <HintPath>$(exapiPackage)\ImGui.NET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

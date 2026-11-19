@@ -1,0 +1,580 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using ExileCore.PoEMemory;
+using ExileCore.PoEMemory.MemoryObjects;
+using ExileCore.Shared.Enums;
+using BaseComp = ExileCore.PoEMemory.Components.Base;
+using ModsComp = ExileCore.PoEMemory.Components.Mods;
+using QualityComp = ExileCore.PoEMemory.Components.Quality;
+using SocketsComp = ExileCore.PoEMemory.Components.Sockets;
+using StackComp = ExileCore.PoEMemory.Components.Stack;
+using GemComp = ExileCore.PoEMemory.Components.SkillGem;
+using ReqComp = ExileCore.PoEMemory.Components.AttributeRequirements;
+using StatsComp = ExileCore.PoEMemory.Components.Stats;
+using NormalInventoryItem = ExileCore.PoEMemory.Elements.InventoryElements.NormalInventoryItem;
+
+namespace PoE1Access;
+
+/// <summary>
+/// The inventory, read the way Path of Exile 2 Access reads it:
+///  * Selecting an item: "Rusted Sword, column 4, row 1", then a missing requirement
+///    ("Cannot use: 21 Int"), then the tooltip lines. Equipped: "Helmet: Iron Hat".
+///  * In a menu: tap L3 (Insert) the next tooltip line, double tap (F1) the previous one,
+///    hold half a second (Delete) the whole tooltip, hold a second and a half (End) the whole
+///    inventory grid.
+///  * Items in hand: "In hand: …", then "Equipped: …, Helmet", "Placed at column 3, row 2" or
+///    "You no longer hold an item"; "Unequipped: …" when something leaves an equipment slot.
+/// Positions come from the game's own inventory lists (ServerData), as the item browser's do.
+/// </summary>
+public partial class PoE1AccessCore
+{
+    // ---- Where an item is ----
+
+    private enum ItemPlace { None, Bag, Equipped, Hand }
+
+    private (ItemPlace Place, string Label, int Col, int Row) Locate(Entity item)
+    {
+        if (item == null || item.Address == 0) return (ItemPlace.None, "", 0, 0);
+        ServerData server = GetServerData();
+        if (server == null) return (ItemPlace.None, "", 0, 0);
+
+        foreach (var s in Slots(server, InventorySlotE.MainInventory1))
+            if (s.Item?.Address == item.Address) return (ItemPlace.Bag, "", s.PosX + 1, s.PosY + 1);
+        foreach (var (slot, label) in EquipmentSlots)
+            foreach (var s in Slots(server, slot))
+                if (s.Item?.Address == item.Address)
+                    return (ItemPlace.Equipped, slot == InventorySlotE.Flask1 ? label + " " + (s.PosX + 1) : label, 0, 0);
+        foreach (var s in Slots(server, InventorySlotE.Cursor1))
+            if (s.Item?.Address == item.Address) return (ItemPlace.Hand, "", 0, 0);
+        return (ItemPlace.None, "", 0, 0);
+    }
+
+    private IEnumerable<ServerInventory.InventSlotItem> Slots(ServerData server, InventorySlotE slot)
+    {
+        ServerInventory inv = Try(() => server.GetPlayerInventoryBySlot(slot), null);
+        if (inv == null || inv.Address == 0) return Enumerable.Empty<ServerInventory.InventSlotItem>();
+        var items = Try(() => inv.InventorySlotItems, null);
+        return items != null ? items.Where(s => s.Item != null && s.Item.Address != 0) : Enumerable.Empty<ServerInventory.InventSlotItem>();
+    }
+
+    // ---- What an item is ----
+
+    // "Rusted Sword", "Rare Grim Bane, Iron Hat", "Orb of Transmutation, 6".
+    private string ItemTitle(Entity item)
+    {
+        BaseComp baseC = GetComp<BaseComp>(item);
+        ModsComp mods = GetComp<ModsComp>(item);
+        StackComp stack = GetComp<StackComp>(item);
+
+        string baseName = baseC != null ? CleanText(Try(() => baseC.Name, "")) : "";
+        if (baseName.Length == 0) baseName = LastPathSegment(Try(() => item.Path, ""));
+
+        ItemRarity rarity = mods != null ? Try(() => mods.ItemRarity, ItemRarity.Normal) : ItemRarity.Normal;
+        string unique = mods != null && (rarity == ItemRarity.Rare || rarity == ItemRarity.Unique)
+            ? CleanText(Try(() => mods.UniqueName, "")) : "";
+
+        string title = unique.Length > 0 && !string.Equals(unique, baseName, StringComparison.OrdinalIgnoreCase)
+            ? unique + ", " + baseName : baseName;
+        string rarityWord = rarity switch
+        {
+            ItemRarity.Magic => "magic",
+            ItemRarity.Rare => "rare",
+            ItemRarity.Unique => "unique",
+            _ => "",
+        };
+        if (rarityWord.Length > 0) title += ", " + rarityWord;
+
+        int size = stack != null ? Try(() => stack.Size, 0) : 0;
+        if (size > 1) title += ", " + size;
+        return title;
+    }
+
+    // "Cannot use: 21 Int", or "" when the character meets every requirement.
+    private string MissingRequirement(Entity item)
+    {
+        var parts = new List<string>();
+        ReqComp req = GetComp<ReqComp>(item);
+        if (req != null)
+        {
+            var stats = GetComp<StatsComp>(GameController?.Player);
+            int Have(GameStat s)
+            {
+                var d = stats != null ? Try(() => stats.StatDictionary, null) : null;
+                return d != null && d.TryGetValue(s, out int v) ? v : 0;
+            }
+            int str = Try(() => req.strength, 0), dex = Try(() => req.dexterity, 0), intel = Try(() => req.intelligence, 0);
+            if (stats != null)
+            {
+                if (str > Have(GameStat.Strength)) parts.Add(str + " Str");
+                if (dex > Have(GameStat.Dexterity)) parts.Add(dex + " Dex");
+                if (intel > Have(GameStat.Intelligence)) parts.Add(intel + " Int");
+            }
+        }
+        GemComp gem = GetComp<GemComp>(item);
+        if (gem != null)
+        {
+            int need = Try(() => gem.RequiredLevel, 0);
+            int level = Try(() => GameController.Player.GetComponent<ExileCore.PoEMemory.Components.Player>().Level, 0);
+            if (need > 0 && level > 0 && need > level) parts.Insert(0, "level " + need);
+        }
+        return parts.Count > 0 ? "Cannot use: " + string.Join(", ", parts) : "";
+    }
+
+    // The tooltip, one line per entry: item level, quality, sockets, gem level, mods...
+    private List<string> ItemLines(Entity item)
+    {
+        var lines = new List<string>();
+        BaseComp baseC = GetComp<BaseComp>(item);
+        ModsComp mods = GetComp<ModsComp>(item);
+        QualityComp quality = GetComp<QualityComp>(item);
+        SocketsComp sockets = GetComp<SocketsComp>(item);
+        GemComp gem = GetComp<GemComp>(item);
+
+        if (gem != null)
+        {
+            int lvl = Try(() => gem.Level, 0), max = Try(() => gem.MaxLevel, 0);
+            if (lvl > 0) lines.Add("Gem level " + lvl + (max > 0 ? " of " + max : ""));
+        }
+        int itemLevel = mods != null ? Try(() => mods.ItemLevel, 0) : 0;
+        if (itemLevel > 0 && gem == null) lines.Add("Item level " + itemLevel);
+        int q = quality != null ? Try(() => quality.ItemQuality, 0) : 0;
+        if (q > 0) lines.Add("Quality " + q + " percent");
+
+        int socketCount = sockets != null ? Try(() => sockets.NumberOfSockets, 0) : 0;
+        if (socketCount > 0)
+        {
+            int link = Try(() => sockets.LargestLinkSize, 0);
+            lines.Add(socketCount + (socketCount == 1 ? " socket" : " sockets") + (link > 1 ? ", largest link " + link : ""));
+        }
+
+        string description = ItemDescription(item, gem);
+        if (description.Length > 0) lines.Add(description);
+
+        if (baseC != null && Try(() => baseC.isCorrupted, false)) lines.Add("Corrupted");
+        if (mods != null && Try(() => mods.IsMirrored, false)) lines.Add("Mirrored");
+        ItemRarity rarity = mods != null ? Try(() => mods.ItemRarity, ItemRarity.Normal) : ItemRarity.Normal;
+        if (mods != null && !Try(() => mods.Identified, true) && rarity != ItemRarity.Normal) lines.Add("Unidentified");
+
+        if (mods != null)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int before = lines.Count;
+            void Add(string label, IEnumerable<string> stats)
+            {
+                if (stats == null) return;
+                foreach (string s in stats)
+                {
+                    string c = CleanText(s);
+                    if (c.Length > 0 && seen.Add(c)) lines.Add(label.Length > 0 ? label + ": " + c : c);
+                }
+            }
+            Add("Enchant", Try<IEnumerable<string>>(() => mods.EnchantedStats, null));
+            Add("Implicit", Try<IEnumerable<string>>(() => mods.HumanImpStats, null));
+            Add("Fractured", Try<IEnumerable<string>>(() => mods.FracturedStats, null));
+            Add("Crafted", Try<IEnumerable<string>>(() => mods.HumanCraftedStats, null));
+            Add("", Try<IEnumerable<string>>(() => mods.HumanStats, null));
+
+            if (lines.Count == before)
+            {
+                // The readable lists came back empty: the modifiers' own translations.
+                var raw = Try<List<ItemMod>>(() => mods.ItemMods, null);
+                if (raw != null)
+                    foreach (ItemMod m in raw)
+                    {
+                        ItemMod mod = m;
+                        string t = Try(() => mod.Translation, "");
+                        if (string.IsNullOrWhiteSpace(t)) t = Try(() => mod.DisplayName, "");
+                        t = CleanText(t);
+                        if (t.Length > 0 && seen.Add(t)) lines.Add(t);
+                    }
+            }
+        }
+        return lines;
+    }
+
+    // ---- Loot sounds: which cue an item on the ground gets ----
+
+    private Synth.Loot? LootKindOf(Entity ground)
+    {
+        Entity item = Try(() => ground.GetComponent<ExileCore.PoEMemory.Components.WorldItem>()?.ItemEntity, null);
+        if (item == null || item.Address == 0) return null;
+        string path = Try(() => item.Path, "") ?? "";
+        string cls = Try(() => GameController.Files.BaseItemTypes.Translate(path)?.ClassName, "") ?? "";
+        ModsComp mods = GetComp<ModsComp>(item);
+        ItemRarity rarity = mods != null ? Try(() => mods.ItemRarity, ItemRarity.Normal) : ItemRarity.Normal;
+
+        Synth.Loot kind;
+        if (path.Contains("/QuestItems/") || cls.StartsWith("Quest", StringComparison.OrdinalIgnoreCase)) kind = Synth.Loot.Quest;
+        else if (path.EndsWith("CurrencyIdentification") || path.EndsWith("CurrencyPortal")) kind = Synth.Loot.Scroll;
+        else if (cls.Contains("Currency") || path.StartsWith("Metadata/Items/Currency")) kind = Synth.Loot.Currency;
+        else if (cls.Contains("Gem") || path.StartsWith("Metadata/Items/Gems")) kind = Synth.Loot.Gem;
+        else if (rarity == ItemRarity.Unique) kind = Synth.Loot.Unique;
+        else if (cls.Contains("Flask") || path.StartsWith("Metadata/Items/Flasks")) kind = Synth.Loot.Flask;
+        else if (cls == "Map" || path.StartsWith("Metadata/Items/Maps")) kind = Synth.Loot.Map;
+        else if (cls.Contains("Divination") || path.StartsWith("Metadata/Items/DivinationCards")) kind = Synth.Loot.Card;
+        else if (cls.Contains("Jewel") || path.StartsWith("Metadata/Items/Jewels")) kind = Synth.Loot.Jewel;
+        else if (rarity == ItemRarity.Rare) kind = Synth.Loot.Rare;
+        else if (rarity == ItemRarity.Magic) kind = Synth.Loot.Magic;
+        else if (mods != null) kind = Synth.Loot.Normal;
+        else kind = Synth.Loot.Other;
+
+        int filter = Settings.LootFilter.Value;
+        if (filter >= 1 && (kind == Synth.Loot.Normal || kind == Synth.Loot.Other || kind == Synth.Loot.Scroll)) return null;
+        if (filter >= 2 && (kind == Synth.Loot.Magic || kind == Synth.Loot.Flask || kind == Synth.Loot.Jewel && rarity < ItemRarity.Rare)) return null;
+        return kind;
+    }
+
+    // ---- Descriptions from the game's data ----
+
+    private Dictionary<string, string> _currencyDescriptions;
+
+    /// <summary>What the item does, from the game's own data: a gem's skill description
+    /// ("Support gem" for supports), or a currency item's description ("Identifies an item").</summary>
+    private string ItemDescription(Entity item, GemComp gem)
+    {
+        if (gem != null)
+        {
+            var effect = Try(() => gem.GemEffect?.GrantedEffect, null);
+            if (effect == null) effect = Try(() => gem.GrantedEffect1, null);
+            if (effect == null) return "";
+            bool support = Try(() => effect.IsSupport, false);
+            string text = support ? "" : CleanText(Try(() => effect.ActiveSkill?.Description, "") ?? "");
+            return support ? "Support gem" : text;
+        }
+
+        string path = Try(() => item.Path, "") ?? "";
+        if (!path.StartsWith("Metadata/Items/Currency", StringComparison.OrdinalIgnoreCase)) return "";
+        if (_currencyDescriptions == null)
+        {
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var c in GameController.Files.CurrencyItems.EntriesList)
+                {
+                    string meta = Try(() => c.Type?.Metadata, null);
+                    string d = Try(() => c.Description, null);
+                    if (!string.IsNullOrEmpty(meta) && !string.IsNullOrWhiteSpace(d)) map[meta] = d;
+                }
+            }
+            catch { }
+            if (map.Count == 0) return "";   // the files are not loaded yet: try again next time
+            _currencyDescriptions = map;
+        }
+        return _currencyDescriptions.TryGetValue(path, out string desc) ? CleanText(desc) : "";
+    }
+
+    // ---- Selecting an item ----
+
+    private List<string> _tipLines = new List<string>();
+    private int _tipIndex;
+    private long _tipItemAddr;
+
+    /// <summary>What is said when the selection lands on an inventory item (or equipment slot).</summary>
+    private string DescribeInventoryFocus(Element hover)
+    {
+        NormalInventoryItem slot = hover.AsObject<NormalInventoryItem>();
+        Entity item = slot?.Item;
+        if (item == null || item.Address == 0 || !item.IsValid) return null;
+
+        var (place, label, col, row) = Locate(item);
+        _lastFocusWasEquipment = place == ItemPlace.Equipped;
+        string title = ItemTitle(item);
+        string head;
+        switch (place)
+        {
+            case ItemPlace.Bag: head = title + ", column " + col + ", row " + row; break;
+            case ItemPlace.Equipped: head = label + ": " + title; break;
+            default:
+                // Not in the player's own lists (a stash or merchant): the name only for now.
+                head = title;
+                break;
+        }
+        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = "over " + head;
+
+        var lines = new List<string> { head };
+        string missing = MissingRequirement(item);
+        if (missing.Length > 0) lines.Add(missing);
+        lines.AddRange(ItemLines(item));
+
+        _tipLines = lines;
+        _tipIndex = 0;
+        _tipItemAddr = item.Address;
+        return JoinSpeech(lines);
+    }
+
+    // ---- Equipment slots, also when empty ----
+
+    // The inventory panel's slot areas, in their fixed order (found 18 Nov 2026 by matching
+    // worn items to the game's inventory lists; same order on two characters). An entry of ""
+    // is a slot the game hides, or the flasks row and the bag grid, which are read item by item.
+    private static readonly string[] SlotOrder =
+    {
+        "Helmet", "Amulet", "", "Body armour", "Off hand", "Main hand", "Swap off hand", "Swap main hand",
+        "Ring 1", "Ring 2", "", "Gloves", "Belt", "Boots", "", "", "",
+    };
+
+    private bool _lastFocusWasEquipment;
+
+    /// <summary>The equipment slot the element is (or lies in), or null: walks up to the slot
+    /// area that sits directly in the inventory panel and counts its place among the slot areas.</summary>
+    private string EquipmentSlotOf(Element e)
+    {
+        var mem = Mem;
+        Element cur = e;
+        for (int up = 0; up <= 4 && cur != null && cur.Address != 0; up++)
+        {
+            Element parent = UiText.ParentOf(Mem, cur);
+            Element panel = parent != null ? UiText.ParentOf(Mem, parent) : null;
+            if (panel != null && UiText.Title(mem, panel) == "Inventory")
+            {
+                int type = Try(() => (int)UiText.TypeOf(Mem, cur), -1);
+                IList<Element> kids = Try<IList<Element>>(() => parent.Children, null);
+                if (kids == null) return null;
+                int k = 0;
+                foreach (Element s in kids)
+                {
+                    if (Try(() => (int)UiText.TypeOf(Mem, s), -2) != type) continue;
+                    if (s.Address == cur.Address) return k < SlotOrder.Length && SlotOrder[k].Length > 0 ? SlotOrder[k] : null;
+                    k++;
+                }
+                return null;
+            }
+            cur = parent;
+        }
+        return null;
+    }
+
+    /// <summary>An empty equipment slot under the selection: "Helmet, empty".</summary>
+    private string DescribeEmptySlot(Element hover)
+    {
+        string slot = EquipmentSlotOf(hover);
+        if (slot == null) return null;
+        _lastFocusWasEquipment = true;
+
+        // The selection can rest on the slot rather than the item in it: name what is worn.
+        ServerData server = GetServerData();
+        var known = EquipmentSlots.FirstOrDefault(s => s.Label == slot);
+        if (server != null && known.Label != null)
+        {
+            var worn = Slots(server, known.Slot).FirstOrDefault();
+            if (worn?.Item != null)
+            {
+                string t = slot + ": " + ItemTitle(worn.Item);
+                _tipLines = new List<string> { t };
+                _tipLines.AddRange(ItemLines(worn.Item));
+                _tipIndex = 0;
+                _tipItemAddr = worn.Item.Address;
+                return t;
+            }
+        }
+        _tipLines = new List<string> { slot + ", empty" };
+        _tipIndex = 0;
+        _tipItemAddr = 0;
+        return slot + ", empty";
+    }
+
+    // The controller selection in the inventory panel. The game reports no hovered element on an
+    // empty slot; instead each slot area holds a "selected" int at +0x358 (1 = selected), and the
+    // flasks row and the bag hold the selected cell's index at +0x340 (found 18 Nov 2026).
+    private static int SlotSelectedOffset => 0x358 + UiText.Shift; private static int SlotCellOffset => 0x340 + UiText.Shift;
+    private Element _inventoryPanel;
+    private string _lastSelectedSlot = "";
+    private long _nextSlotPollMs;
+
+    private void PollEquipmentSelection(long now)
+    {
+        if (now < _nextSlotPollMs) return;
+        _nextSlotPollMs = now + 100;
+        Element panel = _inventoryPanel;
+        if (panel == null || panel.Address == 0 || !Try(() => UiText.Visible(Mem, panel), false)) { _lastSelectedSlot = ""; return; }
+
+        var mem = Mem;
+        IList<Element> kids = Try<IList<Element>>(() => panel.Children[0].Children, null);
+        if (kids == null || kids.Count > 80) return;
+        int slotType = -1, k = 0, selected = -1, cell = -1;
+        foreach (Element s in kids)
+        {
+            int type = Try(() => (int)UiText.TypeOf(Mem, s), -2);
+            if (slotType < 0)
+            {
+                if (type <= 0) continue;
+                slotType = type;   // the first typed child is the first slot area (the helmet)
+            }
+            if (type != slotType) continue;
+            if (Try(() => mem.Read<int>(s.Address + SlotSelectedOffset), 0) == 1)
+            {
+                selected = k;
+                cell = Try(() => mem.Read<int>(s.Address + SlotCellOffset), -1);
+                break;
+            }
+            k++;
+        }
+
+        string key = selected < 0 ? "" : selected + ":" + cell;
+        if (key == _lastSelectedSlot) return;
+        _lastSelectedSlot = key;
+        if (selected < 0) return;
+
+        string label = selected < SlotOrder.Length ? SlotOrder[selected] : "";
+        ServerData server = GetServerData();
+        if (server == null) return;
+
+        if (label.Length > 0)
+        {
+            _lastFocusWasEquipment = true;
+            var known = EquipmentSlots.FirstOrDefault(s => s.Label == label);
+            if (known.Label == null || Slots(server, known.Slot).Any()) return;   // filled: the item reader speaks
+            _tipLines = new List<string> { label + ", empty" };
+            _tipIndex = 0;
+            _tipItemAddr = 0;
+            Say(label + ", empty", true);
+            return;
+        }
+
+        if (selected == FlaskRowIndex)
+        {
+            _lastFocusWasEquipment = true;
+            if (cell < 0 || cell > 4) return;
+            if (Slots(server, InventorySlotE.Flask1).Any(f => f.PosX == cell)) return;
+            string text = "Flask " + (cell + 1) + ", empty";
+            _tipLines = new List<string> { text };
+            _tipIndex = 0;
+            _tipItemAddr = 0;
+            Say(text, true);
+            return;
+        }
+
+        _lastFocusWasEquipment = false;   // the bag
+    }
+
+    private const int FlaskRowIndex = 14;
+
+    /// <summary>Every equipment slot: what is in it, or empty.</summary>
+    private void SayAllEquipment()
+    {
+        ServerData server = GetServerData();
+        if (server == null) { Say("No equipment data", true); return; }
+        var parts = new List<string> { "Equipment" };
+        foreach (var (slot, label) in EquipmentSlots)
+        {
+            var items = Slots(server, slot).OrderBy(s => s.PosX).ToList();
+            if (slot == InventorySlotE.Flask1)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var f = items.FirstOrDefault(s => s.PosX == i);
+                    parts.Add(label + " " + (i + 1) + (f != null ? ": " + ItemTitle(f.Item) : ", empty"));
+                }
+                continue;
+            }
+            parts.Add(label + (items.Count > 0 ? ": " + ItemTitle(items[0].Item) : ", empty"));
+        }
+        Say(JoinSpeech(parts), true);
+    }
+
+    // ---- Tooltip line by line (in menus) ----
+
+    private bool TooltipNext(int step)
+    {
+        if (_tipLines.Count == 0) return false;
+        int next = _tipIndex + step;
+        if (next >= _tipLines.Count) { Say("End of tooltip", true); return true; }
+        if (next < 0) { Say("Start of tooltip. " + _tipLines[0], true); _tipIndex = 0; return true; }
+        _tipIndex = next;
+        Say(_tipLines[_tipIndex], true);
+        return true;
+    }
+
+    private bool TooltipAll()
+    {
+        if (_tipLines.Count == 0) return false;
+        Say(JoinSpeech(_tipLines), true);
+        return true;
+    }
+
+    // ---- The whole bag ----
+
+    private void SayWholeInventory()
+    {
+        ServerData server = GetServerData();
+        if (server == null) { Say("No inventory data", true); return; }
+        ServerInventory inv = Try(() => server.GetPlayerInventoryBySlot(InventorySlotE.MainInventory1), null);
+        var items = Slots(server, InventorySlotE.MainInventory1).OrderBy(s => s.PosY).ThenBy(s => s.PosX).ToList();
+
+        int cells = items.Sum(s => Math.Max(1, s.SizeX) * Math.Max(1, s.SizeY));
+        int total = inv != null ? Try(() => inv.Columns * inv.Rows, 0) : 0;
+        var parts = new List<string>
+        {
+            "Inventory, " + items.Count + (items.Count == 1 ? " item" : " items") +
+            (total > 0 ? ", " + (total - cells) + " of " + total + " cells free" : ""),
+        };
+        foreach (var s in items) parts.Add(ItemTitle(s.Item) + ", column " + (s.PosX + 1) + ", row " + (s.PosY + 1));
+        Say(JoinSpeech(parts), true);
+    }
+
+    // ---- Items in hand, equipping and unequipping ----
+
+    private long _handItemAddr;
+    private string _handItemTitle = "";
+    private Dictionary<string, (long Addr, string Title)> _equipped;
+    private long _nextHandPollMs;
+
+    private void PollInventoryMoves(long now)
+    {
+        if (now < _nextHandPollMs) return;
+        _nextHandPollMs = now + 200;
+        ServerData server = GetServerData();
+        if (server == null) return;
+
+        // Worn gear by slot.
+        var equipped = new Dictionary<string, (long, string)>();
+        foreach (var (slot, label) in EquipmentSlots)
+            foreach (var s in Slots(server, slot))
+            {
+                string key = slot == InventorySlotE.Flask1 ? label + " " + (s.PosX + 1) : label;
+                equipped[key] = (s.Item.Address, ItemTitle(s.Item));
+            }
+
+        // During an area load the lists come back empty for a moment: ignore that, or every
+        // worn piece would be "unequipped".
+        if (equipped.Count == 0 && _equipped != null && _equipped.Count > 2) return;
+
+        // The item in hand (the cursor's inventory).
+        var hand = Slots(server, InventorySlotE.Cursor1).FirstOrDefault();
+        long handAddr = hand?.Item?.Address ?? 0;
+
+        if (_equipped != null)
+        {
+            // Something left an equipment slot and is not simply in another one.
+            foreach (var kv in _equipped)
+            {
+                bool stillThere = equipped.TryGetValue(kv.Key, out var now2) && now2.Item1 == kv.Value.Addr;
+                bool movedSlot = equipped.Values.Any(v => v.Item1 == kv.Value.Addr);
+                if (!stillThere && !movedSlot) Say("Unequipped: " + kv.Value.Title, false);
+            }
+        }
+
+        if (handAddr != _handItemAddr)
+        {
+            if (handAddr != 0)
+            {
+                _handItemTitle = ItemTitle(hand.Item);
+                Say("In hand: " + _handItemTitle + ". Choose a cell or a matching equipment slot to place it", true);
+            }
+            else if (_handItemAddr != 0)
+            {
+                // Where did it go?
+                string where = "";
+                foreach (var kv in equipped)
+                    if (kv.Value.Item1 == _handItemAddr) where = "Equipped: " + _handItemTitle + ", " + kv.Key;
+                if (where.Length == 0)
+                    foreach (var s in Slots(server, InventorySlotE.MainInventory1))
+                        if (s.Item.Address == _handItemAddr) where = "Placed: " + _handItemTitle + ", column " + (s.PosX + 1) + ", row " + (s.PosY + 1);
+                Say(where.Length > 0 ? where : "You no longer hold an item", true);
+            }
+            _handItemAddr = handAddr;
+        }
+        _equipped = equipped;
+    }
+}

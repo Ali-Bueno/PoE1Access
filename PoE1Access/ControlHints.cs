@@ -88,11 +88,29 @@ public partial class PoE1AccessCore
         return true;
     }
 
+    // The tab bar over the character windows (Passives, Character, Skills, Inventory, Cosmetics,
+    // World), which the game switches with the bumpers; it shows them as pictures of LB and RB
+    // ("lb_instruction_image", "rb_instruction_image"), not as text.
+    private string TabBarHint()
+    {
+        var mem = Mem;
+        Element bar = ChildNamed(UiRoot(), "panel_selector_container", 5);
+        if (bar == null || !Try(() => UiText.Visible(mem, bar), false)) return "";
+        Element layout = ChildNamed(bar, "nav_bar_layout", 1);
+        var tabs = new List<string>();
+        if (layout != null) CollectText(layout, 3, tabs);
+        tabs = tabs.Distinct().ToList();
+        if (tabs.Count < 2) return "";
+        return "Left and right bumper: switch between " + string.Join(", ", tabs);
+    }
+
     // Shown texts in the open windows that name a controller button.
     private List<string> GameHints(List<(string Title, Element E, string Path)> panels)
     {
         var mem = Mem;
         var result = new List<string>();
+        string tabHint = Try(TabBarHint, "");
+        if (tabHint.Length > 0) result.Add(tabHint);
         foreach (var (_, panel, _) in panels)
         {
             if (panel == null || panel.Address == 0) continue;

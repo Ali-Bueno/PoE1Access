@@ -108,7 +108,7 @@ internal sealed class Navigator
     private bool Passable(int x, int y) => Clearance(x, y) >= MinPassable;
 
     // Extra cost of stepping on a square near an edge, so routes keep to open ground.
-    private static int EdgeCost(int clearance) => clearance >= 4 ? 0 : clearance == 3 ? 4 : 14;
+    private static int EdgeCost(int clearance) => clearance >= 5 ? 0 : clearance == 4 ? 3 : clearance == 3 ? 10 : 30;
 
     private Entity Player => _gc.Player;
 
@@ -896,13 +896,25 @@ internal sealed class Navigator
     private int _stamp;
 
     /// <summary>Route from a to b as a list of cells, or null. Capped so it never stalls.</summary>
+    // Routes keep to squares of 3 or more (well clear of walls and water) when such a route
+    // exists, and use squares of 2 only where there is no other way (narrow passages); a route
+    // along a shore's 2s could not be walked (Twilight Strand, 19 Nov 2026).
     private List<(int X, int Y)> FindPath(Vector2 a, Vector2 b, int maxExpand = 250000)
     {
+        return FindPathWith(a, b, maxExpand, 3) ?? FindPathWith(a, b, maxExpand, MinPassable);
+    }
+
+    private int _pathMin = MinPassable;
+    private bool PathOk(int x, int y) => Clearance(x, y) >= _pathMin;
+
+    private List<(int X, int Y)> FindPathWith(Vector2 a, Vector2 b, int maxExpand, int minClearance)
+    {
+        _pathMin = minClearance;
         if (_grid == null) return null;
         int sx = (int)a.X, sy = (int)a.Y, tx = (int)b.X, ty = (int)b.Y;
         if (!InGrid(sx, sy) || !InGrid(tx, ty)) return null;
-        if (!Passable(tx, ty)) { var t2 = NearestPassable(tx, ty, 8); if (t2 == null) return null; (tx, ty) = t2.Value; }
-        if (!Passable(sx, sy)) { var s2 = NearestPassable(sx, sy, 4); if (s2 == null) return null; (sx, sy) = s2.Value; }
+        if (!PathOk(tx, ty)) { var t2 = NearestPathOk(tx, ty, 8); if (t2 == null) return null; (tx, ty) = t2.Value; }
+        if (!PathOk(sx, sy)) { var s2 = NearestPathOk(sx, sy, 4); if (s2 == null) return null; (sx, sy) = s2.Value; }
 
         int n = _gridW * _gridH;
         if (_pathCells == null || _pathCells.Length != n)
@@ -933,8 +945,8 @@ internal sealed class Navigator
             for (int k = 0; k < 8; k++)
             {
                 int nx = cx + dx[k], ny = cy + dy[k];
-                if (!Passable(nx, ny)) continue;
-                if (k >= 4 && (!Passable(cx + dx[k], cy) || !Passable(cx, cy + dy[k]))) continue;
+                if (!PathOk(nx, ny)) continue;
+                if (k >= 4 && (!PathOk(cx + dx[k], cy) || !PathOk(cx, cy + dy[k]))) continue;
                 int ni = ny * _gridW + nx;
                 int ng = g0 + (k < 4 ? 10 : 14) + EdgeCost(Clearance(nx, ny));
                 if (_pathCells[ni] == _stamp && _gScore[ni] <= ng) continue;
@@ -959,6 +971,15 @@ internal sealed class Navigator
     }
 
     private bool InGrid(int x, int y) => x >= 0 && y >= 0 && x < _gridW && y < _gridH;
+
+    private (int, int)? NearestPathOk(int x, int y, int r)
+    {
+        for (int d = 1; d <= r; d++)
+            for (int b = y - d; b <= y + d; b++)
+                for (int a = x - d; a <= x + d; a++)
+                    if (PathOk(a, b)) return (a, b);
+        return null;
+    }
 
     private (int, int)? NearestPassable(int x, int y, int r)
     {
@@ -987,7 +1008,7 @@ internal sealed class Navigator
         for (float t = 0; t <= len; t += 0.5f)
         {
             Vector2 q = a + step * t;
-            if (!Passable((int)q.X, (int)q.Y)) return false;
+            if (!PathOk((int)q.X, (int)q.Y)) return false;   // shortcuts keep the route's clearance
         }
         return true;
     }

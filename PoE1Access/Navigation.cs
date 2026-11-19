@@ -92,6 +92,24 @@ internal sealed class Navigator
         return row != null && x < row.Length && row[x] > 0;
     }
 
+    // The pathfinding grid holds 0 for no ground and 1 to 5 for how far a square is from a wall
+    // or water (5 = open ground). 1 is the very edge, where a character's body does not fit
+    // (seen 19 Nov 2026 on the Twilight Strand's shore, where a route along the 1s could not be
+    // walked), so routes and places to go use only squares of 2 or more.
+    private const int MinPassable = 2;
+
+    private int Clearance(int x, int y)
+    {
+        if (_grid == null || x < 0 || y < 0 || y >= _gridH) return 0;
+        int[] row = _grid[y];
+        return row != null && x < row.Length ? row[x] : 0;
+    }
+
+    private bool Passable(int x, int y) => Clearance(x, y) >= MinPassable;
+
+    // Extra cost of stepping on a square near an edge, so routes keep to open ground.
+    private static int EdgeCost(int clearance) => clearance >= 4 ? 0 : clearance == 3 ? 4 : 14;
+
     private Entity Player => _gc.Player;
 
     private Vector2 PlayerGrid()
@@ -883,8 +901,8 @@ internal sealed class Navigator
         if (_grid == null) return null;
         int sx = (int)a.X, sy = (int)a.Y, tx = (int)b.X, ty = (int)b.Y;
         if (!InGrid(sx, sy) || !InGrid(tx, ty)) return null;
-        if (!Walkable(tx, ty)) { var t2 = NearestWalkable(tx, ty, 6); if (t2 == null) return null; (tx, ty) = t2.Value; }
-        if (!Walkable(sx, sy)) { var s2 = NearestWalkable(sx, sy, 3); if (s2 == null) return null; (sx, sy) = s2.Value; }
+        if (!Passable(tx, ty)) { var t2 = NearestPassable(tx, ty, 8); if (t2 == null) return null; (tx, ty) = t2.Value; }
+        if (!Passable(sx, sy)) { var s2 = NearestPassable(sx, sy, 4); if (s2 == null) return null; (sx, sy) = s2.Value; }
 
         int n = _gridW * _gridH;
         if (_pathCells == null || _pathCells.Length != n)
@@ -915,10 +933,10 @@ internal sealed class Navigator
             for (int k = 0; k < 8; k++)
             {
                 int nx = cx + dx[k], ny = cy + dy[k];
-                if (!Walkable(nx, ny)) continue;
-                if (k >= 4 && (!Walkable(cx + dx[k], cy) || !Walkable(cx, cy + dy[k]))) continue;
+                if (!Passable(nx, ny)) continue;
+                if (k >= 4 && (!Passable(cx + dx[k], cy) || !Passable(cx, cy + dy[k]))) continue;
                 int ni = ny * _gridW + nx;
-                int ng = g0 + (k < 4 ? 10 : 14);
+                int ng = g0 + (k < 4 ? 10 : 14) + EdgeCost(Clearance(nx, ny));
                 if (_pathCells[ni] == _stamp && _gScore[ni] <= ng) continue;
                 _pathCells[ni] = _stamp;
                 _gScore[ni] = ng;
@@ -942,6 +960,15 @@ internal sealed class Navigator
 
     private bool InGrid(int x, int y) => x >= 0 && y >= 0 && x < _gridW && y < _gridH;
 
+    private (int, int)? NearestPassable(int x, int y, int r)
+    {
+        for (int d = 1; d <= r; d++)
+            for (int b = y - d; b <= y + d; b++)
+                for (int a = x - d; a <= x + d; a++)
+                    if (Passable(a, b)) return (a, b);
+        return null;
+    }
+
     private (int, int)? NearestWalkable(int x, int y, int r)
     {
         for (int d = 1; d <= r; d++)
@@ -960,7 +987,7 @@ internal sealed class Navigator
         for (float t = 0; t <= len; t += 0.5f)
         {
             Vector2 q = a + step * t;
-            if (!Walkable((int)q.X, (int)q.Y)) return false;
+            if (!Passable((int)q.X, (int)q.Y)) return false;
         }
         return true;
     }
@@ -1216,7 +1243,7 @@ internal sealed class Navigator
         var edges = new List<(int Seen, int Unseen)>();
         var queue = new Queue<int>();
         int sx = (int)p.X, sy = (int)p.Y;
-        if (!Walkable(sx, sy)) { var w = NearestWalkable(sx, sy, 4); if (w == null) return new List<ScanItem>(); (sx, sy) = w.Value; }
+        if (!Passable(sx, sy)) { var w = NearestPassable(sx, sy, 4); if (w == null) return new List<ScanItem>(); (sx, sy) = w.Value; }
         int start = sy * _gridW + sx;
         _uxStamp[start] = seenGen;
         queue.Enqueue(start);
@@ -1227,7 +1254,7 @@ internal sealed class Navigator
             int cx = cur % _gridW, cy = cur / _gridW;
             foreach (var (nx, ny) in new[] { (cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1) })
             {
-                if (!Walkable(nx, ny)) continue;
+                if (!Passable(nx, ny)) continue;
                 int ni = ny * _gridW + nx;
                 if (!_seen[ni]) { edges.Add((cur, ni)); continue; }
                 if (_uxStamp[ni] == seenGen) continue;
@@ -1260,7 +1287,7 @@ internal sealed class Navigator
                 if (d > reach) reach = d;
                 foreach (var (nx, ny) in new[] { (cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1) })
                 {
-                    if (!Walkable(nx, ny)) continue;
+                    if (!Passable(nx, ny)) continue;
                     int ni = ny * _gridW + nx;
                     if (_seen[ni] || _uxStamp[ni] == gen) continue;
                     _uxStamp[ni] = gen;

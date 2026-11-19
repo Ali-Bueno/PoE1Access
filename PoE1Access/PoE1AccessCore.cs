@@ -553,7 +553,31 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         };
         if (unique.Length > 0 && !string.Equals(unique, baseName, StringComparison.OrdinalIgnoreCase))
             return prefix + unique + ", " + baseName;
-        return prefix + baseName;
+        return prefix + MagicFullName(item, baseName);
+    }
+
+    /// <summary>
+    /// The name the game shows for an identified magic item: its prefix, the base, its suffix
+    /// ("Heavy Rusted Sword of Needling"). Each affix's display name is its part of the name; a
+    /// suffix's starts with "of". Anything else (normal, unidentified) keeps the base name.
+    /// </summary>
+    private string MagicFullName(Entity item, string baseName)
+    {
+        ModsComp mods = GetComp<ModsComp>(item);
+        if (mods == null || baseName.Length == 0) return baseName;
+        if (Try(() => mods.ItemRarity, ItemRarity.Normal) != ItemRarity.Magic) return baseName;
+        if (!Try(() => mods.Identified, true)) return baseName;
+        var list = Try(() => mods.ItemMods, null);
+        if (list == null) return baseName;
+        string pre = "", suf = "";
+        foreach (var m in list)
+        {
+            string d = CleanText(Try(() => m.DisplayName, "") ?? "");
+            if (d.Length == 0) continue;   // implicit mods carry no name
+            if (d.StartsWith("of ", StringComparison.OrdinalIgnoreCase)) { if (suf.Length == 0) suf = d; }
+            else if (pre.Length == 0) pre = d;
+        }
+        return string.Join(" ", new[] { pre, baseName, suf }.Where(x => x.Length > 0));
     }
 
     // Life, mana and energy shield, as percentages.

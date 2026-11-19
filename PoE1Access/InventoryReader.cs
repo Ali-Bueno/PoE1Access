@@ -75,7 +75,7 @@ public partial class PoE1AccessCore
             ? CleanText(Try(() => mods.UniqueName, "")) : "";
 
         string title = unique.Length > 0 && !string.Equals(unique, baseName, StringComparison.OrdinalIgnoreCase)
-            ? unique + ", " + baseName : baseName;
+            ? unique + ", " + baseName : MagicFullName(item, baseName);
         string rarityWord = rarity switch
         {
             ItemRarity.Magic => "magic",

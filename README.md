@@ -2,13 +2,13 @@
 
 An accessibility mod that makes **Path of Exile 1** playable without seeing the screen. It reads
 menus, items, panels and the passive tree through your screen reader (NVDA, JAWS and others,
-with braille), and adds sounds to find your way and to follow a fight.
+with braille), and adds sounds to find your way and to  engage in combat.
 
 It runs on [Exile API](https://github.com/exApiTools/ExileApi-Compiled), which reads the game's
 memory. The mod only reads: it never changes the game and never presses anything for you.
 
-> **Warning:** this is an unofficial tool. Grinding Gear Games has not approved it. Use it at
-> your own risk. It is a test version and it can fail, especially right after a game patch.
+> **Warning:** this is in beta, it could be unstable, and not all menus may read properly.   Grinding Gear Games has not approved it. Use it at
+> your own risk. it can fail, especially right after a game patch.
 
 ## What it does
 

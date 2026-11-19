@@ -362,7 +362,10 @@ internal sealed class Navigator
         if (LootKind != null) TickLoot(now, p);
         TickEnemies(now, p);
         TickNpcs(now, p);
+        if (now >= _nextIconLogMs) { _nextIconLogMs = now + 3000; LogMinimapIcons(); }
     }
+
+    private long _nextIconLogMs;
 
     // ===================================================================
     // Enemies (Poe2Access): a growl for each enemy on screen, faster as it gets closer, with a
@@ -1008,13 +1011,13 @@ internal sealed class Navigator
     // Scanner
     // ===================================================================
 
-    public enum Cat { Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
+    public enum Cat { Quest, Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
 
-    private static readonly Cat[] Order = { Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
+    private static readonly Cat[] Order = { Cat.Quest, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
 
     private static readonly Dictionary<Cat, string> CatNames = new Dictionary<Cat, string>
     {
-        { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" },
+        { Cat.Quest, "Quest" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" },
         { Cat.Enemies, "Enemies" }, { Cat.Items, "Items" }, { Cat.Chests, "Chests" }, { Cat.Objects, "Objects" },
     };
 
@@ -1056,10 +1059,46 @@ internal sealed class Navigator
         return list ?? (IEnumerable<Entity>)Array.Empty<Entity>();
     }
 
+    /// <summary>The game shows a quest icon for it on the minimap (shown, not hidden).</summary>
+    private static bool QuestMarked(Entity e)
+    {
+        var icon = Try(() => e.GetComponent<MinimapIcon>(), null);
+        if (icon == null || icon.Address == 0) return false;
+        if (!Try(() => icon.IsVisible, false) || Try(() => icon.IsHide, true)) return false;
+        string name = Try(() => icon.Name, "") ?? "";
+        return name.IndexOf("Quest", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    // Logs once per area every minimap icon the game shows, to check what is marked.
+    private long _iconsLoggedArea = -1;
+
+    private void LogMinimapIcons()
+    {
+        long area = Try(() => (long)_gc.Area.CurrentArea.Hash, 0L);
+        if (area == _iconsLoggedArea) return;
+        var seen = new SortedDictionary<string, int>();
+        foreach (Entity e in Entities())
+        {
+            var icon = Try(() => e.GetComponent<MinimapIcon>(), null);
+            if (icon == null || icon.Address == 0) continue;
+            if (!Try(() => icon.IsVisible, false) || Try(() => icon.IsHide, true)) continue;
+            string key = (Try(() => icon.Name, "") ?? "") + " (" + Try(() => e.Type.ToString(), "?") + ")";
+            seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
+        }
+        if (seen.Count == 0) return;   // the entity list may not be filled yet
+        _iconsLoggedArea = area;
+        PluginLog.Write("Minimap icons shown in " + Try(() => _gc.Area.CurrentArea.DisplayName, "?") + ": " +
+                        string.Join(", ", seen.Select(kv => kv.Key + (kv.Value > 1 ? " x" + kv.Value : ""))));
+    }
+
     private static Cat Category(Entity e)
     {
         EntityType t;
         try { t = e.Type; } catch { return Cat.None; }
+        // Only what the game itself marks for a quest on the minimap (a visible quest icon): no
+        // marker of the mod's own, which a sighted player would not have. Monsters keep their
+        // enemy sounds.
+        if (t != EntityType.Monster && QuestMarked(e)) return Cat.Quest;
         switch (t)
         {
             case EntityType.AreaTransition:

@@ -384,6 +384,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("equipment selection", () => PollEquipmentSelection(now));
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
+            Guard("dialogue", () => PollDialogue(now));
             if (_nav != null)
             {
                 _nav.AnnounceNearby = Settings.AnnounceNearby.Value;
@@ -1828,6 +1829,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         if (stableFor >= Settings.HoverDelayMs.Value && text != _lastHoverSpoken)
         {
+            // A dialogue's options are read one at a time by PollDialogue, not as one list.
+            if (IsWholeOptionList(text)) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
         }

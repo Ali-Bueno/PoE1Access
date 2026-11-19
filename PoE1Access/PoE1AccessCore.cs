@@ -385,6 +385,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
             Guard("dialogue", () => PollDialogue(now));
+            Guard("world map", () => PollWorldMap(now));
             if (_nav != null)
             {
                 _nav.AnnounceNearby = Settings.AnnounceNearby.Value;
@@ -1432,6 +1433,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _inventoryPanel = visible.FirstOrDefault(p => p.Title == "Inventory").E;
         _characterPanel = visible.FirstOrDefault(p => p.Title == "Character").E;
         _skillsPanel = visible.FirstOrDefault(p => p.Title == "Skills").E;
+        _worldPanel = visible.FirstOrDefault(p => p.Title == "World").E;
         var titles = new HashSet<string>(visible.Select(p => p.Title), StringComparer.OrdinalIgnoreCase);
 
         // The first reading is silent, so nothing is announced at start-up.
@@ -1830,7 +1832,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (stableFor >= Settings.HoverDelayMs.Value && text != _lastHoverSpoken)
         {
             // A dialogue's options are read one at a time by PollDialogue, not as one list.
-            if (IsWholeOptionList(text)) { _lastHoverSpoken = text; return; }
+            if (IsWholeOptionList(text) || IsWorldMapText(text)) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
         }

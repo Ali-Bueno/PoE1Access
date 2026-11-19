@@ -70,6 +70,8 @@ In game (controller, L3 = left stick click / keyboard):
   each section
 - In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
   up and down for its details (description, speed, cost, cooldown, damage, linked supports)
+- World map (from a waypoint): opening it says the act and your current quest; moving the
+  selection says the place and its kind ("Lioneye's Watch, Town"); tap L3 for its flavour text
 - Hold L3 + click the right stick / Delete: guide to the chosen thing on or off
 - F9: repeat the last thing said
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment

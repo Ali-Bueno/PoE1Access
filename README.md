@@ -38,6 +38,8 @@ The full player guide, with every control and setting, is [Launcher/README.txt](
 3. The first time, it asks to download Exile API from its GitHub page. Exile API is not part of
    this package. On every start it checks for a newer Exile API and updates it, since Exile API
    is updated after each game patch.
+4. On every start it also installs the newest PoE1Access release from this page, then starts
+   again (versions 0.2.2 and later).
 
 You need Windows 10 or 11 (64-bit), the .NET 10 Desktop Runtime (x64), and Path of Exile 1 in
 windowed or windowed fullscreen mode. A controller is recommended.

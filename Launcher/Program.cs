@@ -47,6 +47,12 @@ internal static class Program
         bool test = args.Any(a => a.StartsWith("--", StringComparison.Ordinal) && a.EndsWith("-test", StringComparison.OrdinalIgnoreCase)) ||
                     args.Any(a => a.Equals("--setup-only", StringComparison.OrdinalIgnoreCase));
         using var single = new Mutex(true, test ? "PoE1Access.Launcher.Test" : "PoE1Access.Launcher", out bool first);
+        // Started by the previous launcher after an update: wait for it to close.
+        if (!first && args.Any(a => a.Equals("--updated", StringComparison.OrdinalIgnoreCase)))
+        {
+            try { first = single.WaitOne(TimeSpan.FromSeconds(15)); }
+            catch (AbandonedMutexException) { first = true; }
+        }
         if (!first)
         {
             Box("Path of Exile access is already running.", "Path of Exile access", MB_ICONINFO);
@@ -59,6 +65,14 @@ internal static class Program
 
         try
         {
+            // The mod's own updates: a newer release on GitHub is installed, then this starts again.
+            // (--setup-only updates too; the "-test" switches do not.)
+            if (!args.Any(a => a.EndsWith("-test", StringComparison.OrdinalIgnoreCase)) &&
+                !args.Any(a => a.Equals("--no-update", StringComparison.OrdinalIgnoreCase)) &&
+                SelfUpdate(args.Where(a => !a.Equals("--updated", StringComparison.OrdinalIgnoreCase)).ToArray()))
+                return 0;
+            CleanUpOldLauncher();
+
             if (!CheckDotNet()) return 1;
             if (!EnsureExileApi()) return 1;
             InstallPlugin();
@@ -104,6 +118,144 @@ internal static class Program
             Box("Path of Exile access could not start:\n\n" + ex.Message + "\n\nDetails are in " + LogFile, "Path of Exile access", MB_ICONERROR);
             return 1;
         }
+    }
+
+    // ---- 0. The mod's own updates ----
+    //
+    // Each start asks GitHub for the mod's newest release (test versions included). When it is
+    // newer than app\version.txt, its PoE1Access.zip is downloaded and unpacked over this folder:
+    // the launcher, app\plugin, app\reader, the readme and licenses. Exile API (app\ExileApi, with
+    // its settings) and the logs are left alone. The running launcher cannot overwrite itself, so
+    // it renames itself to PoE1Access.old.exe first, then starts the new one and closes.
+    private const string ReleasesApi = "https://api.github.com/repos/Random4358/PoE1Access/releases?per_page=10";
+    private static readonly string VersionFile = Path.Combine(AppDir, "version.txt");
+
+    private static Version ParseVersion(string s)
+    {
+        s = (s ?? "").Trim().TrimStart('v', 'V');
+        return Version.TryParse(s, out Version v) ? v : null;
+    }
+
+    private static bool SelfUpdate(string[] args)
+    {
+        Version have = File.Exists(VersionFile) ? ParseVersion(File.ReadAllText(VersionFile)) : null;
+        string tag, zipUrl;
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("PoE1Access-launcher");
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            string json = http.GetStringAsync(ReleasesApi).GetAwaiter().GetResult();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var newest = doc.RootElement.EnumerateArray()
+                .Where(r => !r.GetProperty("draft").GetBoolean())
+                .Select(r => (Tag: r.GetProperty("tag_name").GetString(), Release: r))
+                .Where(r => ParseVersion(r.Tag) != null)
+                .OrderByDescending(r => ParseVersion(r.Tag))
+                .FirstOrDefault();
+            if (newest.Tag == null) return false;
+            tag = newest.Tag;
+            zipUrl = newest.Release.GetProperty("assets").EnumerateArray()
+                .Where(a => a.GetProperty("name").GetString() == "PoE1Access.zip")
+                .Select(a => a.GetProperty("browser_download_url").GetString())
+                .FirstOrDefault();
+            if (zipUrl == null || !zipUrl.StartsWith("https://github.com/Random4358/PoE1Access/releases/download/", StringComparison.Ordinal))
+                return false;
+        }
+        catch (Exception ex)
+        {
+            Log("Update check failed (offline?): " + ex.Message);
+            return false;
+        }
+
+        Version latest = ParseVersion(tag);
+        if (have != null && latest <= have) { Log("Path of Exile access is up to date: " + have); return false; }
+
+        Log("Mod update: " + (have?.ToString() ?? "unknown") + " -> " + latest);
+        Say("Updating Path of Exile access to version " + latest + ". Please wait.");
+        string zip = Path.Combine(AppDir, "update-download.zip");
+        string temp = Path.Combine(AppDir, "update-extract");
+        try
+        {
+            using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) })
+            {
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("PoE1Access-launcher");
+                File.WriteAllBytes(zip, http.GetByteArrayAsync(zipUrl).GetAwaiter().GetResult());
+            }
+            if (Directory.Exists(temp)) Directory.Delete(temp, true);
+            ZipFile.ExtractToDirectory(zip, temp);
+            // The zip holds one folder (PoE1Access) with PoE1Access.exe in it.
+            string top = Directory.GetDirectories(temp).FirstOrDefault(d => File.Exists(Path.Combine(d, "PoE1Access.exe")))
+                         ?? throw new InvalidOperationException("The update does not contain PoE1Access.exe.");
+
+            string self = Environment.ProcessPath ?? Path.Combine(Root, "PoE1Access.exe");
+            string old = Path.Combine(Root, "PoE1Access.old.exe");
+            if (File.Exists(old)) File.Delete(old);
+            File.Move(self, old);   // a running program may be renamed, not overwritten
+
+            int files = 0;
+            foreach (string src in Directory.GetFiles(top, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(top, src);
+                if (rel.StartsWith(Path.Combine("app", "ExileApi"), StringComparison.OrdinalIgnoreCase)) continue;
+                string dest = Path.Combine(Root, rel);
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                try { File.Copy(src, dest, true); }
+                catch (IOException)
+                {
+                    // In use by this launcher (prism.dll, its speech): move it aside, then copy.
+                    string aside = dest + ".old";
+                    if (File.Exists(aside)) File.Delete(aside);
+                    File.Move(dest, aside);
+                    File.Copy(src, dest, true);
+                }
+                files++;
+            }
+            File.WriteAllText(VersionFile, latest.ToString());   // also for releases that did not ship one
+            Log("Mod updated to " + latest + ": " + files + " files");
+            Say("Updated to version " + latest + ". Starting.");
+
+            // Start the new launcher (it removes PoE1Access.old.exe) and close this one.
+            var psi = new ProcessStartInfo(Path.Combine(Root, "PoE1Access.exe")) { UseShellExecute = false, WorkingDirectory = Root };
+            foreach (string a in args) psi.ArgumentList.Add(a);
+            psi.ArgumentList.Add("--no-update");
+            psi.ArgumentList.Add("--updated");
+            Process.Start(psi);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log("Mod update failed: " + ex);
+            // Put the launcher back if it was moved and nothing replaced it.
+            try
+            {
+                string self = Path.Combine(Root, "PoE1Access.exe"), old = Path.Combine(Root, "PoE1Access.old.exe");
+                if (!File.Exists(self) && File.Exists(old)) File.Move(old, self);
+            }
+            catch { }
+            Say("Path of Exile access could not be updated. Starting the version you have.");
+            return false;
+        }
+        finally
+        {
+            try { if (Directory.Exists(temp)) Directory.Delete(temp, true); } catch { }
+            try { if (File.Exists(zip)) File.Delete(zip); } catch { }
+        }
+    }
+
+    // The previous launcher, left after an update; it can go once it has closed.
+    private static void CleanUpOldLauncher()
+    {
+        var leftovers = new[] { Path.Combine(Root, "PoE1Access.old.exe") }
+            .Concat(Directory.EnumerateFiles(Root, "*.old", SearchOption.AllDirectories)
+                .Where(f => !f.StartsWith(ExileApiDir, StringComparison.OrdinalIgnoreCase)))
+            .Where(File.Exists).ToList();
+        foreach (string old in leftovers)
+            for (int i = 0; i < 20 && File.Exists(old); i++)
+            {
+                try { File.Delete(old); }
+                catch { Thread.Sleep(250); }
+            }
     }
 
     // ---- 1. .NET 10 Desktop Runtime ----

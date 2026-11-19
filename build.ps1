@@ -54,7 +54,9 @@ New-Item -ItemType Directory -Force $lic | Out-Null
 Copy-Item (Join-Path $prism "NOTICE"), (Join-Path $prism "SOURCE.txt") $lic
 Copy-Item (Join-Path $prism "LICENSES") $lic -Recurse
 
-# 4. Readme, zip
+# 4. Version (the launcher's updater compares it with the newest GitHub release), readme, zip
+$version = (Get-Content (Join-Path $root "VERSION") -TotalCount 1).Trim()
+Set-Content (Join-Path $dist "app\version.txt") $version -Encoding ascii
 Copy-Item (Join-Path $root "Launcher\README.txt") $dist
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $dist "LICENSE.txt")
 Remove-Item -Recurse -Force $work

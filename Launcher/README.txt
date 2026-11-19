@@ -57,6 +57,13 @@ GETTING STARTED
 
 When you close the game, the mod closes too.
 
+UPDATES
+Each time you start PoE1Access.exe it checks the mod's GitHub page
+(https://github.com/Random4358/PoE1Access/releases) and, when there is a newer version, says
+"Updating Path of Exile access", installs it in this folder and starts again. Exile API is kept
+up to date the same way. Your Exile API settings are kept. Without an internet connection it
+simply starts the version you have.
+
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category (Quest lists only what

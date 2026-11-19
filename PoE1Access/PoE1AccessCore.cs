@@ -571,6 +571,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         });
         if (life.MaxES > 0) parts.Add("energy shield " + Pct(life.CurES, life.MaxES) + " percent");
 
+        // The flasks' uses left, in slot order: "Small Life Flask, 3 uses".
+        ServerData srv = GetServerData();
+        if (srv != null)
+            foreach (var f in Slots(srv, InventorySlotE.Flask1).OrderBy(s => s.PosX))
+            {
+                int uses = FlaskUses(f.Item);
+                if (uses >= 0)
+                    parts.Add(CleanText(Try(() => GetComp<BaseComp>(f.Item)?.Name, "") ?? "flask") + ", " + uses + (uses == 1 ? " use" : " uses"));
+            }
+
         string area = Try(() => GameController.Area.CurrentArea.DisplayName, "");
         int areaLevel = Try(() => GameController.Area.CurrentArea.RealLevel, 0);
         if (area.Length > 0) parts.Add(area + (areaLevel > 0 ? ", area level " + areaLevel : ""));

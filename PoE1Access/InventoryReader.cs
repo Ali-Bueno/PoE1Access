@@ -150,6 +150,8 @@ public partial class PoE1AccessCore
 
         string description = ItemDescription(item, gem);
         if (description.Length > 0) lines.Add(description);
+        string charges = FlaskChargesText(item);
+        if (charges.Length > 0) lines.Add(charges);
 
         if (baseC != null && Try(() => baseC.isCorrupted, false)) lines.Add("Corrupted");
         if (mods != null && Try(() => mods.IsMirrored, false)) lines.Add("Mirrored");
@@ -520,6 +522,35 @@ public partial class PoE1AccessCore
     private Dictionary<string, (long Addr, string Title)> _equipped;
     private long _nextHandPollMs;
 
+    private readonly Dictionary<string, (long SinceMs, string Title)> _gone = new Dictionary<string, (long, string)>();
+    private readonly Dictionary<string, int> _flaskUses = new Dictionary<string, int>();
+
+    // The same item by name (its first part: "Small Life Flask", not ", 3 uses").
+    private static bool SameBase(string a, string b) =>
+        !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b) && a.Split(',')[0] == b.Split(',')[0];
+
+    /// <summary>How many times a flask can be drunk now (its charges over the charges per
+    /// use), or -1 when it is not a flask.</summary>
+    private int FlaskUses(Entity item)
+    {
+        var c = GetComp<ExileCore.PoEMemory.Components.Charges>(item);
+        if (c == null) return -1;
+        int have = Try(() => c.NumCharges, -1), per = Try(() => c.ChargesPerUse, 0);
+        if (have < 0 || per <= 0) return -1;
+        return have / per;
+    }
+
+    /// <summary>"Small Life Flask, 3 uses, 30 of 40 charges".</summary>
+    private string FlaskChargesText(Entity item)
+    {
+        var c = GetComp<ExileCore.PoEMemory.Components.Charges>(item);
+        if (c == null) return "";
+        int have = Try(() => c.NumCharges, -1), per = Try(() => c.ChargesPerUse, 0), max = Try(() => c.ChargesMax, 0);
+        if (have < 0 || per <= 0) return "";
+        int uses = have / per;
+        return uses + (uses == 1 ? " use" : " uses") + (max > 0 ? ", " + have + " of " + max + " charges" : "");
+    }
+
     private void PollInventoryMoves(long now)
     {
         if (now < _nextHandPollMs) return;
@@ -529,11 +560,14 @@ public partial class PoE1AccessCore
 
         // Worn gear by slot.
         var equipped = new Dictionary<string, (long, string)>();
+        var flaskUses = new Dictionary<string, (int Uses, string Title)>();
         foreach (var (slot, label) in EquipmentSlots)
             foreach (var s in Slots(server, slot))
             {
                 string key = slot == InventorySlotE.Flask1 ? label + " " + (s.PosX + 1) : label;
-                equipped[key] = (s.Item.Address, ItemTitle(s.Item));
+                string title = ItemTitle(s.Item);
+                equipped[key] = (s.Item.Address, title);
+                if (slot == InventorySlotE.Flask1) flaskUses[key] = (FlaskUses(s.Item), title);
             }
 
         // During an area load the lists come back empty for a moment: ignore that, or every
@@ -546,13 +580,44 @@ public partial class PoE1AccessCore
 
         if (_equipped != null)
         {
-            // Something left an equipment slot and is not simply in another one.
+            // Something left an equipment slot and is not simply in another one. The game
+            // rebuilds an item's data when it changes (a flask drunk: its charges), giving it a
+            // new address, so the same item in the same slot counts as still there; and a slot
+            // must stay empty for half a second (the lists flicker) before it is said.
             foreach (var kv in _equipped)
             {
-                bool stillThere = equipped.TryGetValue(kv.Key, out var now2) && now2.Item1 == kv.Value.Addr;
+                bool stillThere = equipped.TryGetValue(kv.Key, out var now2) &&
+                                  (now2.Item1 == kv.Value.Addr || now2.Item2 == kv.Value.Title || SameBase(now2.Item2, kv.Value.Title));
                 bool movedSlot = equipped.Values.Any(v => v.Item1 == kv.Value.Addr);
-                if (!stillThere && !movedSlot) Say("Unequipped: " + kv.Value.Title, false);
+                if (stillThere || movedSlot) { _gone.Remove(kv.Key); continue; }
+                if (!_gone.ContainsKey(kv.Key)) _gone[kv.Key] = (now, kv.Value.Title);
             }
+            foreach (var key in _gone.Keys.ToList())
+            {
+                if (equipped.ContainsKey(key)) { _gone.Remove(key); continue; }
+                if (now - _gone[key].SinceMs >= 500)
+                {
+                    Say("Unequipped: " + _gone[key].Title, false);
+                    _gone.Remove(key);
+                }
+            }
+        }
+        // Keep what was there before a slot went quiet, so its item is still known while waiting.
+        foreach (var kv in _gone)
+            if (!equipped.ContainsKey(kv.Key) && _equipped != null && _equipped.TryGetValue(kv.Key, out var was))
+                equipped[kv.Key] = was;
+
+        // Flasks: the uses left, said as one is drunk (or refills from empty).
+        foreach (var kv in flaskUses)
+        {
+            if (_flaskUses.TryGetValue(kv.Key, out int before) && kv.Value.Uses >= 0 && before >= 0)
+            {
+                if (kv.Value.Uses < before)
+                    Say(kv.Value.Title + ", " + kv.Value.Uses + (kv.Value.Uses == 1 ? " use left" : " uses left"), false);
+                else if (before == 0 && kv.Value.Uses > 0)
+                    Say(kv.Value.Title + " ready again", false);
+            }
+            _flaskUses[kv.Key] = kv.Value.Uses;
         }
 
         if (handAddr != _handItemAddr)

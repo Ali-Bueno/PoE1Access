@@ -1,6 +1,6 @@
 # Path of Exile Access (PoE1Access)
 
-A screen reader mod that makes **Path of Exile 1** playable without seeing the screen. It reads
+An accessibility mod that makes **Path of Exile 1** playable without seeing the screen. It reads
 menus, items, panels and the passive tree through your screen reader (NVDA, JAWS and others,
 with braille), and adds sounds to find your way and to follow a fight.
 

@@ -146,6 +146,7 @@ public partial class PoE1AccessCore
         {
             int link = Try(() => sockets.LargestLinkSize, 0);
             lines.Add(socketCount + (socketCount == 1 ? " socket" : " sockets") + (link > 1 ? ", largest link " + link : ""));
+            lines.AddRange(SocketLines(sockets));
         }
 
         string description = ItemDescription(item, gem);
@@ -227,9 +228,76 @@ public partial class PoE1AccessCore
         return kind;
     }
 
+    // ---- Sockets: each linked group, each socket's colour and the gem in it ----
+
+    // "Linked: red, Double Strike level 3; green, empty", one line per group of linked sockets.
+    private List<string> SocketLines(SocketsComp sockets)
+    {
+        var lines = new List<string>();
+        var groups = Try(() => sockets.SocketGroup, null);
+        if (groups == null || groups.Count == 0) return lines;
+
+        var gemAt = new Dictionary<int, string>();
+        var gems = Try(() => sockets.SocketedGems, null);
+        if (gems != null)
+            foreach (var g in gems)
+            {
+                Entity gem = Try(() => g.GemEntity, null);
+                if (gem == null || gem.Address == 0) continue;
+                string name = CleanText(Try(() => GetComp<BaseComp>(gem)?.Name, "") ?? "");
+                if (name.Length == 0) continue;
+                int level = Try(() => GetComp<GemComp>(gem)?.Level ?? 0, 0);
+                gemAt[Try(() => g.SocketIndex, -1)] = name + (level > 0 ? " level " + level : "");
+            }
+
+        static string Colour(char c) => char.ToUpperInvariant(c) switch
+        {
+            'R' => "red", 'G' => "green", 'B' => "blue", 'W' => "white", 'A' => "abyss", 'D' => "resonator",
+            _ => "socket",
+        };
+
+        int index = 0;
+        foreach (string group in groups)
+        {
+            if (string.IsNullOrEmpty(group)) continue;
+            var parts = new List<string>();
+            foreach (char c in group)
+            {
+                parts.Add(Colour(c) + ", " + (gemAt.TryGetValue(index, out string g) ? g : "empty"));
+                index++;
+            }
+            lines.Add((group.Length > 1 ? "Linked: " : "Socket: ") + string.Join("; ", parts));
+        }
+        return lines;
+    }
+
     // ---- Descriptions from the game's data ----
 
     private Dictionary<string, string> _currencyDescriptions;
+
+    // A support gem's description ("Supports attack skills."): in its GrantedEffects.dat row, the
+    // text pointer right after the gem's name pointer (+0xEB name, +0xF3 description; rows are
+    // packed, so these are not 8-aligned). Found 19 Nov 2026 on three support gems.
+    private string SupportDescription(long grantedEffectRow)
+    {
+        if (grantedEffectRow == 0) return "";
+        var mem = Mem;
+        string Str(int off)
+        {
+            try
+            {
+                long p = mem.Read<long>(grantedEffectRow + off);
+                if (p < 0x10000 || p > 0x7FFF_FFFF_FFFF) return "";
+                string s = mem.ReadStringU(p, 600) ?? "";
+                return s.All(ch => ch >= 0x20 && ch < 0x3000) ? s : "";
+            }
+            catch { return ""; }
+        }
+        // Check that the name is where expected before trusting the description next to it.
+        string name = Str(0xEB);
+        if (name.Length == 0 || !name.Contains("Support")) return "";
+        return CleanText(Str(0xF3));
+    }
 
     /// <summary>What the item does, from the game's own data: a gem's skill description
     /// ("Support gem" for supports), or a currency item's description ("Identifies an item").</summary>
@@ -241,8 +309,9 @@ public partial class PoE1AccessCore
             if (effect == null) effect = Try(() => gem.GrantedEffect1, null);
             if (effect == null) return "";
             bool support = Try(() => effect.IsSupport, false);
-            string text = support ? "" : CleanText(Try(() => effect.ActiveSkill?.Description, "") ?? "");
-            return support ? "Support gem" : text;
+            if (!support) return CleanText(Try(() => effect.ActiveSkill?.Description, "") ?? "");
+            string supportText = SupportDescription(effect.Address);
+            return supportText.Length > 0 ? "Support gem. " + supportText : "Support gem";
         }
 
         string path = Try(() => item.Path, "") ?? "";

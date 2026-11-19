@@ -580,7 +580,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         Say(JoinSpeech(parts), true);
     }
 
-    // "Level 12, 63 percent to level 13" (what is still needed), or "Level 100".
+    // "Level 12, 37 percent of the way to level 13", or "Level 100".
     // The table (Constants.PlayerXpLevels) holds the total experience each level starts at.
     private string LevelText()
     {
@@ -593,9 +593,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (xp < 0 || table == null || level + 1 >= table.Length) return "Level " + level;
         long start = table[level], next = table[level + 1];
         if (next <= start) return "Level " + level;
+        // How far through the level you are, so the number rises as you gain experience
+        // (saying what was left made it fall, which read as losing progress).
         double done = Math.Max(0, Math.Min(1, (xp - start) / (double)(next - start)));
-        int toGo = (int)Math.Round(100 * (1 - done));
-        return "Level " + level + ", " + toGo + " percent to level " + (level + 1);
+        int pct = (int)Math.Floor(100 * done);
+        return "Level " + level + ", " + pct + " percent of the way to level " + (level + 1);
     }
 
     // ---- Life, mana and energy shield: spoken as they fall past 75, 50 and 25 percent ----

@@ -21,7 +21,7 @@ from its side (ReachPing, ReachDistance); they play again once every enemy has s
 The two nearest NPCs make a light wooden tap from their side, and
 the nearest other player a quicker, higher double tap (NpcSounds). Life, mana and energy shield
 are spoken as they fall below 75, 50 and 25 percent (AnnounceResources). Double tap L3 for your
-level and how much is left to the next one, then life, mana and the area. Enemies are named once as they come into view, a
+level and how far you are to the next one ("Level 1, 65 percent of the way to level 2"), then life, mana and the area. Enemies are named once as they come into view, a
 pack in one line with the way to its middle: "Zombie, 3, up right. Rhoa, rare, left". When the
 game's target lands on a living enemy you hear two quick blips and its name, with its life when
 hurt. Settings: EnemySounds, EnemyVolume, AnnounceEnemies, EnemyDirections, CrosshairBeep,
@@ -62,7 +62,7 @@ In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
 - Tap L3 / Insert: where the chosen thing is now
-- Double tap L3 / F1: level and how much is left to the next, life, mana, energy shield, area,
+- Double tap L3 / F1: level and how far you are to the next, life, mana, energy shield, area,
   how much you have explored
 - On the character sheet, hold L3 + right stick: up and down for each stat, left and right for
   each section

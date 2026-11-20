@@ -840,7 +840,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // probe marks the offsets that contain it.
     private void RunTextProbe()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         Element hover = state.UIHover;
@@ -955,7 +955,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Element pre = PreGameRoot();
             if (pre != null) return pre;
         }
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return null;
         Element root = Try<Element>(() => state.UIRoot, null);
         if (root == null || root.Address == 0) root = Try<Element>(() => state.IngameUi, null);
@@ -1056,6 +1056,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // Pre-game screens (login, character selection, character creation)
     // ===================================================================
 
+    // The game states that are screens before the game (StateNames' spoken ones).
+    private static readonly HashSet<string> PreGameScreens = new HashSet<string>
+    {
+        "LoginState", "SelectCharacterState", "CreateCharacterState", "DeleteCharacterState", "ChangePasswordState", "CreditsState",
+    };
+
     private static readonly Dictionary<string, string> StateNames = new Dictionary<string, string>
     {
         { "LoginState", "Login screen" },
@@ -1095,16 +1101,46 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                                   Try<IList<GameState>>(() => game.ActiveGameStates, null);
         if (active == null) return ("", 0);
 
-        // The last state with a screen of its own is the one showing.
+        // The last state with a screen of its own is the one showing. The game leaves character
+        // creation in the list when you go back from it, even after logging out ("PreGameState,
+        // LoginState, CreateCharacterState" on the login screen, found 20 Nov 2026), so a screen
+        // whose UI root is hidden or gone (the left-behind creation state has none) is passed over
+        // while another screen lies below it. The login screen keeps its root elsewhere and is
+        // never left behind.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var st = active[i];
             if (st == null || st.Address == 0) continue;
             string type = byAddr.TryGetValue(st.Address, out string t) ? t : "Unknown";
             if (StateNames.TryGetValue(type, out string spoken) && spoken.Length == 0) continue;
+            if (PreGameScreens.Contains(type) && type != "LoginState" && !StateUiShown(st.Address) &&
+                active.Take(i).Any(b => b != null && byAddr.TryGetValue(b.Address, out string bt) && PreGameScreens.Contains(bt)))
+                continue;
             return (type, st.Address);
         }
         return ("", 0);
+    }
+
+    // Whether a screen's UI is shown: character selection and creation keep their UI root at
+    // state +0x218, and it is visible. A screen left behind has no root there, while its other
+    // pointers may lead to stray elements of other screens (seen 20 Nov 2026), so only +0x218
+    // counts. Checked at most twice a second per state.
+    private const int ScreenRootOffset = 0x218;
+    private readonly Dictionary<long, (long AtMs, bool Shown)> _stateUiShown = new Dictionary<long, (long, bool)>();
+
+    private bool StateUiShown(long stateAddr)
+    {
+        long now = _clock.ElapsedMilliseconds;
+        if (_stateUiShown.TryGetValue(stateAddr, out var c) && now - c.AtMs < 500) return c.Shown;
+        bool shown = false;
+        long p = Try(() => Mem.Read<long>(stateAddr + ScreenRootOffset), 0L);
+        if (p >= 0x10000 && p <= 0x7FFF_FFFF_FFFF)
+        {
+            Element e = Try<Element>(() => Game.GetObject<Element>(p), null);
+            if (e != null && LooksLikeElement(e, out _)) shown = Try(() => UiText.VisibleLocal(Mem, e), false);
+        }
+        _stateUiShown[stateAddr] = (now, shown);
+        return shown;
     }
 
     // A state's UI root: the pointer in the state's first bytes that leads to an element named
@@ -1892,7 +1928,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
     private string ReadHoverText(long now)
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return "";
 
         Element hover = state.UIHover;
@@ -2514,7 +2550,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // F11: the element under the cursor, its tooltip, and what the plugin made of it.
     private void DumpHovered()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         var sb = new StringBuilder();

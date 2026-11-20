@@ -1696,6 +1696,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         string name = path.Substring(at + 10);
         int cut = name.IndexOfAny(new[] { '|', '.' });
         if (cut > 0) name = name.Substring(0, cut);
+        // The path is read cut short at times ("..._ESHalf_MOT"): "_MOTD" and what follows go.
+        int motdAt = name.IndexOf("_MOT", StringComparison.OrdinalIgnoreCase);
+        if (motdAt > 0) name = name.Substring(0, motdAt);
         name = Regex.Replace(name, @"^public_news_\d{4}-\d{2}-\d{2}_", "", RegexOptions.IgnoreCase);
         var words = name.Split('_').Where(w => w.Length > 0).ToList();
         int motd = words.FindIndex(w => w.Equals("MOTD", StringComparison.OrdinalIgnoreCase));

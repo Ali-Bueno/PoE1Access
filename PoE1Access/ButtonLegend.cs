@@ -29,11 +29,14 @@ public partial class PoE1AccessCore
         ["c2,99"] = "D-pad up",
         ["184,c0"] = "L3",
         ["c2,f9"] = "R3",
-        ["184,120"] = "Right bumper",
         ["0,f9"] = "Start",
-        // Not named by the game's pictures; the "Navigate Skills" prompt of skill binding, next
-        // to the right stick button's picture on the sheet: the left stick.
-        ["61,f9"] = "Left stick",
+        // Checked 20 Nov 2026 against the prompts on screen (PS5 pictures): "L1 Current League
+        // Info" on the login screen, "R Navigate Skills" in skill binding, "L Switch League" and
+        // "R1 Toggle Solo Self-Found" on the league screen.
+        ["184,120"] = "Left bumper",
+        ["0,159"] = "Right bumper",
+        ["123,c0"] = "Left stick",
+        ["61,f9"] = "Right stick",
     };
 
     private List<Element> _legends = new List<Element>();

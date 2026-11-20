@@ -1056,6 +1056,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // Pre-game screens (login, character selection, character creation)
     // ===================================================================
 
+    // The game states that are screens before the game (StateNames' spoken ones).
+    private static readonly HashSet<string> PreGameScreens = new HashSet<string>
+    {
+        "LoginState", "SelectCharacterState", "CreateCharacterState", "DeleteCharacterState", "ChangePasswordState", "CreditsState",
+    };
+
     private static readonly Dictionary<string, string> StateNames = new Dictionary<string, string>
     {
         { "LoginState", "Login screen" },
@@ -1095,16 +1101,46 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                                   Try<IList<GameState>>(() => game.ActiveGameStates, null);
         if (active == null) return ("", 0);
 
-        // The last state with a screen of its own is the one showing.
+        // The last state with a screen of its own is the one showing. The game leaves character
+        // creation in the list when you go back from it, even after logging out ("PreGameState,
+        // LoginState, CreateCharacterState" on the login screen, found 20 Nov 2026), so a screen
+        // whose UI is hidden is passed over while another screen lies below it.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var st = active[i];
             if (st == null || st.Address == 0) continue;
             string type = byAddr.TryGetValue(st.Address, out string t) ? t : "Unknown";
             if (StateNames.TryGetValue(type, out string spoken) && spoken.Length == 0) continue;
+            if (PreGameScreens.Contains(type) && !StateUiShown(st.Address) &&
+                active.Take(i).Any(b => b != null && byAddr.TryGetValue(b.Address, out string bt) && PreGameScreens.Contains(bt)))
+                continue;
             return (type, st.Address);
         }
         return ("", 0);
+    }
+
+    // Whether a screen's UI is shown: the first UI element its state points to (its root) is
+    // visible. Checked at most twice a second per state.
+    private readonly Dictionary<long, (long AtMs, bool Shown)> _stateUiShown = new Dictionary<long, (long, bool)>();
+
+    private bool StateUiShown(long stateAddr)
+    {
+        long now = _clock.ElapsedMilliseconds;
+        if (_stateUiShown.TryGetValue(stateAddr, out var c) && now - c.AtMs < 500) return c.Shown;
+        bool shown = true;   // unknown counts as shown, as before
+        byte[] b = TextProbe.ReadUpTo(Mem, stateAddr, 0x800);
+        if (b != null)
+            for (int o = 0; o + 8 <= b.Length; o += 8)
+            {
+                long p = BitConverter.ToInt64(b, o);
+                if (p < 0x10000 || p > 0x7FFF_FFFF_FFFF || p == stateAddr) continue;
+                Element e = Try<Element>(() => Game.GetObject<Element>(p), null);
+                if (e == null || !LooksLikeElement(e, out _)) continue;
+                shown = Try(() => UiText.VisibleLocal(Mem, e), true);
+                break;
+            }
+        _stateUiShown[stateAddr] = (now, shown);
+        return shown;
     }
 
     // A state's UI root: the pointer in the state's first bytes that leads to an element named

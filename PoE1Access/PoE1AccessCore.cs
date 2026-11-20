@@ -1213,6 +1213,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private long _preGameStateSinceMs;
     private long _lastInGameMs = -100000;   // last time the game was in gameplay
     private bool _preGameAnnounced;
+    private bool _loginSeen;
     private long _charListPendingMs;
 
     private void PreGameTick(long now)
@@ -1246,6 +1247,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             string spoken = StateNames.TryGetValue(type, out string s) ? s : type;
             bool leavingGame = now - _lastInGameMs < 10000;
             long wait = type == "LoginState" && leavingGame ? 6000 : 0;
+            // The game passes through the change password state for a few seconds as it starts,
+            // before the login screen; only one reached from the login screen is said.
+            if (type == "LoginState") _loginSeen = true;
+            if (type == "ChangePasswordState" && !_loginSeen) return;
             if (now - _preGameStateSinceMs >= wait)
             {
                 _preGameAnnounced = true;

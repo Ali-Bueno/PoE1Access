@@ -67,8 +67,9 @@ public partial class PoE1AccessCore
             if (crit > 0) lines.Add("Critical strike chance: " + (crit / 100.0 * (1 + L("local_critical_strike_chance_+%") / 100.0)).ToString("0.00") + "%");
             int attackTime = Try(() => weapon.AttackTime, 0);
             if (attackTime > 0) lines.Add("Attacks per second: " + (1000.0 / attackTime * (1 + L("local_attack_speed_+%") / 100.0)).ToString("0.00"));
+            // Melee weapons only: bows and wands carry a long range (120) the tooltip does not show.
             int range = Try(() => weapon.WeaponRange, 0) + L("local_weapon_range_+");
-            if (range > 0) lines.Add("Weapon range: " + (range / 10.0).ToString("0.#") + " metres");
+            if (range > 0 && range < 50) lines.Add("Weapon range: " + (range / 10.0).ToString("0.#") + " metres");
         }
 
         var armour = GetComp<ArmourComp>(item);

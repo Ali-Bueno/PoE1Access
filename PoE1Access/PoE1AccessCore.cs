@@ -42,6 +42,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private const int MaxSpeechChars = 2500;
 
     private static readonly Regex TagRegex = new Regex("<[^<>]{1,60}>", RegexOptions.Compiled);
+    private static readonly Regex KeywordRegex = new Regex(@"\[([^\[\]|]{1,60})(?:\|([^\[\]]{1,80}))?\]", RegexOptions.Compiled);
     // Grammar marks of the translated texts: "<<set:M>><<set:S>><<set:MS>>Introduce el nombre de tu Templario".
     private static readonly Regex GrammarRegex = new Regex("<<set:[^<>]{0,20}>>", RegexOptions.Compiled);
     private static readonly Regex ControllerRegex = new Regex("<<\\s*([A-Za-z0-9_]{1,40})\\s*>>", RegexOptions.Compiled);
@@ -2768,6 +2769,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             s = ControllerRegex.Replace(s, m => ", " + PromptName(m.Groups[1].Value) + " ");
         if (s.IndexOf('<') >= 0) s = TagRegex.Replace(s, " ");
         s = s.Replace("{", "").Replace("}", "");
+        // Keyword links in mod texts: "[PlayerItemRarity|Item Rarity]" -> "Item Rarity",
+        // "[Spell]" -> "Spell".
+        if (s.IndexOf('[') >= 0) s = KeywordRegex.Replace(s, m => m.Groups[2].Success ? m.Groups[2].Value : m.Groups[1].Value);
 
         var sb = new StringBuilder(s.Length);
         bool space = false;

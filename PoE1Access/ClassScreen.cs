@@ -84,9 +84,9 @@ public partial class PoE1AccessCore
         var keys = all.Keys.Where(k => k.EndsWith("Data/Characters.dat", StringComparison.OrdinalIgnoreCase) ||
                                        k.EndsWith("/Characters.datc64", StringComparison.OrdinalIgnoreCase)).ToList();
         string key = keys.FirstOrDefault(k => !k.StartsWith("Data/", StringComparison.OrdinalIgnoreCase)) ?? keys.FirstOrDefault();
-        if (key == null) return null;
+        if (key == null) { PluginLog.Write("Class names: no Characters table among " + all.Count + " files (" + string.Join(", ", all.Keys.Where(k => k.IndexOf("Character", StringComparison.OrdinalIgnoreCase) >= 0).Take(8)) + ")"); return null; }
         var file = new DatFile(Mem, all[key].Ptr);
-        if (file.Count <= 0 || file.Count > 64 || file.Length < 0x10) return null;
+        if (file.Count <= 0 || file.Count > 64 || file.Length < 0x10) { PluginLog.Write("Class names: " + key + " has " + file.Count + " rows of " + file.Length); return null; }
         var mem = Mem;
         string Str(long row, int off)
         {

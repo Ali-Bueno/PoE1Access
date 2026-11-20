@@ -39,12 +39,19 @@ public partial class PoE1AccessCore
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
     private bool _bindingMode, _legendWasBusy;
+    private long _guideCommandMs = -100000, _nextBindSlotPollMs;
     private long _bindingLastSeenMs;
     private string _bindingSlot = "";
     private string _bindingDetailsSig = "";
 
     private void PollButtonLegend(long now, bool uiBusy)
     {
+        // A slot shows it is selected for only a moment, so slots are checked every tick.
+        if (_bindingMode && now >= _nextBindSlotPollMs)
+        {
+            _nextBindSlotPollMs = now + 40;
+            Try(() => { PollBindingSlots(now); return 0; }, 0);
+        }
         if (now < _nextLegendPollMs) return;
         _nextLegendPollMs = now + (_bindingMode ? 100 : 250);   // a slot's mark lasts a third of a second
 
@@ -61,7 +68,9 @@ public partial class PoE1AccessCore
         {
             _bindingMode = true;
             _bindingDetailsSig = "";
-            Say("Skill binding" + (entries.Count > 0 ? ". " + string.Join(". ", entries) : ""), true);
+            // The guide chord (hold L3, press R3) opens it too, since the game sees the R3.
+            string why = now - _guideCommandMs < 1500 ? ", opened by the game from the guide button's R3. B closes it" : "";
+            Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : ""), true);
             _legendSig = string.Join("|", entries);
             return;
         }
@@ -77,7 +86,6 @@ public partial class PoE1AccessCore
         if (binding)
         {
             if (_skillsBar == null) SkillBindingDetails();   // finds the skill bar
-            Try(() => { PollBindingSlots(now); return 0; }, 0);
             string dsig = string.Join("|", details);
             if (dsig != _bindingDetailsSig && details.Count > 0)
             {
@@ -255,13 +263,20 @@ public partial class PoE1AccessCore
             _skillsBar = bar = ChildNamed(UiRoot(), "skills_bar", 4);
             if (bar == null) return details;
         }
-        var kids = Try<IList<Element>>(() => bar.Children, null);
+        // Read afresh each time: ExileApi caches an element's children and refreshes them only
+        // when it ticks, and the details box is rebuilt for each skill.
+        bar = Fresh(bar);
+        var kids = Try<IList<Element>>(() => bar?.Children, null);
         if (kids != null && kids.Count > 1 && Try(() => UiText.Visible(mem, kids[1]), false))
             CollectText(kids[1], 10, details);
         return details;
     }
 
     private Element _skillsBar;
+
+    // The same element read anew, so none of ExileApi's cached children are reused.
+    private Element Fresh(Element e) =>
+        e == null || e.Address == 0 ? null : Try<Element>(() => Game.GetObject<Element>(e.Address), null);
     private long _nextSkillsBarSearchMs;
 
     // ---- Binding mode: the slot you move to ----
@@ -277,16 +292,32 @@ public partial class PoE1AccessCore
     private void PollBindingSlots(long now)
     {
         var mem = Mem;
-        Element bar = _skillsBar;
+        Element bar = Fresh(_skillsBar);
         if (bar == null) return;
-        Element container = ChildNamed(bar, "skills_container", 3);
+        Element main = ChildNamed(bar, "main", 1);
+        Element container = ChildNamed(main ?? bar, "skills_container", 2);
+        Element indicators = ChildNamed(main ?? bar, "indicator_container", 2);
         var slots = Try<IList<Element>>(() => container?.Children, null);
         if (slots == null) return;
+        var marks = Try<IList<Element>>(() => indicators?.Children, null) ?? new List<Element>();
+        // The selected slot pulses for a moment (a byte at +0x128 set to 1), on the slot itself,
+        // one of its pictures, or its twin in the indicator row.
+        bool Pulsing(Element e, int depth)
+        {
+            if (e == null || e.Address == 0) return false;
+            if (Try(() => mem.Read<byte>(e.Address + 0x128 + UiText.Shift), (byte)0) == 1) return true;
+            if (depth <= 0) return false;
+            var kids = Try<IList<Element>>(() => e.Children, null);
+            if (kids == null || kids.Count > 20) return false;
+            foreach (Element k in kids) if (Pulsing(k, depth - 1)) return true;
+            return false;
+        }
         foreach (Element slot in slots)
         {
             string name = UiText.Name(mem, slot);
             if (!name.StartsWith("skill") || name == "skills_container") continue;
-            if (Try(() => mem.Read<byte>(slot.Address + 0x128 + UiText.Shift), (byte)0) != 1) continue;
+            Element twin = marks.FirstOrDefault(m => UiText.Name(mem, m) == name);
+            if (!Pulsing(slot, 4) && !Pulsing(twin, 4)) continue;
             if (name == _lastSlotSaid && now - _slotSaidMs < 1500) continue;
             _lastSlotSaid = name;
             _slotSaidMs = now;

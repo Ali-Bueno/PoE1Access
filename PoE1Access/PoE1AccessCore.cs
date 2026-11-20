@@ -417,7 +417,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;
                 _nav.AnnounceTarget = Settings.AnnounceTarget.Value;
             }
-            Guard("navigation", () => _nav?.Tick(now, uiBusy, Settings.Radar.Value, ItemName));
+            // Skill binding mode (opened by R3, so also by the guide chord) keeps the guide's
+            // directions quiet like a window does, so they do not talk over the skills.
+            Guard("navigation", () => _nav?.Tick(now, uiBusy || _bindingMode, Settings.Radar.Value, ItemName));
         }
         catch (Exception ex)
         {
@@ -542,6 +544,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 if (!uiBusy) Guard("scan", () => _nav.Scan(0, 1, now, ItemName));
                 break;
             case ControllerInput.Command.Guide:
+                _guideCommandMs = now;
                 if (!uiBusy) Guard("guide", () => _nav.ToggleGuide(ItemName));
                 break;
         }

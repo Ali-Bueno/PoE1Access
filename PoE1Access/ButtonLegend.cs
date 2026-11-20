@@ -29,14 +29,22 @@ public partial class PoE1AccessCore
         ["c2,99"] = "D-pad up",
         ["184,c0"] = "L3",
         ["c2,f9"] = "R3",
-        ["184,120"] = "Right bumper",
         ["0,f9"] = "Start",
-        // Not named by the game's pictures; the "Navigate Skills" prompt of skill binding, next
-        // to the right stick button's picture on the sheet: the left stick.
-        ["61,f9"] = "Left stick",
+        // Checked 20 Nov 2026 against the prompts on screen (PS5 pictures): "L1 Current League
+        // Info" on the login screen, "R Navigate Skills" in skill binding, "L Switch League" and
+        // "R1 Toggle Solo Self-Found" on the league screen, "L Switch Waypoint" and "R Browse
+        // Primary Areas" on the world map.
+        ["184,120"] = "Left bumper",
+        ["0,159"] = "Right bumper",
+        ["123,c0"] = "Left stick",
+        ["61,f9"] = "Right stick",
+        // "Close" in the character windows, which the View button (Share on PlayStation) opens
+        // and closes; its picture is the sheet's first box.
+        ["0,0"] = "View button",
     };
 
     private List<Element> _legends = new List<Element>();
+    private readonly HashSet<string> _unnamedPictures = new HashSet<string>();
     private long _legendRoot;
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
@@ -166,10 +174,16 @@ public partial class PoE1AccessCore
                 var buttons = new List<string>();
                 var shown = parts.Where(pt => Try(() => UiText.VisibleLocal(mem, pt), false)).ToList();
                 Element labelPart = shown.FirstOrDefault(pt => { var t = new List<string>(); CollectTextAll(pt, 3, t); return t.Count > 0; });
-                foreach (Element part in shown)
+                // The label part's copy (+0x230) names the button; the picture parts' own picture
+                // is used only when it names none, since after leaving the game it keeps the
+                // picture of an earlier use (found 20 Nov 2026: R3 for the login screen's "L1
+                // Current League Info", while the label part still had L1).
+                foreach (Element part in new[] { labelPart }.Concat(shown.Where(pt => pt != labelPart)))
                 {
+                    if (part == null || (part != labelPart && buttons.Count > 0)) continue;
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
                     if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
+                    else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
                 string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;

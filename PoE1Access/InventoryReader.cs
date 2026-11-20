@@ -395,7 +395,7 @@ public partial class PoE1AccessCore
             }
             string gemName = CleanText(Try(() => GetComp<BaseComp>(item)?.Name, "") ?? "");
             string supportText = SupportDescription(effect.Address, gemName);
-            return supportText.Length > 0 ? T($"Support gem. {supportText}", $"Gema de apoyo. {supportText}") : T("Support gem", "Gema de apoyo");
+            return supportText.Length > 0 ? T($"Support gem. {supportText}", $"Gema de asistencia. {supportText}") : T("Support gem", "Gema de asistencia");
         }
 
         string path = Try(() => item.Path, "") ?? "";
@@ -479,23 +479,7 @@ public partial class PoE1AccessCore
             string n = key.Substring(6);
             return T($"Flask {n}", $"Frasco {n}");
         }
-        return key switch
-        {
-            "Helmet" => T("Helmet", "Casco"),
-            "Amulet" => T("Amulet", "Amuleto"),
-            "Body armour" => T("Body armour", "Armadura corporal"),
-            "Off hand" => T("Off hand", "Mano secundaria"),
-            "Main hand" => T("Main hand", "Mano principal"),
-            "Swap off hand" => T("Swap off hand", "Mano secundaria alternativa"),
-            "Swap main hand" => T("Swap main hand", "Mano principal alternativa"),
-            "Ring 1" => T("Ring 1", "Anillo 1"),
-            "Ring 2" => T("Ring 2", "Anillo 2"),
-            "Gloves" => T("Gloves", "Guantes"),
-            "Belt" => T("Belt", "Cinturón"),
-            "Boots" => T("Boots", "Botas"),
-            "Flask" => T("Flask", "Frasco"),
-            _ => key,
-        };
+        return EquipmentSlotName(key);
     }
 
     /// <summary>The equipment slot the element is (or lies in), or null: walks up to the slot

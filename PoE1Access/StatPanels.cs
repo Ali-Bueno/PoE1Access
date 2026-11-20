@@ -142,7 +142,7 @@ public partial class PoE1AccessCore
             if (supports.Count > 0)
             {
                 string supportList = string.Join(", ", supports);
-                Add(T($"Supported by {supportList}", $"Apoyada por {supportList}"));
+                Add(T($"Supported by {supportList}", $"Con asistencia de {supportList}"));
             }
         }
         return lines;

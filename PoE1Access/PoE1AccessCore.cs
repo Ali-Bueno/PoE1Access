@@ -2198,16 +2198,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         string startId = starts.FirstOrDefault(s => id.StartsWith(s, StringComparison.OrdinalIgnoreCase) && id.Length > s.Length && char.IsDigit(id[s.Length]));
         if (startId != null)
         {
-            name = startId switch
+            // The game's own class name, in the client's language (ClassScreen.cs), by class number.
+            name = ClassName(startId switch
             {
-                "marauder" => T("Marauder", "Merodeador"),
-                "witch" => T("Witch", "Bruja"),
-                "ranger" => T("Ranger", "Cazadora"),
-                "duelist" => T("Duelist", "Duelista"),
-                "templar" => T("Templar", "Templario"),
-                "six" => T("Shadow", "Sombra"),
-                _ => T("Scion", "Descendiente"),
-            };
+                "marauder" => 1, "witch" => 3, "ranger" => 2, "duelist" => 4, "templar" => 5, "six" => 6, _ => 0,
+            });
             kind = T("class start", "inicio de clase");
             status = "";
         }

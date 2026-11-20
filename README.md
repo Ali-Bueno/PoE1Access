@@ -36,7 +36,8 @@ The full player guide, with every control and setting, is [Launcher/README.txt](
 The mod only reads the controller. It cannot stop the game from seeing a press, so its
 controls use L3 (clicking the left stick) and the right stick while L3 is held, which the game
 leaves free in play. Every keyboard key can be changed in Exile API's menu (F12), under
-PoE1Access.
+PoE1Access. The launcher keeps Exile API's window hidden; start `PoE1Access.exe --show-exileapi` to use
+that menu.
 
 ### Mod controls in play
 

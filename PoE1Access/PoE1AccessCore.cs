@@ -507,7 +507,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (uiBusy && cmd == ControllerInput.Command.Guide) cmd = ControllerInput.Command.Hold;
         if (uiBusy && cmd == ControllerInput.Command.ScanRight && _tipLines.Count > 0) cmd = ControllerInput.Command.LongHold;
 
-        bool inventoryOpen = _openPanels != null && _openPanels.Contains("Inventory");
+        bool inventoryOpen = _openPanels != null && _openPanels.Any(t => IsGameWord(t, InventoryTitle));
         switch (cmd)
         {
             case ControllerInput.Command.Tap:
@@ -595,7 +595,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         {
             string d = CleanText(Try(() => m.DisplayName, "") ?? "");
             if (d.Length == 0) continue;   // implicit mods carry no name
-            if (d.StartsWith("of ", StringComparison.OrdinalIgnoreCase)) { if (suf.Length == 0) suf = d; }
+            // An English suffix's name starts with "of"; in other client languages the mod's
+            // record says whether it is a prefix or a suffix.
+            var affix = Try(() => (ModType?)m.ModRecord?.AffixType, null);
+            bool suffix = d.StartsWith("of ", StringComparison.OrdinalIgnoreCase) || affix == ModType.Suffix;
+            if (suffix) { if (suf.Length == 0) suf = d; }
             else if (pre.Length == 0) pre = d;
         }
         return string.Join(" ", new[] { pre, baseName, suf }.Where(x => x.Length > 0));
@@ -1292,12 +1296,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         if (_charListPendingMs != 0) Guard("character list", () => AnnounceCharacterList(now));
         Guard("screen title", () => PollScreenTitle(now));
+        Guard("class outline", () => PollClassOutline(now));
 
-        // Naming a class before it is picked is not possible yet: the class screen's cursor is not
-        // stored near the creation state (searched 18 Nov 2026; IngameState.MousePosX reads 0
-        // there). Known for a later try: CreateCharacterState +0x240 is non-zero while a class is
-        // picked, and [state +0x2E0] +0x40 is the class number (0 Scion, 1 Marauder, 2 Ranger,
-        // 3 Witch, 4 Duelist, 5 Templar, 6 Shadow).
+        // The class screen's outlined Exile is read from the scene (ClassScreen.cs). Also known:
+        // CreateCharacterState +0x240 is non-zero while a class is picked, and [state +0x2E0]
+        // +0x40 is the picked class number.
         if (Settings.AnnouncePanels.Value) PollPanels(now);
         if (Settings.ReadFocus.Value) PollFocus(now);
         // The screen's button prompts (character creation, selection, login): said as they change.
@@ -1355,7 +1358,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (classScreen != _classScreenLine)
         {
             _classScreenLine = classScreen;
-            if (classScreen.Length > 0 && classScreen.IndexOf("class", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (classScreen.Length > 0 && (classScreen.IndexOf("class", StringComparison.OrdinalIgnoreCase) >= 0 || !EnglishClient))
             {
                 string hint = classScreen + " " + ClassBrowseHint;
                 PluginLog.Write("Class screen: " + hint);
@@ -1408,7 +1411,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private bool _classHintGiven;
 
     private const string ClassBrowseHint =
-        "The classes are Exiles standing in front of you. Move the cursor onto one and select it to hear its class and story. " +
+        "The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. " +
         "Nothing is created until you enter a name, so choose back to try another.";
     private const string ClassBackHint = "Choose back to try another class.";
 
@@ -1518,10 +1521,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         var visible = FindVisiblePanels();
         _visiblePanels = visible;
-        _inventoryPanel = visible.FirstOrDefault(p => p.Title == "Inventory").E;
-        _characterPanel = visible.FirstOrDefault(p => p.Title == "Character").E;
-        _skillsPanel = visible.FirstOrDefault(p => p.Title == "Skills").E;
-        _worldPanel = visible.FirstOrDefault(p => p.Title == "World").E;
+        _inventoryPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, InventoryTitle)).E;
+        _characterPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, CharacterTitle)).E;
+        _skillsPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, SkillsTitle)).E;
+        _worldPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, WorldTitle)).E;
         var titles = new HashSet<string>(visible.Select(p => p.Title), StringComparer.OrdinalIgnoreCase);
 
         // The first reading is silent, so nothing is announced at start-up.
@@ -2061,9 +2064,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         bool keystone = Try(() => mem.Read<byte>(skill.Address + 0x4A), (byte)0) == 1;
         bool notable = Try(() => mem.Read<byte>(skill.Address + 0x4B), (byte)0) == 1;
         string id = Try(() => skill.Id, "") ?? "";
+        // Masteries by their Id, which holds in every client language: "mastery_life123", or
+        // "affliction_..._mastery..." on cluster jewels (all 398 masteries, and no other node, on
+        // 20 Nov 2026).
+        bool mastery = id.StartsWith("mastery_", StringComparison.OrdinalIgnoreCase)
+            || (id.StartsWith("affliction_", StringComparison.OrdinalIgnoreCase) && id.IndexOf("mastery", StringComparison.OrdinalIgnoreCase) >= 0)
+            || name.EndsWith("Mastery", StringComparison.OrdinalIgnoreCase);
         string kind = keystone ? "keystone"
             : notable ? "notable"
-            : name.EndsWith("Mastery", StringComparison.OrdinalIgnoreCase) ? "mastery"
+            : mastery ? "mastery"
             : id.StartsWith("jewel_slot", StringComparison.OrdinalIgnoreCase) ? "jewel socket"
             : "passive";
 

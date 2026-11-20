@@ -5,6 +5,7 @@ using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.MemoryObjects;
 using BaseComp = ExileCore.PoEMemory.Components.Base;
 using SocketsComp = ExileCore.PoEMemory.Components.Sockets;
+using GemComp = ExileCore.PoEMemory.Components.SkillGem;
 
 namespace PoE1Access;
 
@@ -146,10 +147,21 @@ public partial class PoE1AccessCore
                     var named = members.Select(e => (E: e, Name: CleanText(Try(() => GetComp<BaseComp>(e)?.Name, "") ?? ""))).ToList();
                     if (!named.Any(n => n.Name == skill)) continue;
                     foreach (var n in named)
-                        if (n.Name != skill && n.Name.EndsWith("Support")) result.Add(n.Name);
+                        if (n.Name != skill && IsSupportGem(n.E, n.Name)) result.Add(n.Name);
                 }
             }
         return result.Distinct().ToList();
+    }
+
+    // A support gem by the game's data (its granted effect, or its metadata path), so it works
+    // in any client language; the English name ending in "Support" is the last resort.
+    private bool IsSupportGem(Entity gem, string name)
+    {
+        var effect = Try(() => GetComp<GemComp>(gem)?.GemEffect?.GrantedEffect, null);
+        if (effect != null) return Try(() => effect.IsSupport, false);
+        string path = Try(() => gem.Path, "") ?? "";
+        if (path.StartsWith("Metadata/Items/Gems/Support", StringComparison.OrdinalIgnoreCase)) return true;
+        return name.EndsWith("Support");
     }
 
     private int _skillsHeaderCount = 1;
@@ -262,9 +274,8 @@ public partial class PoE1AccessCore
         if (kids.Count > 1)
         {
             // A label left without a value (no cost, no souls) is skipped.
-            string[] bare = { "Cost", "Souls", "Reservation", "Cooldown", "Cast Time", "Attack Time" };
             foreach (string row in TableRows(kids[1]))
-                if (!row.Equals(skill, StringComparison.OrdinalIgnoreCase) && !bare.Contains(row)) lines.Add(row);
+                if (!row.Equals(skill, StringComparison.OrdinalIgnoreCase) && !BareSkillLabels.Any(w => IsGameWord(row, w))) lines.Add(row);
         }
         _skillsHeaderCount = lines.Count;
         // The stat table (accuracy, attacks per second, critical strike chance...).
@@ -274,7 +285,7 @@ public partial class PoE1AccessCore
             Element k = kids[i];
             if (Try(() => UiText.VisibleLocal(Mem, k), true)) lines.AddRange(TableRows(kids[i]));
         }
-        return lines.Where(l => !l.Equals("Use Alt Behaviour", StringComparison.OrdinalIgnoreCase)).Distinct().ToList();
+        return lines.Where(l => !IsGameWord(l, AltBehaviourWord)).Distinct().ToList();
     }
 
     private Element ChildNamed(Element root, string name, int depth)

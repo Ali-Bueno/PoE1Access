@@ -133,6 +133,13 @@ public partial class PoE1AccessCore
         var mem = Mem;
         var result = new List<string>();
         Element root = UiRoot();
+        // Before the game the legend is not below the screen's own root but beside it, under the
+        // root above (found 20 Nov 2026: root > [8] > [1], 61 entries, on the class screen).
+        if (_preGameState.Length > 0 && root != null && UiText.Name(mem, root) != "root")
+        {
+            Element above = UiText.ParentOf(mem, root);
+            if (above != null && above.Address != 0) root = above;
+        }
         long rootAddr = root?.Address ?? 0;
         if (rootAddr != _legendRoot) { _legends.Clear(); _legendRoot = rootAddr; _nextLegendSearchMs = 0; }
         if (_legends.Count == 0 || now >= _nextLegendSearchMs)
@@ -190,18 +197,15 @@ public partial class PoE1AccessCore
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        // In play the legend is a pool of dozens of entries; the screens before the game have a
-        // small one of their own, deeper in their tree.
         bool preGame = _preGameState.Length > 0;
         var known = new HashSet<string>((preGame ? PreGameLegendWords : LegendWords).SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
-        int minEntries = preGame ? 2 : 20, maxDepth = preGame ? 8 : 5;
         while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();
             visited++;
             var kids = Try<IList<Element>>(() => e.Children, null);
             if (kids == null || kids.Count > 500) continue;
-            if (kids.Count >= minEntries)
+            if (kids.Count >= 20)
             {
                 int hits = 0;
                 foreach (Element k in kids.Skip(Math.Max(0, kids.Count - 16)))
@@ -212,7 +216,7 @@ public partial class PoE1AccessCore
                 }
                 if (hits >= 2) { found.Add(e); continue; }
             }
-            if (d >= maxDepth) continue;
+            if (d >= 5) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
         if (preGame && found.Count != _preGameLegendCount) PluginLog.Write("Legends before the game: " + found.Count);

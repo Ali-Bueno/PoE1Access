@@ -89,7 +89,7 @@ public class PoE1AccessSettings : ISettings
     // Say life, mana and energy shield as they fall below 75, 50 and 25 percent.
     public ToggleNode AnnounceResources { get; set; } = new ToggleNode(true);
 
-    // Controller commands on L3 (tap, double tap, hold + right stick, hold + R3).
+    // Controller commands on L3 (tap, double tap, triple tap, hold + right stick).
     public ToggleNode ControllerCommands { get; set; } = new ToggleNode(true);
 
     // Keyboard scanner and guide.

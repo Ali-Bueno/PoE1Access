@@ -10,8 +10,10 @@ namespace PoE1Access;
 ///
 ///   L3 tap                 -> Tap        (where the scanner's choice is / repeat in menus)
 ///   L3 double tap          -> DoubleTap  (life, mana, energy shield)
+///   L3 triple tap          -> Guide      (guide beacon on / off)
 ///   L3 hold + right stick  -> ScanUp/Down/Left/Right (category / entry)
-///   L3 hold + R3           -> Guide      (guide beacon on / off)
+/// R3 is left to the game: it opens skill binding there, so a guide on hold L3 + R3 kept
+/// opening it too.
 /// </summary>
 internal sealed class ControllerInput
 {
@@ -42,16 +44,16 @@ internal sealed class ControllerInput
     [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetState")]
     private static extern int GetState910(int index, out XInputState state);
 
-    private const ushort L3 = 0x0040, R3 = 0x0080;
+    private const ushort L3 = 0x0040;
     private const long TapMaxMs = 350, DoubleTapGapMs = 300;
 
     private bool _useOld;
     private int _pad = -1;
     private long _nextPadSearchMs;
 
-    private bool _l3Down, _r3Down, _l3Used;
+    private bool _l3Down, _l3Used;
     private long _l3DownAtMs, _lastTapMs = -1;
-    private bool _pendingTap;
+    private int _taps;   // short presses so far, each within DoubleTapGapMs of the last
     private bool _flickArmed = true;
 
     /// <summary>While the mod's settings menu is open: right stick flicks move in it without
@@ -98,7 +100,7 @@ internal sealed class ControllerInput
         var g = st.Gamepad;
         LeftStick = Stick(g.LX, g.LY);
         RightStick = Stick(g.RX, g.RY);
-        bool l3 = (g.Buttons & L3) != 0, r3 = (g.Buttons & R3) != 0;
+        bool l3 = (g.Buttons & L3) != 0;
 
         Command cmd = Command.None;
 
@@ -132,7 +134,6 @@ internal sealed class ControllerInput
                     ? (v.Y > 0 ? Command.ScanUp : Command.ScanDown)
                     : (v.X > 0 ? Command.ScanRight : Command.ScanLeft);
             }
-            if (r3 && !_r3Down) { _l3Used = true; cmd = Command.Guide; }
 
             // Long hold fires while still held.
             if (cmd == Command.None && !_l3Used && now - _l3DownAtMs >= LongHoldMs)
@@ -151,28 +152,20 @@ internal sealed class ControllerInput
 
         if (!l3 && _l3Down && !_l3Used && now - _l3DownAtMs <= TapMaxMs)
         {
-            // A release after a short press: a tap, or the second of a double tap.
-            if (_pendingTap && now - _lastTapMs <= DoubleTapGapMs)
-            {
-                _pendingTap = false;
-                cmd = Command.DoubleTap;
-            }
-            else
-            {
-                _pendingTap = true;
-                _lastTapMs = now;
-            }
+            // A release after a short press: the first, second or third of a run of taps.
+            _taps = _taps > 0 && now - _lastTapMs <= DoubleTapGapMs ? _taps + 1 : 1;
+            _lastTapMs = now;
+            if (_taps >= 3) { _taps = 0; cmd = Command.Guide; }
         }
 
-        // A single tap fires once the double-tap window has passed.
-        if (cmd == Command.None && _pendingTap && !l3 && now - _lastTapMs > DoubleTapGapMs)
+        // One or two taps count once the gap for another has passed.
+        if (cmd == Command.None && _taps > 0 && !l3 && now - _lastTapMs > DoubleTapGapMs)
         {
-            _pendingTap = false;
-            cmd = Command.Tap;
+            cmd = _taps == 1 ? Command.Tap : Command.DoubleTap;
+            _taps = 0;
         }
 
         _l3Down = l3;
-        _r3Down = r3;
         return cmd;
     }
 

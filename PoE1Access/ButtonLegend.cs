@@ -74,8 +74,7 @@ public partial class PoE1AccessCore
         {
             _bindingMode = true;
             _bindingDetailsSig = "";
-            // The guide chord (hold L3, press R3) opens it too, since the game sees the R3.
-            string why = now - _guideCommandMs < 1500 ? ", opened by the game from the guide button's R3. B closes it" : "";
+            string why = "";
             string how = _bindingHowSaid ? "" : ". Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back";
             _bindingHowSaid = true;
             Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);

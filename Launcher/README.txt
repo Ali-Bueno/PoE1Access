@@ -72,14 +72,16 @@ In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
 - Tap L3 / Insert: where the chosen thing is now
 - Double tap L3 / F1: level and how far you are to the next, life, mana, energy shield, area,
-  how much you have explored
+  how much you have explored, and the area's description (its size, how open it is, where you
+  are in it, its waypoint and where it leads; also said the first time you enter an area)
 - On the character sheet, hold L3 + right stick: up and down for each stat, left and right for
   each section
 - In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
   up and down for its details (description, speed, cost, cooldown, damage, linked supports)
 - World map (from a waypoint): opening it says the act and your current quest; moving the
   selection says the place and its kind ("Lioneye's Watch, Town"); tap L3 for its flavour text
-- Hold L3 + click the right stick / Delete: guide to the chosen thing on or off
+- Triple tap L3 / Delete: guide to the chosen thing on or off (R3 is left to the game, which
+  opens skill binding with it)
 - F9: repeat the last thing said
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.

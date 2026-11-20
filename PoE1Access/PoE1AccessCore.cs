@@ -418,7 +418,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;
                 _nav.AnnounceTarget = Settings.AnnounceTarget.Value;
             }
-            // Skill binding mode (opened by R3, so also by the guide chord) keeps the guide's
+            // Skill binding mode (R3) keeps the guide's
             // directions quiet like a window does, so they do not talk over the skills.
             Guard("navigation", () => _nav?.Tick(now, uiBusy || _bindingMode, Settings.Radar.Value, ItemName));
         }

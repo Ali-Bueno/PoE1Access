@@ -155,8 +155,11 @@ public partial class PoE1AccessCore
             lines.AddRange(SocketLines(sockets));
         }
 
+        var gemDetails = gem != null ? GemDetails(gem) : (new List<string>(), new List<string>());
+        lines.AddRange(gemDetails.Item1);
         string description = ItemDescription(item, gem);
         if (description.Length > 0) lines.Add(description);
+        lines.AddRange(gemDetails.Item2);
         string charges = FlaskChargesText(item);
         if (charges.Length > 0) lines.Add(charges);
 

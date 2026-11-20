@@ -19,6 +19,8 @@ public partial class PoE1AccessCore
     private long _dialogueSelected;
     private List<string> _dialogueOptions = new List<string>();
     private readonly Dictionary<long, int> _rowMinKids = new Dictionary<long, int>();
+    private readonly Dictionary<long, int> _rowLastKids = new Dictionary<long, int>();
+    private bool _dialogueAnnounced;
 
     private void PollDialogue(long now)
     {
@@ -32,6 +34,8 @@ public partial class PoE1AccessCore
             _dialogueSelected = 0;
             _dialogueOptions.Clear();
             _rowMinKids.Clear();
+            _rowLastKids.Clear();
+            _dialogueAnnounced = false;
         }
         if (_dialogueFrame == null)
         {
@@ -43,6 +47,11 @@ public partial class PoE1AccessCore
             if (_dialogueFrame == null) return;
         }
 
+        // Read afresh: ExileApi caches an element's children and refreshes them only when it
+        // ticks, so a kept element's counts went stale and the selection was missed.
+        _dialogueFrame = Fresh(_dialogueFrame);
+        if (_dialogueFrame == null) return;
+
         // A dialogue window can hold several option lists (an NPC's talk topics above, then
         // Purchase, Gamble, Goodbye...): every shown list, in order, counts as one list of options.
         var frames = DialogueFrames();
@@ -51,22 +60,33 @@ public partial class PoE1AccessCore
         for (int f = 0; f < frames.Count; f++)
             foreach (var (row, text) in OptionRows(frames[f])) rows.Add((row, text, f));
         if (rows.Count < 2) return;
-        bool opened = _dialogueOptions.Count == 0;
+        bool opened = !_dialogueAnnounced;
+        _dialogueAnnounced = true;
         _dialogueOptions = rows.Select(r => r.Text).ToList();
         if (opened) Say(rows.Count + " options. Move to hear each", false);
 
         // The game adds its highlight to the selected option as one more child. Options differ in
-        // their own children (some carry an 18x18 icon), so each option is compared with itself:
-        // the fewest children it has been seen with. The one now above its own count is selected.
+        // their own children (some carry an 18x18 icon), and one can keep an extra child after the
+        // selection has left it (Introduction, after coming back from a topic; seen 20 Nov 2026),
+        // so the selected option is the one whose count has just gone up; before any move, the one
+        // above the fewest children it has been seen with, if only one is.
         var kids = rows.Select(r => Try(() => (int)r.Row.ChildCount, 0)).ToList();
+        int idx = -1;
+        var rose = new List<int>();
         for (int i = 0; i < rows.Count; i++)
         {
             long a = rows[i].Row.Address;
+            if (_rowLastKids.TryGetValue(a, out int last) && kids[i] > last) rose.Add(i);
+            _rowLastKids[a] = kids[i];
             _rowMinKids[a] = _rowMinKids.TryGetValue(a, out int m) ? Math.Min(m, kids[i]) : kids[i];
         }
-        var above = Enumerable.Range(0, rows.Count).Where(i => kids[i] > _rowMinKids[rows[i].Row.Address]).ToList();
-        if (above.Count != 1) return;   // nothing known to be selected yet, or no clear choice
-        int idx = above[0];
+        if (rose.Count == 1) idx = rose[0];
+        else if (_dialogueSelected == 0)
+        {
+            var above = Enumerable.Range(0, rows.Count).Where(i => kids[i] > _rowMinKids[rows[i].Row.Address]).ToList();
+            if (above.Count == 1) idx = above[0];
+        }
+        if (idx < 0) return;   // nothing new selected
 
         long sel = rows[idx].Row.Address;
         if (sel == _dialogueSelected) return;
@@ -143,7 +163,24 @@ public partial class PoE1AccessCore
         return null;
     }
 
-    /// <summary>True when the text is the dialogue's whole option list read as one.</summary>
-    private bool IsWholeOptionList(string text) =>
-        _dialogueFrame != null && _dialogueOptions.Count >= 2 && _dialogueOptions.Count(o => text.Contains(o)) >= 2;
+    /// <summary>True when the text is dialogue options read together (or one option the
+    /// dialogue reader says itself). The dialogue window is looked for at once if it is not
+    /// known yet, so the first group is not read as one either.</summary>
+    private bool IsWholeOptionList(string text)
+    {
+        if (_dialogueFrame == null)
+        {
+            _dialogueFrame = Try(FindDialogueFrame, null);
+            if (_dialogueFrame == null) return false;
+            _nextDialogueSearchMs = 0;
+            var options = new List<string>();
+            foreach (Element f in DialogueFrames())
+                options.AddRange(OptionRows(f).Select(r => r.Text));
+            if (options.Count >= 2) _dialogueOptions = options;
+            else return false;
+        }
+        if (_dialogueOptions.Count < 2) return false;
+        if (_dialogueOptions.Any(o => string.Equals(o, text, StringComparison.OrdinalIgnoreCase))) return true;
+        return _dialogueOptions.Count(o => text.Contains(o)) >= 2;
+    }
 }

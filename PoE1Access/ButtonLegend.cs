@@ -31,6 +31,9 @@ public partial class PoE1AccessCore
         ["c2,f9"] = "R3",
         ["184,120"] = "Right bumper",
         ["0,f9"] = "Start",
+        // Not named by the game's pictures; the "Navigate Skills" prompt of skill binding, next
+        // to the right stick button's picture on the sheet: the left stick.
+        ["61,f9"] = "Left stick",
     };
 
     private List<Element> _legends = new List<Element>();
@@ -38,7 +41,7 @@ public partial class PoE1AccessCore
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
-    private bool _bindingMode, _legendWasBusy;
+    private bool _bindingMode, _legendWasBusy, _bindingHowSaid;
     private long _guideCommandMs = -100000, _nextBindSlotPollMs;
     private long _bindingLastSeenMs;
     private string _bindingSlot = "";
@@ -70,8 +73,10 @@ public partial class PoE1AccessCore
             _bindingDetailsSig = "";
             // The guide chord (hold L3, press R3) opens it too, since the game sees the R3.
             string why = now - _guideCommandMs < 1500 ? ", opened by the game from the guide button's R3. B closes it" : "";
-            Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : ""), true);
-            _legendSig = string.Join("|", entries);
+            string how = _bindingHowSaid ? "" : ". Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back";
+            _bindingHowSaid = true;
+            Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);
+            _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
         if (!binding && _bindingMode && now - _bindingLastSeenMs > 1200)
@@ -79,7 +84,7 @@ public partial class PoE1AccessCore
             _bindingMode = false;
             _bindingSlot = "";
             Say("Skill binding closed", true);
-            _legendSig = string.Join("|", entries);
+            _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
         binding = _bindingMode;
@@ -96,7 +101,7 @@ public partial class PoE1AccessCore
 
         // The legend is said as it changes in windows and menus (in play it changes with
         // whatever you stand by, which would be chatter; hold L3 hears it there).
-        string sig = string.Join("|", entries);
+        string sig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
         // A window or menu becoming active says its controls even when they were already on
         // screen (the mod started with the window open, or noticed it late).
         if (uiBusy && !_legendWasBusy) _legendSig = "";
@@ -140,23 +145,18 @@ public partial class PoE1AccessCore
                 CollectText(entry, 3, labels);
                 string label = string.Join(" ", labels.Where(l => l != "+"));
                 if (label.Length == 0) continue;
-                // The button picture: the one held by the part with the label (in the play legend
-                // both parts hold the same one; in the inventory's, the other part holds an
-                // unrelated picture), else the parts' own.
+                // The button picture. An entry is a picture part and a label part, both reused
+                // from a pool: the picture part's main picture (+0x510) is the button, and the
+                // label part keeps the same one second (+0x230) while its main picture is left
+                // over from an earlier use (found 20 Nov 2026: "Back" showed B on the picture part
+                // and +0x230, X as the label part's leftover).
                 var buttons = new List<string>();
-                var withText = new List<Element>();
-                var without = new List<Element>();
-                foreach (Element part in parts)
+                var shown = parts.Where(pt => Try(() => UiText.VisibleLocal(mem, pt), false)).ToList();
+                Element labelPart = shown.FirstOrDefault(pt => { var t = new List<string>(); CollectTextAll(pt, 3, t); return t.Count > 0; });
+                foreach (Element part in shown)
                 {
-                    if (!Try(() => UiText.VisibleLocal(mem, part), false)) continue;
-                    var t = new List<string>();
-                    CollectTextAll(part, 3, t);
-                    (t.Count > 0 ? withText : without).Add(part);
-                }
-                foreach (Element part in withText.Count > 0 ? withText : without)
-                {
-                    string box = IconBox(part);
-                    if (box.Length > 0) buttons.Add(LegendButtons.TryGetValue(box, out string b) ? b : "");
+                    string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
+                    if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
                 string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;
@@ -211,10 +211,12 @@ public partial class PoE1AccessCore
     }
 
     // "0,39" for a picture cut from the controller icon sheet at 0,39 (its top-left corner).
-    private string IconBox(Element e)
+    private string IconBox(Element e) => IconBox(e, 0x510, 0x560, 0x230, 0x280);
+
+    private string IconBox(Element e, params int[] offsets)
     {
         var mem = Mem;
-        foreach (int off in new[] { 0x510, 0x560, 0x230, 0x280 })
+        foreach (int off in offsets)
         {
             try
             {

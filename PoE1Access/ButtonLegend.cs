@@ -141,6 +141,13 @@ public partial class PoE1AccessCore
         var mem = Mem;
         var result = new List<string>();
         Element root = UiRoot();
+        // Before the game the legend is not below the screen's own root but beside it, under the
+        // root above (found 20 Nov 2026: root > [8] > [1], 61 entries, on the class screen).
+        if (_preGameState.Length > 0 && root != null && UiText.Name(mem, root) != "root")
+        {
+            Element above = UiText.ParentOf(mem, root);
+            if (above != null && above.Address != 0) root = above;
+        }
         long rootAddr = root?.Address ?? 0;
         if (rootAddr != _legendRoot) { _legends.Clear(); _legendRoot = rootAddr; _nextLegendSearchMs = 0; }
         if (_legends.Count == 0 || now >= _nextLegendSearchMs)
@@ -195,6 +202,8 @@ public partial class PoE1AccessCore
 
     // The legends: elements holding prompt entries (dozens of them, mostly hidden, with labels
     // such as "Pick Up", "Move", "Close", "Navigate", in the client's language: LegendWords).
+    private int _preGameLegendCount = -1;
+
     private List<Element> FindLegends(Element root)
     {
         var found = new List<Element>();
@@ -202,7 +211,8 @@ public partial class PoE1AccessCore
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        var known = new HashSet<string>(LegendWords.SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
+        bool preGame = _preGameState.Length > 0;
+        var known = new HashSet<string>((preGame ? PreGameLegendWords : LegendWords).SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
         while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();
@@ -223,6 +233,8 @@ public partial class PoE1AccessCore
             if (d >= 5) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
+        if (preGame && found.Count != _preGameLegendCount) PluginLog.Write("Legends before the game: " + found.Count);
+        _preGameLegendCount = preGame ? found.Count : -1;
         return found;
     }
 

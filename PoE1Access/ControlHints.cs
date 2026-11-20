@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore.PoEMemory;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -23,14 +24,21 @@ public partial class PoE1AccessCore
     private string _lastHintsPanels = "";
 
     // The mod's own controls, by window title in English (PanelKey finds it in any language).
-    private static readonly Dictionary<string, string> ModHelp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    // The keys are English; the texts are made when spoken, in the mod's language.
+    private static readonly Dictionary<string, Func<string>> ModHelp = new Dictionary<string, Func<string>>(StringComparer.OrdinalIgnoreCase)
     {
-        ["Inventory"] = "Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item. Hold L3 longer: the whole bag, or every equipment slot",
-        ["Stash"] = "Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item",
-        ["Passives"] = "Each node says its links. Tap L3: next line. Double tap: previous line. Hold L3: everything about the node",
-        ["Character"] = "Hold L3 and move the right stick: up and down for each stat, left and right for each section",
-        ["Skills"] = "Hold L3 and move the right stick: left and right for each skill, up and down for its details",
-        ["World"] = "Move to hear each place. Tap L3 for its description",
+        ["Inventory"] = () => T("Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item. Hold L3 longer: the whole bag, or every equipment slot",
+            "Pulsa L3: siguiente línea del objeto seleccionado. Doble pulsación: línea anterior. Mantén L3: el objeto completo. Mantén L3 más tiempo: toda la bolsa, o todas las ranuras de equipamiento"),
+        ["Stash"] = () => T("Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item",
+            "Pulsa L3: siguiente línea del objeto seleccionado. Doble pulsación: línea anterior. Mantén L3: el objeto completo"),
+        ["Passives"] = () => T("Each node says its links. Tap L3: next line. Double tap: previous line. Hold L3: everything about the node",
+            "Cada nodo dice sus enlaces. Pulsa L3: siguiente línea. Doble pulsación: línea anterior. Mantén L3: todo sobre el nodo"),
+        ["Character"] = () => T("Hold L3 and move the right stick: up and down for each stat, left and right for each section",
+            "Mantén L3 y mueve el stick derecho: arriba y abajo para cada estadística, izquierda y derecha para cada sección"),
+        ["Skills"] = () => T("Hold L3 and move the right stick: left and right for each skill, up and down for its details",
+            "Mantén L3 y mueve el stick derecho: izquierda y derecha para cada habilidad, arriba y abajo para sus detalles"),
+        ["World"] = () => T("Move to hear each place. Tap L3 for its description",
+            "Muévete para oír cada lugar. Pulsa L3 para su descripción"),
     };
 
     // A window's English title, from its title in the client's language ("Inventario" is
@@ -65,10 +73,10 @@ public partial class PoE1AccessCore
             _hintsSig = sig;
             _lastHints = hints;
             var say = new List<string>();
-            if (hints.Count > 0) say.Add("Controls: " + string.Join(". ", hints));
+            if (hints.Count > 0) { string hintList = string.Join(". ", hints); say.Add(T($"Controls: {hintList}", $"Controles: {hintList}")); }
             foreach (var (title, _, _) in panels)
-                if (ModHelp.TryGetValue(PanelKey(title), out string help) && _modHelpSaid.Add(PanelKey(title)))
-                    say.Add(title + ": " + help);
+                if (ModHelp.TryGetValue(PanelKey(title), out Func<string> help) && _modHelpSaid.Add(PanelKey(title)))
+                    say.Add(title + ": " + help());
             if (say.Count > 0) Say(JoinSpeech(say), false);
             return;
         }
@@ -78,7 +86,7 @@ public partial class PoE1AccessCore
             var added = hints.Except(_lastHints).ToList();
             _hintsSig = sig;
             _lastHints = hints;
-            if (added.Count > 0) Say("Controls: " + string.Join(". ", added), false);
+            if (added.Count > 0) { string addedList = string.Join(". ", added); Say(T($"Controls: {addedList}", $"Controles: {addedList}"), false); }
         }
     }
 
@@ -88,12 +96,12 @@ public partial class PoE1AccessCore
         var panels = _visiblePanels ?? new List<(string Title, Element E, string Path)>();
         var say = new List<string>();
         // The game's button legend for the current screen (in play too).
-        if (_legendNow.Count > 0) say.Add("Controls: " + string.Join(". ", _legendNow));
+        if (_legendNow.Count > 0) { string legendList = string.Join(". ", _legendNow); say.Add(T($"Controls: {legendList}", $"Controles: {legendList}")); }
         if (panels.Count == 0) { if (say.Count == 0) return false; Say(JoinSpeech(say), true); return true; }
         var hints = GameHints(panels);
-        if (hints.Count > 0) say.Add("Controls: " + string.Join(". ", hints));
+        if (hints.Count > 0) { string hintList = string.Join(". ", hints); say.Add(T($"Controls: {hintList}", $"Controles: {hintList}")); }
         foreach (var (title, _, _) in panels)
-            if (ModHelp.TryGetValue(PanelKey(title), out string help)) say.Add(title + ": " + help);
+            if (ModHelp.TryGetValue(PanelKey(title), out Func<string> help)) say.Add(title + ": " + help());
         if (say.Count == 0) return false;
         Say(JoinSpeech(say), true);
         return true;
@@ -112,7 +120,8 @@ public partial class PoE1AccessCore
         if (layout != null) CollectText(layout, 3, tabs);
         tabs = tabs.Distinct().ToList();
         if (tabs.Count < 2) return "";
-        return "Left and right bumper: switch between " + string.Join(", ", tabs);
+        string tabList = string.Join(", ", tabs);
+        return T($"Left and right bumper: switch between {tabList}", $"LB y RB: cambia entre {tabList}");
     }
 
     // Shown texts in the open windows that name a controller button.

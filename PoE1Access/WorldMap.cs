@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore.PoEMemory;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -64,8 +65,8 @@ public partial class PoE1AccessCore
         {
             var say = new List<string>();
             if (actText.Count > 0) say.Add(string.Join(", ", actText.Distinct()));
-            if (quest.Count > 0) say.Add("Quest: " + string.Join(". ", quest));
-            if (placeText.Count > 0) say.Add("Selected: " + string.Join(", ", placeText.Take(2)));
+            if (quest.Count > 0) { string questText = string.Join(". ", quest); say.Add(T($"Quest: {questText}", $"Misión: {questText}")); }
+            if (placeText.Count > 0) { string selText = string.Join(", ", placeText.Take(2)); say.Add(T($"Selected: {selText}", $"Seleccionado: {selText}")); }
             if (say.Count > 0) Say(JoinSpeech(say), false);
             _worldPlaceSig = placeSig;
             SetWorldTip(placeText);

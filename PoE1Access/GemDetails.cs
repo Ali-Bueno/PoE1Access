@@ -4,6 +4,7 @@ using System.Linq;
 using ExileCore.PoEMemory;
 using ExileCore.Shared.Interfaces;
 using GemComp = ExileCore.PoEMemory.Components.SkillGem;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -113,18 +114,22 @@ public partial class PoE1AccessCore
                         string type = AsciiAt(mem.Read<long>(mem.Read<long>(types + i * 16)));
                         if (amount > 0 && amount < 100000 && type != null) costs.Add(amount + " " + type);
                     }
-                    if (costs.Count > 0) before.Add("Cost: " + string.Join(", ", costs));
+                    if (costs.Count > 0)
+                    {
+                        string costList = string.Join(", ", costs);
+                        before.Add(T($"Cost: {costList}", $"Coste: {costList}"));
+                    }
                 }
                 return 0;
             }, 0);
             int cooldown = Try(() => perLevel.Cooldown, 0);
-            if (cooldown > 0 && cooldown < 600000) before.Add("Cooldown: " + Seconds(cooldown));
+            if (cooldown > 0 && cooldown < 600000) before.Add(T($"Cooldown: {Seconds(cooldown)}", $"Reutilización: {Seconds(cooldown)}"));
         }
         var types2 = Try(() => effect.ActiveSkill?.SkillTypes, null);
         bool spell = types2 != null && types2.Any(t => t.ToString() == "Spell");
         bool attack = types2 != null && types2.Any(t => t.ToString() == "Attack");
         int cast = Try(() => effect.CastTime, 0);
-        if (spell && !attack && cast > 0 && cast < 60000) before.Add("Cast time: " + Seconds(cast));
+        if (spell && !attack && cast > 0 && cast < 60000) before.Add(T($"Cast time: {Seconds(cast)}", $"Tiempo de lanzamiento: {Seconds(cast)}"));
 
         // Stats: the gem's own skill, then a skill it adds (the Prismatic Burst a support
         // triggers, a Vaal gem's Vaal skill), its lines named after it.
@@ -144,7 +149,7 @@ public partial class PoE1AccessCore
 
         long toNext = Try(() => (long)gem.ExperienceToNextLevel, 0L);
         int max = Try(() => gem.MaxLevel, 0);
-        if (toNext > 0 && (max == 0 || level < max)) after.Add("Experience to next level: " + toNext);
+        if (toNext > 0 && (max == 0 || level < max)) after.Add(T($"Experience to next level: {toNext}", $"Experiencia para el siguiente nivel: {toNext}"));
         return (before, after);
     }
 
@@ -178,11 +183,14 @@ public partial class PoE1AccessCore
             int spellCrit = Try(() => mem.Read<int>(row + 0x18), 0), attackCrit = Try(() => mem.Read<int>(row + 0x1C), 0);
             int multiplier = Try(() => mem.Read<int>(row + 0x20), 0), effectiveness = Try(() => mem.Read<int>(row + 0x24), 0);
             string Pct(int v) => (100 + v / 100.0).ToString("0.#") + "%";
-            if (attack && multiplier > -10000 && multiplier < 100000) headLines.Add("Attack damage: " + Pct(multiplier) + " of base");
+            if (attack && multiplier > -10000 && multiplier < 100000) { string pm = Pct(multiplier); headLines.Add(T($"Attack damage: {pm} of base", $"Daño de ataque: {pm} del base")); }
             int crit = spell ? spellCrit : attackCrit;
-            if (crit > 0 && crit <= 10000) headLines.Add("Critical strike chance: " + (crit / 100.0).ToString("0.##") + "%");
+            if (crit > 0 && crit <= 10000) { string cs = (crit / 100.0).ToString("0.##"); headLines.Add(T($"Critical strike chance: {cs}%", $"Probabilidad de golpe crítico: {cs}%")); }
             if (!attack && (spell || effectiveness != 0) && effectiveness > -10000 && effectiveness < 100000)
-                headLines.Add("Effectiveness of added damage: " + Pct(effectiveness));
+            {
+                string pe = Pct(effectiveness);
+                headLines.Add(T($"Effectiveness of added damage: {pe}", $"Efectividad del daño añadido: {pe}"));
+            }
             stats.AddRange(ListPairs(row, 0x68, 0x28));
             stats.AddRange(ListPairs(row, 0x88, 0x38));
             foreach (string flag in StatList(row, 0x58)) stats.Add((flag, 1));
@@ -204,7 +212,9 @@ public partial class PoE1AccessCore
                     if (value == 0 && max.Value == 0) continue;
                     string what = m.Groups[2].Value;
                     if (what.StartsWith("base_")) what = what.Substring(5);
-                    lines.Add("Deals " + value + " to " + max.Value + " " + what.Replace("_", " "));
+                    string whatWords = what.Replace("_", " ");
+                    int maxValue = max.Value;
+                    lines.Add(T($"Deals {value} to {maxValue} {whatWords}", $"Inflige de {value} a {maxValue} de {whatWords}"));
                     continue;
                 }
             }
@@ -246,7 +256,11 @@ public partial class PoE1AccessCore
         return keys;
     }
 
-    private static string Seconds(int ms) => (ms / 1000.0).ToString("0.##") + " seconds";
+    private static string Seconds(int ms)
+    {
+        string s = (ms / 1000.0).ToString("0.##");
+        return T($"{s} seconds", $"{s} segundos");
+    }
 
     // Stats in a data row: a list of Stats rows (16 bytes each) followed somewhere after it by a
     // list of as many ints, its values ("base_number_of_projectiles" with 4).
@@ -303,16 +317,33 @@ public partial class PoE1AccessCore
     {
         string Words(string s) => s.Replace("_", " ").Replace("  ", " ").Trim();
         var m = System.Text.RegularExpressions.Regex.Match(key, @"^(?:skill_|base_)?(\w+?)_damage_%_to_convert_to_(\w+)$");
-        if (m.Success) return value + "% of " + Words(m.Groups[1].Value) + " damage converted to " + Words(m.Groups[2].Value) + " damage";
+        if (m.Success)
+        {
+            string src = Words(m.Groups[1].Value), dst = Words(m.Groups[2].Value);
+            return T($"{value}% of {src} damage converted to {dst} damage", $"{value}% del daño de {src} convertido en daño de {dst}");
+        }
         m = System.Text.RegularExpressions.Regex.Match(key, @"^(?:skill_|base_)?(\w+?)_damage_%_to_add_as_(\w+)$");
-        if (m.Success) return "Gain " + value + "% of " + Words(m.Groups[1].Value) + " damage as extra " + Words(m.Groups[2].Value) + " damage";
+        if (m.Success)
+        {
+            string src = Words(m.Groups[1].Value), dst = Words(m.Groups[2].Value);
+            return T($"Gain {value}% of {src} damage as extra {dst} damage", $"Ganas {value}% del daño de {src} como daño adicional de {dst}");
+        }
         if (key == "base_number_of_projectiles" || key == "number_of_additional_projectiles")
-            return key.StartsWith("base_") ? (value == 1 ? "Fires 1 projectile" : "Fires " + value + " projectiles")
-                                           : value + " additional projectile" + (value == 1 ? "" : "s");
+            return key.StartsWith("base_")
+                ? (value == 1 ? T("Fires 1 projectile", "Dispara 1 proyectil") : T($"Fires {value} projectiles", $"Dispara {value} proyectiles"))
+                : (value == 1 ? T("1 additional projectile", "1 proyectil adicional") : T($"{value} additional projectiles", $"{value} proyectiles adicionales"));
         m = System.Text.RegularExpressions.Regex.Match(key, @"^(\w+?)_%_chance$");
-        if (m.Success) return value + "% chance to " + Words(m.Groups[1].Value);
+        if (m.Success)
+        {
+            string what = Words(m.Groups[1].Value);
+            return T($"{value}% chance to {what}", $"{value}% de probabilidad de {what}");
+        }
         m = System.Text.RegularExpressions.Regex.Match(key, @"^(\w+?)_%_chance_(\w+)$");
-        if (m.Success) return value + "% chance " + Words(m.Groups[2].Value) + " to " + Words(m.Groups[1].Value);
+        if (m.Success)
+        {
+            string cond = Words(m.Groups[2].Value), what = Words(m.Groups[1].Value);
+            return T($"{value}% chance {cond} to {what}", $"{value}% de probabilidad {cond} de {what}");
+        }
         string k = key.StartsWith("active_skill_") ? key.Substring("active_skill_".Length) : key;
         if (k.EndsWith("_ms")) return Words(k[..^3]) + ": " + Seconds(value);
         return StatWords(k, value);

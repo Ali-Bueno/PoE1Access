@@ -22,7 +22,7 @@ public partial class PoE1AccessCore
     private List<string> _lastHints = new List<string>();
     private string _lastHintsPanels = "";
 
-    // The mod's own controls, by window title.
+    // The mod's own controls, by window title in English (PanelKey finds it in any language).
     private static readonly Dictionary<string, string> ModHelp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["Inventory"] = "Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item. Hold L3 longer: the whole bag, or every equipment slot",
@@ -32,6 +32,15 @@ public partial class PoE1AccessCore
         ["Skills"] = "Hold L3 and move the right stick: left and right for each skill, up and down for its details",
         ["World"] = "Move to hear each place. Tap L3 for its description",
     };
+
+    // A window's English title, from its title in the client's language ("Inventario" is
+    // "Inventory"); any other title as it is.
+    private string PanelKey(string title)
+    {
+        foreach (GameWord w in new[] { InventoryTitle, StashTitle, PassivesTitle, CharacterTitle, SkillsTitle, WorldTitle })
+            if (IsGameWord(title, w)) return w.English;
+        return title;
+    }
 
     private void PollControlHints(long now)
     {
@@ -58,7 +67,7 @@ public partial class PoE1AccessCore
             var say = new List<string>();
             if (hints.Count > 0) say.Add("Controls: " + string.Join(". ", hints));
             foreach (var (title, _, _) in panels)
-                if (ModHelp.TryGetValue(title, out string help) && _modHelpSaid.Add(title))
+                if (ModHelp.TryGetValue(PanelKey(title), out string help) && _modHelpSaid.Add(PanelKey(title)))
                     say.Add(title + ": " + help);
             if (say.Count > 0) Say(JoinSpeech(say), false);
             return;
@@ -84,7 +93,7 @@ public partial class PoE1AccessCore
         var hints = GameHints(panels);
         if (hints.Count > 0) say.Add("Controls: " + string.Join(". ", hints));
         foreach (var (title, _, _) in panels)
-            if (ModHelp.TryGetValue(title, out string help)) say.Add(title + ": " + help);
+            if (ModHelp.TryGetValue(PanelKey(title), out string help)) say.Add(title + ": " + help);
         if (say.Count == 0) return false;
         Say(JoinSpeech(say), true);
         return true;

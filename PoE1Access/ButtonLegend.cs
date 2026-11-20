@@ -64,7 +64,7 @@ public partial class PoE1AccessCore
         var entries = LegendEntries(now);
         _legendNow = entries;
         // Skill binding mode is the legend offering to navigate and select skills.
-        bool binding = entries.Any(e => e.EndsWith("Navigate Skills") || e.EndsWith("Select Skill"));
+        bool binding = entries.Any(e => EndsWithGameWord(e, NavigateSkillsWord) || EndsWithGameWord(e, SelectSkillWord));
         var details = binding ? SkillBindingDetails() : new List<string>();
 
         // The prompts change for a moment as you move in the mode, so it counts as closed only
@@ -178,7 +178,7 @@ public partial class PoE1AccessCore
     }
 
     // The legends: elements holding prompt entries (dozens of them, mostly hidden, with labels
-    // such as "Pick Up", "Move", "Close", "Navigate").
+    // such as "Pick Up", "Move", "Close", "Navigate", in the client's language: LegendWords).
     private List<Element> FindLegends(Element root)
     {
         var found = new List<Element>();
@@ -186,7 +186,7 @@ public partial class PoE1AccessCore
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        string[] known = { "Pick Up", "Move", "Close", "Zoom", "Navigate", "Back", "Select", "Confirm" };
+        var known = new HashSet<string>(LegendWords.SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
         while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();

@@ -346,7 +346,7 @@ public partial class PoE1AccessCore
     // A support gem's description ("Supports attack skills."): in its GrantedEffects.dat row, the
     // text pointer right after the gem's name pointer (+0xEB name, +0xF3 description; rows are
     // packed, so these are not 8-aligned). Found 19 Nov 2026 on three support gems.
-    private string SupportDescription(long grantedEffectRow)
+    private string SupportDescription(long grantedEffectRow, string gemName)
     {
         if (grantedEffectRow == 0) return "";
         var mem = Mem;
@@ -357,13 +357,16 @@ public partial class PoE1AccessCore
                 long p = mem.Read<long>(grantedEffectRow + off);
                 if (p < 0x10000 || p > 0x7FFF_FFFF_FFFF) return "";
                 string s = mem.ReadStringU(p, 600) ?? "";
-                return s.All(ch => ch >= 0x20 && ch < 0x3000) ? s : "";
+                // Any printable text: Korean, Japanese and Chinese clients are above 0x3000.
+                return s.All(ch => ch >= 0x20 && ch < 0xFFF0 && !char.IsSurrogate(ch)) ? s : "";
             }
             catch { return ""; }
         }
-        // Check that the name is where expected before trusting the description next to it.
-        string name = Str(0xEB);
-        if (name.Length == 0 || !name.Contains("Support")) return "";
+        // Check that the name is where expected before trusting the description next to it:
+        // it is the gem's own name, which ends in "Support" in the English client.
+        string name = CleanText(Str(0xEB));
+        if (name.Length == 0) return "";
+        if (!name.Contains("Support") && !string.Equals(name, gemName, StringComparison.OrdinalIgnoreCase)) return "";
         return CleanText(Str(0xF3));
     }
 
@@ -383,7 +386,8 @@ public partial class PoE1AccessCore
                 string shortText = Try(() => active?.Description, "") ?? "";
                 return CleanText(FullText(active?.Address ?? 0, shortText));
             }
-            string supportText = SupportDescription(effect.Address);
+            string gemName = CleanText(Try(() => GetComp<BaseComp>(item)?.Name, "") ?? "");
+            string supportText = SupportDescription(effect.Address, gemName);
             return supportText.Length > 0 ? "Support gem. " + supportText : "Support gem";
         }
 
@@ -470,7 +474,7 @@ public partial class PoE1AccessCore
         {
             Element parent = UiText.ParentOf(Mem, cur);
             Element panel = parent != null ? UiText.ParentOf(Mem, parent) : null;
-            if (panel != null && UiText.Title(mem, panel) == "Inventory")
+            if (panel != null && IsGameWord(UiText.Title(mem, panel), InventoryTitle))
             {
                 int type = Try(() => (int)UiText.TypeOf(Mem, cur), -1);
                 IList<Element> kids = Try<IList<Element>>(() => parent.Children, null);

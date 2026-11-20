@@ -90,7 +90,7 @@ public partial class PoE1AccessCore
         {
             Element parent = UiText.ParentOf(Mem, cur);
             if (parent == null || parent.Address == 0) break;
-            if (UiText.Title(Mem, parent) == "Passives") { top = cur; break; }
+            if (IsGameWord(UiText.Title(Mem, parent), PassivesTitle)) { top = cur; break; }
             top = parent;
             cur = parent;
         }

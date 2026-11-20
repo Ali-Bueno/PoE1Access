@@ -507,7 +507,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (uiBusy && cmd == ControllerInput.Command.Guide) cmd = ControllerInput.Command.Hold;
         if (uiBusy && cmd == ControllerInput.Command.ScanRight && _tipLines.Count > 0) cmd = ControllerInput.Command.LongHold;
 
-        bool inventoryOpen = _openPanels != null && _openPanels.Contains("Inventory");
+        bool inventoryOpen = _openPanels != null && _openPanels.Any(t => IsGameWord(t, InventoryTitle));
         switch (cmd)
         {
             case ControllerInput.Command.Tap:
@@ -595,7 +595,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         {
             string d = CleanText(Try(() => m.DisplayName, "") ?? "");
             if (d.Length == 0) continue;   // implicit mods carry no name
-            if (d.StartsWith("of ", StringComparison.OrdinalIgnoreCase)) { if (suf.Length == 0) suf = d; }
+            // An English suffix's name starts with "of"; in other client languages the mod's
+            // record says whether it is a prefix or a suffix.
+            var affix = Try(() => (ModType?)m.ModRecord?.AffixType, null);
+            bool suffix = d.StartsWith("of ", StringComparison.OrdinalIgnoreCase) || affix == ModType.Suffix;
+            if (suffix) { if (suf.Length == 0) suf = d; }
             else if (pre.Length == 0) pre = d;
         }
         return string.Join(" ", new[] { pre, baseName, suf }.Where(x => x.Length > 0));
@@ -1319,7 +1323,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (classScreen != _classScreenLine)
         {
             _classScreenLine = classScreen;
-            if (classScreen.Length > 0 && classScreen.IndexOf("class", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (classScreen.Length > 0 && (classScreen.IndexOf("class", StringComparison.OrdinalIgnoreCase) >= 0 || !EnglishClient))
             {
                 string hint = classScreen + " " + ClassBrowseHint;
                 PluginLog.Write("Class screen: " + hint);
@@ -1482,10 +1486,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         var visible = FindVisiblePanels();
         _visiblePanels = visible;
-        _inventoryPanel = visible.FirstOrDefault(p => p.Title == "Inventory").E;
-        _characterPanel = visible.FirstOrDefault(p => p.Title == "Character").E;
-        _skillsPanel = visible.FirstOrDefault(p => p.Title == "Skills").E;
-        _worldPanel = visible.FirstOrDefault(p => p.Title == "World").E;
+        _inventoryPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, InventoryTitle)).E;
+        _characterPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, CharacterTitle)).E;
+        _skillsPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, SkillsTitle)).E;
+        _worldPanel = visible.FirstOrDefault(p => IsGameWord(p.Title, WorldTitle)).E;
         var titles = new HashSet<string>(visible.Select(p => p.Title), StringComparer.OrdinalIgnoreCase);
 
         // The first reading is silent, so nothing is announced at start-up.
@@ -2025,9 +2029,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         bool keystone = Try(() => mem.Read<byte>(skill.Address + 0x4A), (byte)0) == 1;
         bool notable = Try(() => mem.Read<byte>(skill.Address + 0x4B), (byte)0) == 1;
         string id = Try(() => skill.Id, "") ?? "";
+        // Masteries by their Id, which holds in every client language: "mastery_life123", or
+        // "affliction_..._mastery..." on cluster jewels (all 398 masteries, and no other node, on
+        // 20 Nov 2026).
+        bool mastery = id.StartsWith("mastery_", StringComparison.OrdinalIgnoreCase)
+            || (id.StartsWith("affliction_", StringComparison.OrdinalIgnoreCase) && id.IndexOf("mastery", StringComparison.OrdinalIgnoreCase) >= 0)
+            || name.EndsWith("Mastery", StringComparison.OrdinalIgnoreCase);
         string kind = keystone ? "keystone"
             : notable ? "notable"
-            : name.EndsWith("Mastery", StringComparison.OrdinalIgnoreCase) ? "mastery"
+            : mastery ? "mastery"
             : id.StartsWith("jewel_slot", StringComparison.OrdinalIgnoreCase) ? "jewel socket"
             : "passive";
 

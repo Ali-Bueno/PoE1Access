@@ -43,12 +43,17 @@ public partial class PoE1AccessCore
         new("Pick Up", "ConsolePickUp"), new("Move", "ConsoleMove", "HideoutLegendMove"),
         new("Close", "ConsoleClosePanel"), new("Zoom", "ConsoleZoom"), new("Navigate", "ConsoleNavigate"),
         new("Back", "ConsoleBack"), new("Select", "ConsoleSelect", "ConsoleActionSelectItem"), new("Confirm"),
-        // The screens before the game: character selection, leagues, classes.
+    };
+    // The screens before the game (login, character selection, leagues, classes) have small
+    // legends of their own; only their own prompts find them, since words such as "Back" are
+    // on those screens' buttons too.
+    private static readonly GameWord[] PreGameLegendWords =
+    {
+        new("Options", "LoginScreenOptionsButtonText", "ActionOpenOptionsPanel"), new("Current League Info", "LeagueInfoBindLegendText"),
         new("Change Selection", "ConsoleChangeSelection"), new("Select Character", "ConsoleSelectCharacter"),
-        new("Create New Character", "ConsoleCreateNewCharacter"), new("Log Out", "ConsoleLogOut"),
-        new("Switch League", "ConsoleSwitchLeague"), new("Select League", "ConsoleSelectLeague"),
+        new("Delete Character", "ConsoleDeleteCharacter"), new("Create New Character", "ConsoleCreateNewCharacter"),
+        new("Log Out", "ConsoleLogOut"), new("Switch League", "ConsoleSwitchLeague"), new("Select League", "ConsoleSelectLeague"),
         new("Switch Class", "ConsoleSwitchClass"), new("Select Class", "ConsoleSelectClass"),
-        new("Current League Info", "LeagueInfoBindLegendText"), new("Cancel", "Cancel"),
     };
     private static readonly GameWord NavigateSkillsWord = new("Navigate Skills", "ConsoleNavigateSkills");
     private static readonly GameWord SelectSkillWord = new("Select Skill", "ConsoleSelectSkill");

@@ -181,6 +181,8 @@ public partial class PoE1AccessCore
 
     // The legends: elements holding prompt entries (dozens of them, mostly hidden, with labels
     // such as "Pick Up", "Move", "Close", "Navigate", in the client's language: LegendWords).
+    private int _preGameLegendCount = -1;
+
     private List<Element> FindLegends(Element root)
     {
         var found = new List<Element>();
@@ -188,10 +190,10 @@ public partial class PoE1AccessCore
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        var known = new HashSet<string>(LegendWords.SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
         // In play the legend is a pool of dozens of entries; the screens before the game have a
         // small one of their own, deeper in their tree.
         bool preGame = _preGameState.Length > 0;
+        var known = new HashSet<string>((preGame ? PreGameLegendWords : LegendWords).SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
         int minEntries = preGame ? 2 : 20, maxDepth = preGame ? 8 : 5;
         while (queue.Count > 0 && visited < 8000)
         {
@@ -213,7 +215,8 @@ public partial class PoE1AccessCore
             if (d >= maxDepth) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
-        if (preGame) PluginLog.Write("Legends found: " + found.Count + " (" + string.Join(", ", found.Select(f => UiText.Name(Mem, f))) + ")");
+        if (preGame && found.Count != _preGameLegendCount) PluginLog.Write("Legends before the game: " + found.Count);
+        _preGameLegendCount = preGame ? found.Count : -1;
         return found;
     }
 

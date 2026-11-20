@@ -1578,8 +1578,6 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                                              elements[kv.Key].Path.Count(c => c == '/') == bannerDepth &&
                                              DescribeHighlighted(elements[kv.Key].E).Length > 0)
                                 .Select(kv => kv.Key).FirstOrDefault();
-                PluginLog.Write("Initial banner: " + (lit != 0 ? elements[lit].Path : "none lit") + "; lit below: " +
-                                string.Join(" ", state.Where(kv => kv.Value.Lit && elements[kv.Key].Path.StartsWith(elements[a].Path + "/")).Select(kv => elements[kv.Key].Path).Take(12)));
                 if (lit != 0) AnnounceFocus(lit, elements[lit].E, elements[lit].Path, "Highlight");
                 else AnnounceFocus(a, elements[a].E, elements[a].Path, "Initial focus");
                 return;

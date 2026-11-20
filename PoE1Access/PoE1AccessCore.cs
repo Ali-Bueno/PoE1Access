@@ -1104,15 +1104,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The last state with a screen of its own is the one showing. The game leaves character
         // creation in the list when you go back from it, even after logging out ("PreGameState,
         // LoginState, CreateCharacterState" on the login screen, found 20 Nov 2026), so a screen
-        // whose UI is hidden, or gone (the left-behind creation state points to no UI element), is
-        // passed over while another screen lies below it.
+        // whose UI root is hidden or gone (the left-behind creation state has none) is passed over
+        // while another screen lies below it. The login screen keeps its root elsewhere and is
+        // never left behind.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var st = active[i];
             if (st == null || st.Address == 0) continue;
             string type = byAddr.TryGetValue(st.Address, out string t) ? t : "Unknown";
             if (StateNames.TryGetValue(type, out string spoken) && spoken.Length == 0) continue;
-            if (PreGameScreens.Contains(type) && !StateUiShown(st.Address) &&
+            if (PreGameScreens.Contains(type) && type != "LoginState" && !StateUiShown(st.Address) &&
                 active.Take(i).Any(b => b != null && byAddr.TryGetValue(b.Address, out string bt) && PreGameScreens.Contains(bt)))
                 continue;
             return (type, st.Address);
@@ -1120,9 +1121,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         return ("", 0);
     }
 
-    // Whether a screen's UI is shown: the first UI element its state points to (its root) is
-    // visible. A screen left behind keeps no UI at all (its state points to no element), and
-    // counts as hidden. Checked at most twice a second per state.
+    // Whether a screen's UI is shown: character selection and creation keep their UI root at
+    // state +0x218, and it is visible. A screen left behind has no root there, while its other
+    // pointers may lead to stray elements of other screens (seen 20 Nov 2026), so only +0x218
+    // counts. Checked at most twice a second per state.
+    private const int ScreenRootOffset = 0x218;
     private readonly Dictionary<long, (long AtMs, bool Shown)> _stateUiShown = new Dictionary<long, (long, bool)>();
 
     private bool StateUiShown(long stateAddr)
@@ -1130,17 +1133,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         long now = _clock.ElapsedMilliseconds;
         if (_stateUiShown.TryGetValue(stateAddr, out var c) && now - c.AtMs < 500) return c.Shown;
         bool shown = false;
-        byte[] b = TextProbe.ReadUpTo(Mem, stateAddr, 0x800);
-        if (b != null)
-            for (int o = 0; o + 8 <= b.Length; o += 8)
-            {
-                long p = BitConverter.ToInt64(b, o);
-                if (p < 0x10000 || p > 0x7FFF_FFFF_FFFF || p == stateAddr) continue;
-                Element e = Try<Element>(() => Game.GetObject<Element>(p), null);
-                if (e == null || !LooksLikeElement(e, out _)) continue;
-                shown = Try(() => UiText.VisibleLocal(Mem, e), true);
-                break;
-            }
+        long p = Try(() => Mem.Read<long>(stateAddr + ScreenRootOffset), 0L);
+        if (p >= 0x10000 && p <= 0x7FFF_FFFF_FFFF)
+        {
+            Element e = Try<Element>(() => Game.GetObject<Element>(p), null);
+            if (e != null && LooksLikeElement(e, out _)) shown = Try(() => UiText.VisibleLocal(Mem, e), false);
+        }
         _stateUiShown[stateAddr] = (now, shown);
         return shown;
     }

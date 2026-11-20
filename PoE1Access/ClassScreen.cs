@@ -75,13 +75,15 @@ public partial class PoE1AccessCore
         return Classes[number].English;
     }
 
-    // The client's Characters table ("Data/Spanish/Characters.datc64" in a Spanish client).
+    // The client's Characters table ("es:Data/Characters.dat" in a Spanish client).
     private string[] ReadClassNames()
     {
         var all = Game?.Files?.AllFiles;
         if (all == null) return null;
-        var keys = all.Keys.Where(k => k.EndsWith("/Characters.datc64", StringComparison.OrdinalIgnoreCase)).ToList();
-        string key = keys.FirstOrDefault(k => !k.StartsWith("Data/Characters.", StringComparison.OrdinalIgnoreCase)) ?? keys.FirstOrDefault();
+        // Keys name the language first in other clients: "es:Data/Characters.dat".
+        var keys = all.Keys.Where(k => k.EndsWith("Data/Characters.dat", StringComparison.OrdinalIgnoreCase) ||
+                                       k.EndsWith("/Characters.datc64", StringComparison.OrdinalIgnoreCase)).ToList();
+        string key = keys.FirstOrDefault(k => !k.StartsWith("Data/", StringComparison.OrdinalIgnoreCase)) ?? keys.FirstOrDefault();
         if (key == null) return null;
         var file = new DatFile(Mem, all[key].Ptr);
         if (file.Count <= 0 || file.Count > 64 || file.Length < 0x10) return null;

@@ -1260,12 +1260,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         if (_charListPendingMs != 0) Guard("character list", () => AnnounceCharacterList(now));
         Guard("screen title", () => PollScreenTitle(now));
+        Guard("class outline", () => PollClassOutline(now));
 
-        // Naming a class before it is picked is not possible yet: the class screen's cursor is not
-        // stored near the creation state (searched 18 Nov 2026; IngameState.MousePosX reads 0
-        // there). Known for a later try: CreateCharacterState +0x240 is non-zero while a class is
-        // picked, and [state +0x2E0] +0x40 is the class number (0 Scion, 1 Marauder, 2 Ranger,
-        // 3 Witch, 4 Duelist, 5 Templar, 6 Shadow).
+        // The class screen's outlined Exile is read from the scene (ClassScreen.cs). Also known:
+        // CreateCharacterState +0x240 is non-zero while a class is picked, and [state +0x2E0]
+        // +0x40 is the picked class number.
         if (Settings.AnnouncePanels.Value) PollPanels(now);
         if (Settings.ReadFocus.Value) PollFocus(now);
         // The screen's button prompts (character creation, selection, login): said as they change.
@@ -1376,7 +1375,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private bool _classHintGiven;
 
     private const string ClassBrowseHint =
-        "The classes are Exiles standing in front of you. Move the cursor onto one and select it to hear its class and story. " +
+        "The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. " +
         "Nothing is created until you enter a name, so choose back to try another.";
     private const string ClassBackHint = "Choose back to try another class.";
 

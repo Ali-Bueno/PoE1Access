@@ -104,7 +104,10 @@ public partial class PoE1AccessCore
             else if (dsig != _bindingDetailsSig && details.Count > 0 && now - _bindingDetailsSinceMs >= 150)
             {
                 _bindingDetailsSig = dsig;
-                Say(JoinSpeech(details), true);
+                var say = new List<string>(details);
+                string place = BindingListPlace(details[0]);
+                if (place.Length > 0) say.Insert(1, place);
+                Say(JoinSpeech(say), true);
             }
         }
 
@@ -299,6 +302,49 @@ public partial class PoE1AccessCore
     // ghostlythrow.dds"), which the skill's own data names too.
     private string _lastSlotSaid = "";
     private long _slotSaidMs;
+
+    // "2 of 3" for the skill shown in the list, from the list's entries (the skill bar's second
+    // part, then its second part: an entry per skill, each with the skill's picture). With only
+    // one, it says so, since moving then does nothing.
+    private string BindingListPlace(string skillName)
+    {
+        var mem = Mem;
+        Element bar = Fresh(_skillsBar);
+        var list = Try(() => bar?.Children[1]?.Children[1]?.Children[0], null);
+        var entries = Try<IList<Element>>(() => list?.Children, null);
+        if (entries == null) return "";
+        var names = new List<string>();
+        foreach (Element entry in entries)
+        {
+            string icon = "";
+            var stack = new Stack<(Element E, int D)>();
+            stack.Push((entry, 0));
+            while (stack.Count > 0 && icon.Length == 0)
+            {
+                var (e, d) = stack.Pop();
+                try
+                {
+                    long p = mem.Read<long>(e.Address + 0x230 + UiText.Shift);
+                    long t = p > 0x10000 ? mem.Read<long>(p + 8) : 0;
+                    string path = t > 0x10000 ? ReadAsciiOrWide(t) : "";
+                    if (path.IndexOf("SkillIcons/", StringComparison.OrdinalIgnoreCase) >= 0) icon = path;
+                }
+                catch { }
+                if (d >= 3) continue;
+                var kids = Try<IList<Element>>(() => e.Children, null);
+                if (kids != null) foreach (Element k in kids) stack.Push((k, d + 1));
+            }
+            if (icon.Length == 0) continue;
+            string file = icon.Substring(icon.IndexOf("SkillIcons/", StringComparison.OrdinalIgnoreCase) + 11);
+            int cut = file.IndexOfAny(new[] { '.', '|' });
+            if (cut > 0) file = file.Substring(0, cut);
+            names.Add(SkillNameForIcon(file));
+        }
+        if (names.Count == 0) return "";
+        if (names.Count == 1) return "the only skill you can put here; socket skill gems in your gear for more";
+        int at = names.FindIndex(n => string.Equals(n, skillName, StringComparison.OrdinalIgnoreCase));
+        return at >= 0 ? (at + 1) + " of " + names.Count : names.Count + " skills";
+    }
 
     private void PollBindingSlots(long now)
     {

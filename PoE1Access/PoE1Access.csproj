@@ -15,6 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The mod's phrases in languages other than English and Spanish (see Localization.cs). -->
+    <EmbeddedResource Include="lang\*.json" LogicalName="lang.%(Filename).json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- $(exapiPackage) is supplied by the HUD when it compiles the plugin.
          These are the exact DLLs ExileApi runs with, so types always match. -->
     <Reference Include="ExileCore">

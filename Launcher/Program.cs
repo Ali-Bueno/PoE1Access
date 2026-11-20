@@ -60,6 +60,7 @@ internal static class Program
         }
 
         Directory.CreateDirectory(AppDir);
+        try { Loc.UseGameLanguage(Log); } catch { }
         try { _speech = SpeechFactory.Create(); Log("Speech: " + _speech.Name); } catch { }
         Say("Path of Exile access starting.");
 

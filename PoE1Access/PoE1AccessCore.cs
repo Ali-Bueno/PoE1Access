@@ -109,6 +109,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
             p?.SetValue(this, new PoE1AccessSettings());
         }
+        Loc.UseGameLanguage(PluginLog.Write);
         _speech = SpeechFactory.Create();
         PluginLog.Write("Standalone mode started (launcher). Speech: " + _speech.Name);
     }
@@ -206,6 +207,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         try
         {
             PluginLog.Write("Initialise. Base folder: " + AppContext.BaseDirectory);
+            Loc.UseGameLanguage(PluginLog.Write);
             _speech = SpeechFactory.Create();
             PluginLog.Write("Speech: " + _speech.Name);
 

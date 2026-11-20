@@ -271,12 +271,8 @@ internal static class Program
         Log(".NET 10 Desktop Runtime: " + (ok ? "found" : "missing"));
         if (ok) return true;
 
-        string msg = T("Exile API needs the Microsoft .NET 10 Desktop Runtime, which is not installed. " +
-                       "Open the download page now? Choose the Desktop Runtime for Windows x64, install it, " +
-                       "then start Path of Exile access again.",
-                       "Exile API necesita el Microsoft .NET 10 Desktop Runtime, que no está instalado. " +
-                       "¿Abrir la página de descarga ahora? Elige el Desktop Runtime para Windows x64, instálalo " +
-                       "y vuelve a iniciar Path of Exile access.");
+        string msg = T("Exile API needs the Microsoft .NET 10 Desktop Runtime, which is not installed. Open the download page now? Choose the Desktop Runtime for Windows x64, install it, then start Path of Exile access again.",
+                       "Exile API necesita el Microsoft .NET 10 Desktop Runtime, que no está instalado. ¿Abrir la página de descarga ahora? Elige el Desktop Runtime para Windows x64, instálalo y vuelve a iniciar Path of Exile access.");
         Say(msg);
         if (Box(msg, "Path of Exile access", MB_YESNO | MB_ICONWARNING) == IDYES) Open(DotNetPage);
         return false;

@@ -1462,10 +1462,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private bool _classHintGiven;
 
     private static string ClassBrowseHint =>
-        T("The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. " +
-          "Nothing is created until you enter a name, so choose back to try another.",
-          "Las clases son exiliados que están frente a ti. Mueve el stick izquierdo para oír cada una y selecciónala para oír su historia. " +
-          "No se crea nada hasta que introduzcas un nombre, así que elige volver para probar otra.");
+        T("The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. Nothing is created until you enter a name, so choose back to try another.",
+          "Las clases son exiliados que están frente a ti. Mueve el stick izquierdo para oír cada una y selecciónala para oír su historia. No se crea nada hasta que introduzcas un nombre, así que elige volver para probar otra.");
     private static string ClassBackHint => T("Choose back to try another class.", "Elige volver para probar otra clase.");
 
     // First visible descendant with this internal name, up to `depth` levels down.
@@ -1590,8 +1588,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             var opened = titles.Where(t => !_openPanels.Contains(t)).ToList();
             var closed = _openPanels.Where(t => !titles.Contains(t)).ToList();
             var parts = new List<string>();
-            foreach (string t in closed) parts.Add(T($"{t} closed", $"{t} cerrado"));
-            foreach (string t in opened) parts.Add(T($"{t} open", $"{t} abierto"));
+            foreach (string t in closed) parts.Add(T($"{t} closed", $"Se cierra {t}"));
+            foreach (string t in opened) parts.Add(T($"{t} open", $"Se abre {t}"));
             if (parts.Count > 0)
             {
                 PluginLog.Write("Panels: " + string.Join(", ", parts));

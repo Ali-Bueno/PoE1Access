@@ -501,7 +501,7 @@ internal static class Program
 
     private static void WaitForGameToClose(Process game, Process loader)
     {
-        try { game.WaitForExit(); } catch { }
+        OverlayWindow.KeepQuietUntilExit(game, loader, Log);
         Log("Game closed");
         try { if (!loader.HasExited) loader.Kill(true); } catch { }
         Say("Path of Exile closed. Path of Exile access stopped.");

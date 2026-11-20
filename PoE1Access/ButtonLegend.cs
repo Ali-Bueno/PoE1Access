@@ -41,7 +41,9 @@ public partial class PoE1AccessCore
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
-    private bool _bindingMode, _legendWasBusy, _bindingHowSaid;
+    private bool _bindingMode, _legendWasBusy, _bindingHowSaid, _bindingListOpen;
+    private string _bindingDetailsPending = "";
+    private long _bindingDetailsSinceMs;
     private long _guideCommandMs = -100000, _nextBindSlotPollMs;
     private long _bindingLastSeenMs;
     private string _bindingSlot = "";
@@ -50,7 +52,8 @@ public partial class PoE1AccessCore
     private void PollButtonLegend(long now, bool uiBusy)
     {
         // A slot shows it is selected for only a moment, so slots are checked every tick.
-        if (_bindingMode && now >= _nextBindSlotPollMs)
+        // In the skill list the slots flicker as you move, so their names are left out there.
+        if (_bindingMode && !_bindingListOpen && now >= _nextBindSlotPollMs)
         {
             _nextBindSlotPollMs = now + 40;
             Try(() => { PollBindingSlots(now); return 0; }, 0);
@@ -83,6 +86,7 @@ public partial class PoE1AccessCore
         {
             _bindingMode = false;
             _bindingSlot = "";
+            _bindingListOpen = false;
             Say("Skill binding closed", true);
             _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
@@ -91,11 +95,16 @@ public partial class PoE1AccessCore
         if (binding)
         {
             if (_skillsBar == null) SkillBindingDetails();   // finds the skill bar
+            // The skill list is open while its details box shows. Its skill is said once the box
+            // has settled (it fills in over a moment), and cuts off whatever was being said.
+            _bindingListOpen = details.Count > 0;
+            if (!_bindingListOpen) _bindingDetailsSig = "";   // opening the list again says its skill again
             string dsig = string.Join("|", details);
-            if (dsig != _bindingDetailsSig && details.Count > 0)
+            if (dsig != _bindingDetailsPending) { _bindingDetailsPending = dsig; _bindingDetailsSinceMs = now; }
+            else if (dsig != _bindingDetailsSig && details.Count > 0 && now - _bindingDetailsSinceMs >= 150)
             {
                 _bindingDetailsSig = dsig;
-                Say(JoinSpeech(details), false);
+                Say(JoinSpeech(details), true);
             }
         }
 

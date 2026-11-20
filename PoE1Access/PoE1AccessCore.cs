@@ -399,6 +399,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("dialogue", () => PollDialogue(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
+            Guard("button legend", () => PollButtonLegend(now, uiBusy));
             if (_nav != null)
             {
                 _nav.AnnounceNearby = Settings.AnnounceNearby.Value;
@@ -519,6 +520,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 // In menus: the whole tooltip.
                 // Nothing to read there: the window's controls.
                 if (uiBusy && !TooltipAll() && !SayControlsAgain() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
+                // In play: the game's button prompts for what is around you (pick up, talk...).
+                if (!uiBusy && !SayControlsAgain()) Say("No button prompts on screen", true);
                 break;
             case ControllerInput.Command.LongHold:
                 // In the inventory: every item in the bag, or every equipment slot when the

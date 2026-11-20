@@ -77,8 +77,10 @@ public partial class PoE1AccessCore
     private bool SayControlsAgain()
     {
         var panels = _visiblePanels ?? new List<(string Title, Element E, string Path)>();
-        if (panels.Count == 0) return false;
         var say = new List<string>();
+        // The game's button legend for the current screen (in play too).
+        if (_legendNow.Count > 0) say.Add("Controls: " + string.Join(". ", _legendNow));
+        if (panels.Count == 0) { if (say.Count == 0) return false; Say(JoinSpeech(say), true); return true; }
         var hints = GameHints(panels);
         if (hints.Count > 0) say.Add("Controls: " + string.Join(". ", hints));
         foreach (var (title, _, _) in panels)

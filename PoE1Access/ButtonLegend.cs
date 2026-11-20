@@ -29,14 +29,22 @@ public partial class PoE1AccessCore
         ["c2,99"] = "D-pad up",
         ["184,c0"] = "L3",
         ["c2,f9"] = "R3",
-        ["184,120"] = "Right bumper",
         ["0,f9"] = "Start",
-        // Not named by the game's pictures; the "Navigate Skills" prompt of skill binding, next
-        // to the right stick button's picture on the sheet: the left stick.
-        ["61,f9"] = "Left stick",
+        // Checked 20 Nov 2026 against the prompts on screen (PS5 pictures): "L1 Current League
+        // Info" on the login screen, "R Navigate Skills" in skill binding, "L Switch League" and
+        // "R1 Toggle Solo Self-Found" on the league screen, "L Switch Waypoint" and "R Browse
+        // Primary Areas" on the world map.
+        ["184,120"] = "Left bumper",
+        ["0,159"] = "Right bumper",
+        ["123,c0"] = "Left stick",
+        ["61,f9"] = "Right stick",
+        // "Close" in the character windows, which the View button (Share on PlayStation) opens
+        // and closes; its picture is the sheet's first box.
+        ["0,0"] = "View button",
     };
 
     private List<Element> _legends = new List<Element>();
+    private readonly HashSet<string> _unnamedPictures = new HashSet<string>();
     private long _legendRoot;
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
@@ -133,6 +141,13 @@ public partial class PoE1AccessCore
         var mem = Mem;
         var result = new List<string>();
         Element root = UiRoot();
+        // Before the game the legend is not below the screen's own root but beside it, under the
+        // root above (found 20 Nov 2026: root > [8] > [1], 61 entries, on the class screen).
+        if (_preGameState.Length > 0 && root != null && UiText.Name(mem, root) != "root")
+        {
+            Element above = UiText.ParentOf(mem, root);
+            if (above != null && above.Address != 0) root = above;
+        }
         long rootAddr = root?.Address ?? 0;
         if (rootAddr != _legendRoot) { _legends.Clear(); _legendRoot = rootAddr; _nextLegendSearchMs = 0; }
         if (_legends.Count == 0 || now >= _nextLegendSearchMs)
@@ -170,6 +185,7 @@ public partial class PoE1AccessCore
                 {
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
                     if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
+                    else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
                 string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;
@@ -181,6 +197,8 @@ public partial class PoE1AccessCore
 
     // The legends: elements holding prompt entries (dozens of them, mostly hidden, with labels
     // such as "Pick Up", "Move", "Close", "Navigate", in the client's language: LegendWords).
+    private int _preGameLegendCount = -1;
+
     private List<Element> FindLegends(Element root)
     {
         var found = new List<Element>();
@@ -188,7 +206,8 @@ public partial class PoE1AccessCore
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        var known = new HashSet<string>(LegendWords.SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
+        bool preGame = _preGameState.Length > 0;
+        var known = new HashSet<string>((preGame ? PreGameLegendWords : LegendWords).SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
         while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();
@@ -209,6 +228,8 @@ public partial class PoE1AccessCore
             if (d >= 5) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
+        if (preGame && found.Count != _preGameLegendCount) PluginLog.Write("Legends before the game: " + found.Count);
+        _preGameLegendCount = preGame ? found.Count : -1;
         return found;
     }
 

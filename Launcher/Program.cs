@@ -107,7 +107,7 @@ internal static class Program
             if (loader == null) { StopReader(reader); return 1; }
 
             Say("Ready.");
-            WaitForGameToClose(game, loader);
+            WaitForGameToClose(game, loader, args.Any(a => a.Equals("--show-exileapi", StringComparison.OrdinalIgnoreCase)));
             StopReader(reader);
             return 0;
         }
@@ -499,9 +499,9 @@ internal static class Program
         return p;
     }
 
-    private static void WaitForGameToClose(Process game, Process loader)
+    private static void WaitForGameToClose(Process game, Process loader, bool showExileApi)
     {
-        try { game.WaitForExit(); } catch { }
+        OverlayWindow.KeepQuietUntilExit(game, loader, showExileApi, Log);
         Log("Game closed");
         try { if (!loader.HasExited) loader.Kill(true); } catch { }
         Say("Path of Exile closed. Path of Exile access stopped.");

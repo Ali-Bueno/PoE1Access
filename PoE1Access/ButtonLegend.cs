@@ -189,13 +189,17 @@ public partial class PoE1AccessCore
         queue.Enqueue((root, 0));
         int visited = 0;
         var known = new HashSet<string>(LegendWords.SelectMany(WordsFor), StringComparer.OrdinalIgnoreCase);
+        // In play the legend is a pool of dozens of entries; the screens before the game have a
+        // small one of their own, deeper in their tree.
+        bool preGame = _preGameState.Length > 0;
+        int minEntries = preGame ? 2 : 20, maxDepth = preGame ? 8 : 5;
         while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();
             visited++;
             var kids = Try<IList<Element>>(() => e.Children, null);
             if (kids == null || kids.Count > 500) continue;
-            if (kids.Count >= 20)
+            if (kids.Count >= minEntries)
             {
                 int hits = 0;
                 foreach (Element k in kids.Skip(Math.Max(0, kids.Count - 16)))
@@ -206,9 +210,10 @@ public partial class PoE1AccessCore
                 }
                 if (hits >= 2) { found.Add(e); continue; }
             }
-            if (d >= 5) continue;
+            if (d >= maxDepth) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
+        if (preGame) PluginLog.Write("Legends found: " + found.Count + " (" + string.Join(", ", found.Select(f => UiText.Name(Mem, f))) + ")");
         return found;
     }
 

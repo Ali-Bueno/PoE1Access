@@ -41,7 +41,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private const int MaxDumpNodes = 5000;
     private const int MaxSpeechChars = 2500;
 
-    private static readonly Regex TagRegex = new Regex("<[^<>]{1,60}>", RegexOptions.Compiled);
+    // Markup, empty ones too: the Spanish name screen starts with "<>" marks ("< >< >< >Introduce...").
+    private static readonly Regex TagRegex = new Regex("<[^<>]{0,60}>", RegexOptions.Compiled);
     private static readonly Regex ControllerRegex = new Regex("<<\\s*([A-Za-z0-9_]{1,40})\\s*>>", RegexOptions.Compiled);
 
     // "xbox_button_a" -> "A button", "xbox_dpad_up" -> "D-pad up", "xbox_lt" -> "left trigger".

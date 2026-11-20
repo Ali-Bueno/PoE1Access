@@ -54,6 +54,9 @@ GETTING STARTED
 5. The login screen, character selection and character creation are read from the start. Exile
    API itself only starts once a character is in the game; until then the mod reads those
    screens on its own (app\reader). Password boxes are never read aloud or logged.
+6. Exile API's own window (its menu, notifications and messages drawn over the game) is kept
+   hidden, out of Alt+Tab, and from taking the focus from the game. To use its menu (F12), for
+   example to change a key, start PoE1Access.exe --show-exileapi.
 
 When you close the game, the mod closes too.
 

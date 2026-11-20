@@ -80,6 +80,9 @@ internal sealed class Navigator
                 _gridW = g[0].Length;
                 _pathCells = null;
             }
+            // What attacks can pass: walls are closed, water and low ground are open.
+            int[][] t = _gc.IngameState.Data.RawTerrainTargetingData;
+            _sightGrid = t != null && t.Length == _gridH && t[0] != null ? t : null;
         }
         catch { }
         _gridLoadedMs = now;
@@ -420,7 +423,7 @@ internal sealed class Navigator
             float dist = (g - p).Length();
             if (dist > EnemyCells) continue;
             near.Add((e, id, g, dist, Try(() => e.Rarity, MonsterRarity.White)));
-            if (targeted == null && Try(() => e.GetComponent<Targetable>()?.isTargeted ?? false, false)) targeted = e;
+            if (targeted == null && Try(() => e.GetComponent<Targetable>()?.isTargeted ?? false, false) && InSight(p, g)) targeted = e;
         }
 
         // Target: blips and the name when it lands on a new living enemy.
@@ -472,15 +475,15 @@ internal sealed class Navigator
         if (!EnemySounds) return;
 
         // Poe2Access rules: at most four streams (the nearest unique, then the nearest magic or
-        // rare, then the nearest others); one hidden behind a wall (a run of more than 8 blocked
-        // cells on the line to it) is silent, but uniques are heard through walls; a stream
+        // rare, then the nearest others); one hidden behind a wall (on the game's targeting map)
+        // is silent, uniques too, since it cannot be hit from here; a stream
         // pulses every 600 ms at the screen's edge down to 150 ms beside you; starts are at least
         // 100 ms apart and the most overdue goes first; loudness stays the same (nearness is the
         // tempo); pan follows the side of the screen at up to 0.9; only enemies below you are
         // lowered in pitch, to 0.8 at the bottom edge.
         int Rank(MonsterRarity r) => r == MonsterRarity.Unique ? 0 : r == MonsterRarity.Rare || r == MonsterRarity.Magic ? 1 : 2;
         var streams = near
-            .Where(x => x.Rarity == MonsterRarity.Unique || InSight(p, x.G))
+            .Where(x => InSight(p, x.G))   // behind a wall: silent, uniques too
             .OrderBy(x => Rank(x.Rarity)).ThenBy(x => x.Dist)
             .Take(EnemyVoices).ToList();
         if (streams.Count == 0 || now - _lastEnemyCueMs < 100) return;
@@ -615,9 +618,30 @@ internal sealed class Navigator
     private const float ScreenHalfHeightCells = 45f;   // about half the screen's height in map cells
     private long _lastEnemyCueMs;
 
-    // A straight line on the walkable grid with no run of more than 8 blocked cells.
+    private int[][] _sightGrid;
+
+    // In sight: a straight line the game's targeting map leaves open (so a wall of any thickness
+    // hides what is behind it, while water does not); a single closed cell is let through, as
+    // the map has specks on open ground. Without that map, the walkable grid with runs of more
+    // than 8 blocked cells, as before.
     private bool InSight(Vector2 from, Vector2 to)
     {
+        int[][] sight = _sightGrid;
+        if (sight != null)
+        {
+            float l = (to - from).Length();
+            int n = (int)Math.Ceiling(l);
+            int run = 0;
+            for (int s = 1; s < n; s++)
+            {
+                Vector2 q = from + (to - from) * (s / (float)n);
+                int x = (int)q.X, y = (int)q.Y;
+                bool open = y >= 0 && y < sight.Length && sight[y] != null && x >= 0 && x < sight[y].Length && sight[y][x] > 0;
+                if (open) run = 0;
+                else if (++run > 1) return false;
+            }
+            return true;
+        }
         if (_grid == null) return true;
         float len = (to - from).Length();
         int steps = (int)Math.Ceiling(len);

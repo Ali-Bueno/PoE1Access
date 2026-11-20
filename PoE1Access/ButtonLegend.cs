@@ -63,8 +63,10 @@ public partial class PoE1AccessCore
 
         var entries = LegendEntries(now);
         _legendNow = entries;
-        // Skill binding mode is the legend offering to navigate and select skills.
-        bool binding = entries.Any(e => EndsWithGameWord(e, NavigateSkillsWord) || EndsWithGameWord(e, SelectSkillWord));
+        // Skill binding mode is the legend offering to navigate and select skills, in play (the
+        // skills panel offers "Select Skill" too, which is not the mode).
+        bool panelOpen = _openPanels != null && _openPanels.Count > 0;
+        bool binding = !panelOpen && entries.Any(e => EndsWithGameWord(e, NavigateSkillsWord) || EndsWithGameWord(e, SelectSkillWord));
         var details = binding ? SkillBindingDetails() : new List<string>();
 
         // The prompts change for a moment as you move in the mode, so it counts as closed only

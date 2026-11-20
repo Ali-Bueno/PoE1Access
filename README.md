@@ -31,6 +31,21 @@ memory. The mod only reads: it never changes the game and never presses anything
 The full player guide, with every control and setting, is [Launcher/README.txt](Launcher/README.txt)
 (it ships as README.txt in the download).
 
+## Languages
+
+The mod works with the game in any of its languages: it finds windows and prompts by the
+game's own words, read from the game's data in the client's language, and names classes the
+way the game does. It also speaks its own phrases in the game's language: English and Spanish
+are written in the code, and Brazilian Portuguese, French, German, Russian, Thai, Japanese,
+Korean and Traditional Chinese come from the tables in `PoE1Access/lang/`. The language is the
+one set in the game's options (it takes effect when the game and the mod start again).
+
+To add or fix a translation, edit `PoE1Access/lang/<code>.json` ({ "English phrase": "translation" },
+keeping placeholders such as `{0}`), then run `py tools/localization/phrases.py check`, which
+reports missing, stale and mismatched entries. New phrases in the code are written as
+`T("English", "Spanish")`; `py tools/localization/phrases.py missing <code>` lists what a table
+still lacks.
+
 ## Controls
 
 The mod only reads the controller. It cannot stop the game from seeing a press, so its

@@ -1574,6 +1574,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 string inside = elements[a].Path + "/";
                 long lit = _preGameState != "CreateCharacterState" ? 0 : state.Where(kv => kv.Value.Lit && kv.Key != a && elements[kv.Key].Path.StartsWith(inside) &&
                                              DescribeHighlighted(elements[kv.Key].E).Length > 0)
+                                // the deepest: the banner, not the group's lit heading
+                                .OrderByDescending(kv => elements[kv.Key].Path.Count(c => c == '/'))
                                 .Select(kv => kv.Key).FirstOrDefault();
                 if (lit != 0) AnnounceFocus(lit, elements[lit].E, elements[lit].Path, "Highlight");
                 else AnnounceFocus(a, elements[a].E, elements[a].Path, "Initial focus");

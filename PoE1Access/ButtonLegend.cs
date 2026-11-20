@@ -37,6 +37,7 @@ public partial class PoE1AccessCore
     };
 
     private List<Element> _legends = new List<Element>();
+    private readonly HashSet<string> _unnamedPictures = new HashSet<string>();
     private long _legendRoot;
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
@@ -168,6 +169,7 @@ public partial class PoE1AccessCore
                 {
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
                     if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
+                    else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
                 string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;

@@ -133,8 +133,14 @@ public partial class PoE1AccessCore
 
         if (gem != null)
         {
+            // As the game's tooltip has them: the tags ("Attack, Projectile, AoE, Melee, Strike,
+            // Fire"), the level, then the level it needs.
+            string tags = GemTags(gem);
+            if (tags.Length > 0) lines.Add(tags);
             int lvl = Try(() => gem.Level, 0), max = Try(() => gem.MaxLevel, 0);
             if (lvl > 0) lines.Add("Gem level " + lvl + (max > 0 ? " of " + max : ""));
+            int need = Try(() => gem.RequiredLevel, 0);
+            if (need > 1) lines.Add("Requires level " + need);
         }
         int itemLevel = mods != null ? Try(() => mods.ItemLevel, 0) : 0;
         if (itemLevel > 0 && gem == null) lines.Add("Item level " + itemLevel);
@@ -278,6 +284,43 @@ public partial class PoE1AccessCore
     // ExileApi reads game text up to a fixed length, which cuts long gem descriptions short
     // ("...causes balls of molten magma"). The full text: the pointer in the record whose text
     // starts with the short one, read again without the limit.
+    // The gem's tags, read from its GemEffects row: a list of GemTags rows (an id and the
+    // shown name; ids such as "strength" or "grants_active_skill" have no name and are not
+    // shown). Found at +0x60 on the 18 Nov 2026 patch; other offsets are searched if it moves.
+    private string GemTags(GemComp gem)
+    {
+        long row = Try(() => gem.GemEffect?.Address ?? 0, 0L);
+        if (row == 0) return "";
+        var mem = Mem;
+        string Ascii(long a)
+        {
+            if (a < 0x10000 || a > 0x7FFF_FFFF_FFFF) return null;
+            string t = Try(() => mem.ReadStringU(a, 120), null);
+            return t != null && t.All(c => c >= 32 && c < 127) ? t : null;
+        }
+        List<string> TagsAt(int off)
+        {
+            long count = Try(() => mem.Read<long>(row + off), 0L);
+            long list = Try(() => mem.Read<long>(row + off + 8), 0L);
+            if (count < 1 || count > 20 || list < 0x10000 || list > 0x7FFF_FFFF_FFFF) return null;
+            var names = new List<string>();
+            bool anyId = false;
+            for (int i = 0; i < count; i++)
+            {
+                long tag = Try(() => mem.Read<long>(list + i * 16), 0L);
+                string id = Ascii(Try(() => mem.Read<long>(tag), 0L));
+                if (string.IsNullOrEmpty(id) || id.Any(c => c == ' ' || char.IsUpper(c))) return null;
+                anyId = true;
+                string name = Ascii(Try(() => mem.Read<long>(tag + 8), 0L));
+                if (!string.IsNullOrEmpty(name)) names.Add(name);
+            }
+            return anyId && names.Count > 0 ? names : null;
+        }
+        var found = TagsAt(0x60);
+        for (int off = 0; found == null && off < 0x100; off += 4) found = TagsAt(off);
+        return found != null ? string.Join(", ", found) : "";
+    }
+
     private string FullText(long record, string shortText)
     {
         if (record == 0 || shortText.Length < 20) return shortText;

@@ -38,7 +38,7 @@ public partial class PoE1AccessCore
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
-    private bool _bindingMode;
+    private bool _bindingMode, _legendWasBusy;
     private long _bindingLastSeenMs;
     private string _bindingSlot = "";
     private string _bindingDetailsSig = "";
@@ -89,6 +89,10 @@ public partial class PoE1AccessCore
         // The legend is said as it changes in windows and menus (in play it changes with
         // whatever you stand by, which would be chatter; hold L3 hears it there).
         string sig = string.Join("|", entries);
+        // A window or menu becoming active says its controls even when they were already on
+        // screen (the mod started with the window open, or noticed it late).
+        if (uiBusy && !_legendWasBusy) _legendSig = "";
+        _legendWasBusy = uiBusy;
         if (sig == _legendSig) return;
         _legendSig = sig;
         // Said when they appear (a window opening, an item selected) and when they change.

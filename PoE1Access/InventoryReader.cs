@@ -146,6 +146,8 @@ public partial class PoE1AccessCore
         if (itemLevel > 0 && gem == null) lines.Add("Item level " + itemLevel);
         int q = quality != null ? Try(() => quality.ItemQuality, 0) : 0;
         if (q > 0) lines.Add("Quality " + q + " percent");
+        // Damage, speed and defences, and what the item requires, as the tooltip has them.
+        if (gem == null) lines.AddRange(Try(() => ItemProperties(item), new List<string>()));
 
         int socketCount = sockets != null ? Try(() => sockets.NumberOfSockets, 0) : 0;
         if (socketCount > 0)

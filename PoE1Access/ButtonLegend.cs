@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ExileCore.PoEMemory;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -85,9 +86,9 @@ public partial class PoE1AccessCore
             _bindingMode = true;
             _bindingDetailsSig = "";
             string why = "";
-            string how = _bindingHowSaid ? "" : ". Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back";
+            string how = _bindingHowSaid ? "" : ". " + T("Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back", "Muévete a una ranura y se dice su habilidad; A abre las habilidades que puedes poner ahí, y se lee la que seleccionas; B vuelve atrás");
             _bindingHowSaid = true;
-            Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);
+            Say(T("Skill binding", "Asignación de habilidades") + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);
             _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
@@ -96,7 +97,7 @@ public partial class PoE1AccessCore
             _bindingMode = false;
             _bindingSlot = "";
             _bindingListOpen = false;
-            Say("Skill binding closed", true);
+            Say(T("Skill binding closed", "Asignación de habilidades cerrada"), true);
             _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
@@ -131,7 +132,7 @@ public partial class PoE1AccessCore
         _legendSig = sig;
         // Said when they appear (a window opening, an item selected) and when they change.
         if ((uiBusy || binding) && entries.Count > 0)
-            Say("Controls: " + string.Join(". ", entries), false);
+            Say(T($"Controls: {string.Join(". ", entries)}", $"Controles: {string.Join(". ", entries)}"), false);
     }
 
     /// <summary>The legend as "X: Select Skill", one entry each, in screen order. There are
@@ -184,11 +185,11 @@ public partial class PoE1AccessCore
                 foreach (Element part in shown)
                 {
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
-                    if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
+                    if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(ButtonWord(b));
                     else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
-                string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;
+                string line = buttons.Count > 0 ? string.Join(T(" and ", " y "), buttons) + ": " + label : label;
                 if (!result.Contains(line)) result.Add(line);
             }
         }
@@ -363,9 +364,9 @@ public partial class PoE1AccessCore
             names.Add(SkillNameForIcon(file));
         }
         if (names.Count == 0) return "";
-        if (names.Count == 1) return "the only skill you can put here; socket skill gems in your gear for more";
+        if (names.Count == 1) return T("the only skill you can put here; socket skill gems in your gear for more", "la única habilidad que puedes poner aquí; engarza gemas de habilidad en tu equipo para tener más");
         int at = names.FindIndex(n => string.Equals(n, skillName, StringComparison.OrdinalIgnoreCase));
-        return at >= 0 ? (at + 1) + " of " + names.Count : names.Count + " skills";
+        return at >= 0 ? T($"{at + 1} of {names.Count}", $"{at + 1} de {names.Count}") : T($"{names.Count} skills", $"{names.Count} habilidades");
     }
 
     private void PollBindingSlots(long now)
@@ -401,7 +402,7 @@ public partial class PoE1AccessCore
             _lastSlotSaid = name;
             _slotSaidMs = now;
             string skill = SlotSkill(slot);
-            Say(SlotButton(name) + ": " + (skill.Length > 0 ? skill : "empty"), true);
+            Say(SlotButton(name) + ": " + (skill.Length > 0 ? skill : T("empty", "vacía")), true);
             return;
         }
     }
@@ -409,8 +410,23 @@ public partial class PoE1AccessCore
     private static string SlotButton(string slot) => slot switch
     {
         "skillA" => "A", "skillB" => "B", "skillX" => "X", "skillY" => "Y",
-        "skillDpadU" => "D-pad up", "skillDpadR" => "D-pad right", "skillDpadD" => "D-pad down", "skillDpadL" => "D-pad left",
+        "skillDpadU" => ButtonWord("D-pad up"), "skillDpadR" => ButtonWord("D-pad right"), "skillDpadD" => ButtonWord("D-pad down"), "skillDpadL" => ButtonWord("D-pad left"),
         _ => slot,
+    };
+
+    // A button's spoken name: LegendButtons holds the English names, said in the mod's language here.
+    private static string ButtonWord(string english) => english switch
+    {
+        "D-pad up" => T("D-pad up", "Cruceta arriba"),
+        "D-pad down" => T("D-pad down", "Cruceta abajo"),
+        "D-pad left" => T("D-pad left", "Cruceta izquierda"),
+        "D-pad right" => T("D-pad right", "Cruceta derecha"),
+        "Left bumper" => T("Left bumper", "LB"),
+        "Right bumper" => T("Right bumper", "RB"),
+        "Left stick" => T("Left stick", "Stick izquierdo"),
+        "Right stick" => T("Right stick", "Stick derecho"),
+        "View button" => T("View button", "Botón View"),
+        _ => english,   // A, B, X, Y, L3, R3, Start
     };
 
     // The skill on a slot, named from its icon: the skill on your bar with that icon, or the

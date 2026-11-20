@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -49,27 +50,27 @@ internal sealed partial class Navigator
         int act = Try(() => area.Act, 0);
         int level = Try(() => _gc.IngameState.Data.CurrentAreaLevel, 0);
         bool town = Try(() => area.IsTown, false), hideout = Try(() => area.IsHideout, false);
-        string kind = hideout ? "hideout" : town ? "town" : "";
         var head = new List<string>();
         if (name.Length > 0) head.Add(name);
-        if (kind.Length > 0) head.Add(kind + (act > 0 ? " of act " + act : ""));
-        else if (act > 0) head.Add("act " + act);
-        if (level > 0 && !town && !hideout) head.Add("area level " + level);
+        if (hideout) head.Add(act > 0 ? T($"hideout of act {act}", $"guarida del acto {act}") : T("hideout", "guarida"));
+        else if (town) head.Add(act > 0 ? T($"town of act {act}", $"pueblo del acto {act}") : T("town", "pueblo"));
+        else if (act > 0) head.Add(T($"act {act}", $"acto {act}"));
+        if (level > 0 && !town && !hideout) head.Add(T($"area level {level}", $"nivel de área {level}"));
         if (head.Count > 0) parts.Add(string.Join(", ", head));
 
         string ground = GroundText(PlayerGrid());
         if (ground.Length > 0) parts.Add(ground);
 
-        if (Try(() => area.HasWaypoint, false)) parts.Add("It has a waypoint");
+        if (Try(() => area.HasWaypoint, false)) parts.Add(T("It has a waypoint", "Tiene un transportador"));
         var bosses = Try(() => area.Bosses?.Select(b => b?.ToString() ?? "").Where(b => b.Length > 0).ToList(), null);
-        if (bosses != null && bosses.Count > 0) parts.Add((bosses.Count == 1 ? "Boss: " : "Bosses: ") + string.Join(", ", bosses));
+        if (bosses != null && bosses.Count > 0) { string names = string.Join(", ", bosses); parts.Add(bosses.Count == 1 ? T($"Boss: {names}", $"Jefe: {names}") : T($"Bosses: {names}", $"Jefes: {names}")); }
         var links = Try(() => area.Connections?.Select(c => Try(() => c.Name, "") ?? "").Where(c => c.Length > 0).Distinct().ToList(), null);
-        if (links != null && links.Count > 0) parts.Add("It leads to " + JoinAnd(links));
+        if (links != null && links.Count > 0) parts.Add(T($"It leads to {JoinAnd(links)}", $"Conduce a {JoinAnd(links)}"));
         return string.Join(". ", parts);
     }
 
     private static string JoinAnd(List<string> items) =>
-        items.Count == 1 ? items[0] : string.Join(", ", items.Take(items.Count - 1)) + " and " + items[items.Count - 1];
+        items.Count == 1 ? items[0] : T($"{string.Join(", ", items.Take(items.Count - 1))} and {items[items.Count - 1]}", $"{string.Join(", ", items.Take(items.Count - 1))} y {items[items.Count - 1]}");
 
     // "A large area, mostly open ground, stretching up and down. You are near its bottom edge."
     private string GroundText(Vector2 p)
@@ -100,26 +101,30 @@ internal sealed partial class Navigator
         }
         if (walkable == 0) return "";
         walkable *= 4;   // every second square in both directions was counted
-        string size = walkable < 40000 ? "A small area" : walkable < 150000 ? "A medium-sized area" : walkable < 400000 ? "A large area" : "A very large area";
+        string size = walkable < 40000 ? T("A small area", "Un área pequeña") : walkable < 150000 ? T("A medium-sized area", "Un área mediana") : walkable < 400000 ? T("A large area", "Un área grande") : T("A very large area", "Un área muy grande");
         double openShare = open * 4.0 / walkable;
-        string openness = openShare >= 0.6 ? "mostly open ground" : openShare >= 0.35 ? "open ground and narrow paths" : "mostly narrow paths";
+        string openness = openShare >= 0.6 ? T("mostly open ground", "terreno mayormente abierto") : openShare >= 0.35 ? T("open ground and narrow paths", "terreno abierto y caminos estrechos") : T("mostly narrow paths", "mayormente caminos estrechos");
         var text = size + ", " + openness;
         if (!axes) return text;
 
         float w = maxX - minX, h = maxY - minY;
         if (w > 0 && h > 0)
         {
-            if (w / h > 1.6f) text += ", stretching left and right";
-            else if (h / w > 1.6f) text += ", stretching up and down";
+            if (w / h > 1.6f) text += T(", stretching left and right", ", se extiende a izquierda y derecha");
+            else if (h / w > 1.6f) text += T(", stretching up and down", ", se extiende arriba y abajo");
         }
         // Where you are in it: the player is at (0, 0) of these coordinates.
         float fx = w > 0 ? -minX / w : 0.5f, fy = h > 0 ? -minY / h : 0.5f;   // 0 = left / bottom
-        string horiz = fx < 0.25f ? "left" : fx > 0.75f ? "right" : "";
-        string vert = fy < 0.25f ? "bottom" : fy > 0.75f ? "top" : "";
-        string where = vert.Length > 0 && horiz.Length > 0 ? "near its " + vert + " " + horiz + " corner"
-                     : vert.Length > 0 ? "near its " + vert + " edge"
-                     : horiz.Length > 0 ? "near its " + horiz + " edge"
-                     : "near its middle";
-        return text + ". You are " + where;
+        string where;
+        if (fy < 0.25f && fx < 0.25f) where = T("near its bottom left corner", "cerca de su esquina inferior izquierda");
+        else if (fy < 0.25f && fx > 0.75f) where = T("near its bottom right corner", "cerca de su esquina inferior derecha");
+        else if (fy > 0.75f && fx < 0.25f) where = T("near its top left corner", "cerca de su esquina superior izquierda");
+        else if (fy > 0.75f && fx > 0.75f) where = T("near its top right corner", "cerca de su esquina superior derecha");
+        else if (fy < 0.25f) where = T("near its bottom edge", "cerca de su borde inferior");
+        else if (fy > 0.75f) where = T("near its top edge", "cerca de su borde superior");
+        else if (fx < 0.25f) where = T("near its left edge", "cerca de su borde izquierdo");
+        else if (fx > 0.75f) where = T("near its right edge", "cerca de su borde derecho");
+        else where = T("near its middle", "cerca de su centro");
+        return text + T($". You are {where}", $". Estás {where}");
     }
 }

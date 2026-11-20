@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore.Shared.Nodes;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -35,7 +36,7 @@ public partial class PoE1AccessCore
 
     private List<MenuItem> BuildMenu()
     {
-        string Pct(int v) => v + " percent";
+        string Pct(int v) => T($"{v} percent", $"{v} por ciento");
         MenuItem Vol(string label, RangeNode<int> node, Action<int> sample) =>
             new MenuItem { Label = label, Range = node, Words = Pct, OnChange = sample };
         MenuItem Sw(string label, ToggleNode node) => new MenuItem { Label = label, Toggle = node };
@@ -43,43 +44,43 @@ public partial class PoE1AccessCore
 
         return new List<MenuItem>
         {
-            Sub("Sound volumes",
-                Vol("Master volume", Settings.MasterVolume, _ => SampleSound("loot")),
-                Vol("Enemy, NPC and combat sounds", Settings.EnemyVolume, _ => SampleSound("enemy")),
-                Vol("Loot sounds", Settings.LootVolume, _ => SampleSound("loot")),
-                Vol("Radar", Settings.RadarVolume, _ => SampleSound("radar")),
-                Vol("Guide", Settings.GuideVolume, _ => SampleSound("guide"))),
-            Sub("Speech",
+            Sub(T("Sound volumes", "Volúmenes de sonido"),
+                Vol(T("Master volume", "Volumen general"), Settings.MasterVolume, _ => SampleSound("loot")),
+                Vol(T("Enemy, NPC and combat sounds", "Sonidos de enemigos, PNJ y combate"), Settings.EnemyVolume, _ => SampleSound("enemy")),
+                Vol(T("Loot sounds", "Sonidos de botín"), Settings.LootVolume, _ => SampleSound("loot")),
+                Vol(T("Radar", "Radar"), Settings.RadarVolume, _ => SampleSound("radar")),
+                Vol(T("Guide", "Guía"), Settings.GuideVolume, _ => SampleSound("guide"))),
+            Sub(T("Speech", "Voz"),
                 new MenuItem
                 {
-                    Label = "Speech speed", Range = Settings.SpeechRate, Words = Pct,
+                    Label = T("Speech speed", "Velocidad de la voz"), Range = Settings.SpeechRate, Words = Pct,
                     OnChange = v => ApplySpeechRate(true),
                 },
-                Sw("Describe areas on arrival", Settings.DescribeAreas),
-                Sw("Name enemies coming into view", Settings.AnnounceEnemies),
-                Sw("Say which way enemies are", Settings.EnemyDirections),
-                Sw("Name the targeted enemy", Settings.AnnounceTarget),
-                Sw("Life, mana and shield warnings", Settings.AnnounceResources),
-                Sw("Name things you walk up to", Settings.AnnounceNearby),
-                Sw("Turn prompts while guiding", Settings.RoutePrompts),
-                Sw("Announce panels", Settings.AnnouncePanels)),
-            Sub("Sounds on or off",
-                Sw("Wall radar", Settings.Radar),
-                Sw("Unexplored ground pips", Settings.UnexploredMark),
-                Sw("Enemy sounds", Settings.EnemySounds),
-                Sw("NPC and player sounds", Settings.NpcSounds),
-                Sw("Loot sounds", Settings.LootSounds),
+                Sw(T("Describe areas on arrival", "Describir las áreas al llegar"), Settings.DescribeAreas),
+                Sw(T("Name enemies coming into view", "Nombrar a los enemigos que aparecen a la vista"), Settings.AnnounceEnemies),
+                Sw(T("Say which way enemies are", "Decir en qué dirección están los enemigos"), Settings.EnemyDirections),
+                Sw(T("Name the targeted enemy", "Nombrar al enemigo apuntado"), Settings.AnnounceTarget),
+                Sw(T("Life, mana and shield warnings", "Avisos de vida, maná y escudo"), Settings.AnnounceResources),
+                Sw(T("Name things you walk up to", "Nombrar lo que tienes cerca al acercarte"), Settings.AnnounceNearby),
+                Sw(T("Turn prompts while guiding", "Avisos de giro durante la guía"), Settings.RoutePrompts),
+                Sw(T("Announce panels", "Anunciar los paneles"), Settings.AnnouncePanels)),
+            Sub(T("Sounds on or off", "Sonidos activados o desactivados"),
+                Sw(T("Wall radar", "Radar de paredes"), Settings.Radar),
+                Sw(T("Unexplored ground pips", "Pitidos del terreno sin explorar"), Settings.UnexploredMark),
+                Sw(T("Enemy sounds", "Sonidos de enemigos"), Settings.EnemySounds),
+                Sw(T("NPC and player sounds", "Sonidos de PNJ y jugadores"), Settings.NpcSounds),
+                Sw(T("Loot sounds", "Sonidos de botín"), Settings.LootSounds),
                 new MenuItem
                 {
-                    Label = "Which loot sounds", Range = Settings.LootFilter, Step = 1,
-                    Words = v => v == 0 ? "all items" : v == 1 ? "magic or better" : "valuable only",
+                    Label = T("Which loot sounds", "Qué sonidos de botín"), Range = Settings.LootFilter, Step = 1,
+                    Words = v => v == 0 ? T("all items", "todos los objetos") : v == 1 ? T("magic or better", "mágicos o mejores") : T("valuable only", "solo los valiosos"),
                 },
-                Sw("Targeting blips", Settings.CrosshairBeep),
-                Sw("Melee reach ping", Settings.ReachPing),
-                new MenuItem { Label = "Melee reach distance", Range = Settings.ReachDistance, Words = v => v.ToString() }),
-            Sub("Reading",
-                Sw("Read the controller selection", Settings.ReadFocus),
-                Sw("Read what is under the cursor", Settings.ReadOnHover)),
+                Sw(T("Targeting blips", "Pitidos de apuntado"), Settings.CrosshairBeep),
+                Sw(T("Melee reach ping", "Aviso de alcance cuerpo a cuerpo"), Settings.ReachPing),
+                new MenuItem { Label = T("Melee reach distance", "Distancia de alcance cuerpo a cuerpo"), Range = Settings.ReachDistance, Words = v => v.ToString() }),
+            Sub(T("Reading", "Lectura"),
+                Sw(T("Read the controller selection", "Leer la selección del mando"), Settings.ReadFocus),
+                Sw(T("Read what is under the cursor", "Leer lo que hay bajo el cursor"), Settings.ReadOnHover)),
         };
     }
 
@@ -90,7 +91,7 @@ public partial class PoE1AccessCore
         _menuStack.Add((_menuRoot, _menuLastIndex.TryGetValue(_menuRoot, out int i) ? i : 0));
         _pad.MenuMode = true;
         PluginLog.Write("Settings menu opened");
-        Say("Mod settings. " + DescribeMenuItem(), true);
+        Say(T($"Mod settings. {DescribeMenuItem()}", $"Ajustes del mod. {DescribeMenuItem()}"), true);
     }
 
     private void CloseMenu()
@@ -100,18 +101,18 @@ public partial class PoE1AccessCore
         _menuStack.Clear();
         _pad.MenuMode = false;
         PluginLog.Write("Settings menu closed");
-        Say("Settings closed", true);
+        Say(T("Settings closed", "Ajustes cerrados"), true);
     }
 
     private string DescribeMenuItem()
     {
         var (items, index) = _menuStack[^1];
         MenuItem it = items[index];
-        string value = it.Children != null ? "submenu"
-            : it.Toggle != null ? (it.Toggle.Value ? "on" : "off")
+        string value = it.Children != null ? T("submenu", "submenú")
+            : it.Toggle != null ? (it.Toggle.Value ? T("on", "activado") : T("off", "desactivado"))
             : it.Range != null ? (it.Words ?? (v => v.ToString()))(it.Range.Value)
             : "";
-        return it.Label + ", " + value + ", " + (index + 1) + " of " + items.Count;
+        return T($"{it.Label}, {value}, {index + 1} of {items.Count}", $"{it.Label}, {value}, {index + 1} de {items.Count}");
     }
 
     // dy: -1 up, +1 down; dx: -1 left, +1 right.
@@ -123,7 +124,7 @@ public partial class PoE1AccessCore
         {
             int next = Math.Max(0, Math.Min(items.Count - 1, index + dy));
             _menuStack[^1] = (items, next);
-            Say(DescribeMenuItem() + (next == index ? (dy > 0 ? ", last" : ", first") : ""), true);
+            Say(DescribeMenuItem() + (next == index ? (dy > 0 ? T(", last", ", último") : T(", first", ", primero")) : ""), true);
             return;
         }
 
@@ -133,13 +134,13 @@ public partial class PoE1AccessCore
             if (dx < 0) { Say(DescribeMenuItem(), true); return; }
             _menuLastIndex[items] = index;
             _menuStack.Add((it.Children, _menuLastIndex.TryGetValue(it.Children, out int i) ? i : 0));
-            Say(it.Label + ". " + DescribeMenuItem(), true);
+            Say(T($"{it.Label}. {DescribeMenuItem()}", $"{it.Label}. {DescribeMenuItem()}"), true);
             return;
         }
         if (it.Toggle != null)
         {
             it.Toggle.Value = !it.Toggle.Value;
-            Say(it.Label + ", " + (it.Toggle.Value ? "on" : "off"), true);
+            Say(it.Toggle.Value ? T($"{it.Label}, on", $"{it.Label}, activado") : T($"{it.Label}, off", $"{it.Label}, desactivado"), true);
             return;
         }
         if (it.Range != null)
@@ -147,7 +148,7 @@ public partial class PoE1AccessCore
             int v = Math.Max(it.Range.Min, Math.Min(it.Range.Max, it.Range.Value + dx * it.Step));
             bool edge = v == it.Range.Value;
             it.Range.Value = v;
-            Say((it.Words ?? (n => n.ToString()))(v) + (edge ? (dx > 0 ? ", highest" : ", lowest") : ""), true);
+            Say((it.Words ?? (n => n.ToString()))(v) + (edge ? (dx > 0 ? T(", highest", ", máximo") : T(", lowest", ", mínimo")) : ""), true);
             it.OnChange?.Invoke(v);
         }
     }
@@ -197,6 +198,8 @@ public partial class PoE1AccessCore
         _appliedRate = rate;
         bool ok = _speech is PrismSpeech p && p.SetRate(rate / 100f);
         if (fromMenu && !ok)
-            Say("Your screen reader keeps its own speed. Change it in " + (_speech?.Name ?? "the screen reader") + "'s settings", false);
+            Say(_speech?.Name is string reader
+                ? T($"Your screen reader keeps its own speed. Change it in {reader}'s settings", $"Tu lector de pantalla mantiene su propia velocidad. Cámbiala en los ajustes de {reader}")
+                : T("Your screen reader keeps its own speed. Change it in the screen reader's settings", "Tu lector de pantalla mantiene su propia velocidad. Cámbiala en los ajustes del lector de pantalla"), false);
     }
 }

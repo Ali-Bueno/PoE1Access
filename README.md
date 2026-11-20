@@ -31,6 +31,74 @@ memory. The mod only reads: it never changes the game and never presses anything
 The full player guide, with every control and setting, is [Launcher/README.txt](Launcher/README.txt)
 (it ships as README.txt in the download).
 
+## Controls
+
+The mod only reads the controller. It cannot stop the game from seeing a press, so its
+controls use L3 (clicking the left stick) and the right stick while L3 is held, which the game
+leaves free in play. Every keyboard key can be changed in Exile API's menu (F12), under
+PoE1Access.
+
+### Mod controls in play
+
+- **Tap L3** (Insert): where the thing you chose in the scanner is now.
+- **Double tap L3** (F1): your level and how far you are to the next, life, mana, energy shield,
+  flask uses, the area and its level, how much you have explored, and the area's description.
+- **Triple tap L3** (Delete): the guide to the chosen thing, on or off.
+- **Hold L3 + right stick up or down** (Page Up, Page Down): the scanner's previous or next
+  category (exits, waypoints, characters, enemies, items, chests, unexplored ground, quest,
+  where you died).
+- **Hold L3 + right stick left or right** (Home, End): the previous or next thing in that
+  category, nearest first.
+- **Hold L3 for half a second**: the game's button prompts for what is around you (pick up,
+  talk, and so on).
+- **Hold L3 for a second and a half** (hold F3 for a second): the mod's settings menu.
+- **F9**: repeat the last thing said.
+
+### Mod controls in windows and menus
+
+- **Tap L3**: the next line of the selected item or tooltip. **Double tap L3**: the previous
+  line.
+- **Hold L3 for half a second**: the whole item or tooltip, or the window's controls when there
+  is nothing to read.
+- **Hold L3 for a second and a half** in the inventory: every item in the bag, or every
+  equipment slot when the selection is on the equipment.
+- **F5, F6**: previous, next item in your inventory. **F7**: switch between inventory and
+  equipment.
+- **Character sheet**: hold L3 + right stick up and down for each stat, left and right for each
+  section.
+- **Skills panel**: hold L3 + right stick left and right for each skill on your skill bar, up and
+  down for its details.
+- **World map** (from a waypoint): move the selection to hear each place; tap L3 for its
+  description.
+- **Passive tree**: each node says its links; tap L3 for the next line, double tap for the
+  previous, hold L3 for everything about the node.
+
+### Mod settings menu
+
+- **Right stick up and down** (arrow keys): move.
+- **Right stick left and right**: open a submenu, turn a switch on or off, or change a value in
+  steps of 5. A volume plays its sound as it changes.
+- **Tap L3** (Backspace): back up one level. **Double tap L3**, or hold F3 again: close.
+
+### Game controls (controller)
+
+These are the game's own controls, as it shows them on screen with a controller. The mod reads
+the game's button prompts as they appear, so the prompts of each window and menu are said as
+you open them. Hold L3 to hear them again.
+
+- **Left stick**: move, and move the selection in menus and windows.
+- **A, B, X, Y and the D-pad**: the skills on your skill bar, one per button.
+- **R3** (clicking the right stick): skill binding, to choose which skill each button uses.
+  - **Left stick**: move between the buttons; each one says the skill on it, or "empty".
+  - **A**: the skills you can put on that button. Move with the left stick to hear each one with
+    its details and its place in the list ("2 of 3"). A puts it on the button.
+  - **B**: back, then close skill binding.
+- **Start**: the game menu (options, log out, exit).
+- **Left and right bumper**, in the character windows: switch between Passives, Character,
+  Skills, Inventory, Cosmetics and World.
+- **Inventory**: the left stick moves the selection; L3 compares items or opens more actions; the
+  game names the buttons to pick up, place and close in its prompts, which the mod reads.
+
 ## Installing
 
 1. Download the latest release zip from the Releases page and unzip it anywhere.

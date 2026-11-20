@@ -1256,6 +1256,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // 3 Witch, 4 Duelist, 5 Templar, 6 Shadow).
         if (Settings.AnnouncePanels.Value) PollPanels(now);
         if (Settings.ReadFocus.Value) PollFocus(now);
+        // The screen's button prompts (character creation, selection, login): said as they change.
+        Guard("button legend", () => PollButtonLegend(now, true));
     }
 
     // Pre-game screens carry their instructions in an element named "title_frame" ("Creation.

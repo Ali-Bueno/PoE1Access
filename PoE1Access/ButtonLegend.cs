@@ -9,25 +9,32 @@ namespace PoE1Access;
 // The game's button legend: the row of controller prompts it shows for the current screen
 // ("Navigate Skills", "Select Skill", "Back", "Use Skill" in skill binding mode). Each entry is a
 // button picture and a label. The pictures are boxes cut from one sheet of controller icons
-// (Gamepad/XboxOne/1.dds|left,top,right,bottom); the boxes were matched to buttons on
-// 20 Nov 2026 from the legend's own entries: "Pick Up" is A and "Back" is B, the two-button
-// entries pair the four face buttons with each modifier, and the sheet keeps the face buttons
-// in the order A, B, X, Y; "Move" is the left stick. Boxes not matched yet are read by label only.
+// (Gamepad/XboxOne/1.dds|left,top,right,bottom), matched to buttons by the game's own
+// picture names (see LegendButtons). Boxes not named yet are read by their label only.
 //
 // Also skill binding mode (R3 in play, as the game does it on controller): its start and end
 // are said, and the details box of the selected skill is read when it changes.
 public partial class PoE1AccessCore
 {
+    // Boxes on the controller icon sheet, by the game's own picture names (found 20 Nov 2026 in
+    // UI elements that hold both a name such as "Controller/Button4" and its box; the game's
+    // button table names A "Button4", B "Button3", X "Button1", Y "Button2"). Boxes not named
+    // there are read by their label only, rather than with a guessed button.
     private static readonly Dictionary<string, string> LegendButtons = new Dictionary<string, string>
     {
-        ["0,39"] = "A",
+        ["c2,39"] = "A",
         ["61,39"] = "B",
-        ["c2,39"] = "X",
-        ["14e,0"] = "Y",
-        ["123,c0"] = "Left stick",
+        ["14e,0"] = "X",
+        ["0,39"] = "Y",
+        ["c2,99"] = "D-pad up",
+        ["184,c0"] = "L3",
+        ["c2,f9"] = "R3",
+        ["184,120"] = "Right bumper",
+        ["0,f9"] = "Start",
     };
 
-    private Element _legend;
+    private List<Element> _legends = new List<Element>();
+    private long _legendRoot;
     private long _nextLegendSearchMs, _nextLegendPollMs;
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
@@ -89,76 +96,95 @@ public partial class PoE1AccessCore
             Say("Controls: " + string.Join(". ", entries), false);
     }
 
-    /// <summary>The legend as "X: Select Skill", one entry each, in screen order.</summary>
+    /// <summary>The legend as "X: Select Skill", one entry each, in screen order. There are
+    /// several legends (play, the inventory's, ...); every shown entry of each counts.</summary>
     private List<string> LegendEntries(long now)
     {
         var mem = Mem;
         var result = new List<string>();
-        if (_legend == null || _legend.Address == 0)
+        Element root = UiRoot();
+        long rootAddr = root?.Address ?? 0;
+        if (rootAddr != _legendRoot) { _legends.Clear(); _legendRoot = rootAddr; _nextLegendSearchMs = 0; }
+        if (_legends.Count == 0 || now >= _nextLegendSearchMs)
         {
-            if (now < _nextLegendSearchMs) return result;
-            _nextLegendSearchMs = now + 3000;
-            _legend = FindLegend();
-            if (_legend == null) return result;
-        }
-        if (!Try(() => UiText.Visible(mem, _legend), false)) return result;
-        var kids = Try<IList<Element>>(() => _legend.Children, null);
-        if (kids == null) { _legend = null; return result; }
-        foreach (Element entry in kids)
-        {
-            if (!Try(() => UiText.VisibleLocal(mem, entry), false)) continue;
-            var parts = Try<IList<Element>>(() => entry.Children, null);
-            if (parts == null || parts.Count < 2) continue;
-            var labels = new List<string>();
-            CollectText(entry, 3, labels);
-            string label = string.Join(" ", labels.Where(l => l != "+"));
-            if (label.Length == 0) continue;
-            var buttons = new List<string>();
-            foreach (Element p in parts)
+            if (now >= _nextLegendSearchMs)
             {
-                if (!Try(() => UiText.VisibleLocal(mem, p), false)) continue;
-                string box = IconBox(p);
-                if (box.Length > 0) buttons.Add(LegendButtons.TryGetValue(box, out string b) ? b : "");
+                _nextLegendSearchMs = now + 5000;
+                _legends = FindLegends(root);
             }
-            // The picture is held twice in an entry (its frame and its image): each button once.
-            buttons = buttons.Where(b => b.Length > 0).Distinct().ToList();
-            result.Add(buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label);
+            if (_legends.Count == 0) return result;
+        }
+        foreach (Element legend in _legends)
+        {
+            if (!Try(() => UiText.Visible(mem, legend), false)) continue;
+            var kids = Try<IList<Element>>(() => legend.Children, null);
+            if (kids == null) continue;
+            foreach (Element entry in kids)
+            {
+                if (!Try(() => UiText.VisibleLocal(mem, entry), false)) continue;
+                var parts = Try<IList<Element>>(() => entry.Children, null);
+                if (parts == null || parts.Count < 2) continue;
+                var labels = new List<string>();
+                CollectText(entry, 3, labels);
+                string label = string.Join(" ", labels.Where(l => l != "+"));
+                if (label.Length == 0) continue;
+                // The button picture: the one held by the part with the label (in the play legend
+                // both parts hold the same one; in the inventory's, the other part holds an
+                // unrelated picture), else the parts' own.
+                var buttons = new List<string>();
+                var withText = new List<Element>();
+                var without = new List<Element>();
+                foreach (Element part in parts)
+                {
+                    if (!Try(() => UiText.VisibleLocal(mem, part), false)) continue;
+                    var t = new List<string>();
+                    CollectTextAll(part, 3, t);
+                    (t.Count > 0 ? withText : without).Add(part);
+                }
+                foreach (Element part in withText.Count > 0 ? withText : without)
+                {
+                    string box = IconBox(part);
+                    if (box.Length > 0) buttons.Add(LegendButtons.TryGetValue(box, out string b) ? b : "");
+                }
+                buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
+                string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;
+                if (!result.Contains(line)) result.Add(line);
+            }
         }
         return result;
     }
 
-    // The legend: the element holding the prompt entries (dozens of them, mostly hidden, with
-    // labels such as "Pick Up", "Move", "Close").
-    private Element FindLegend()
+    // The legends: elements holding prompt entries (dozens of them, mostly hidden, with labels
+    // such as "Pick Up", "Move", "Close", "Navigate").
+    private List<Element> FindLegends(Element root)
     {
-        Element root = UiRoot();
-        if (root == null) return null;
-        var mem = Mem;
+        var found = new List<Element>();
+        if (root == null) return found;
         var queue = new Queue<(Element E, int D)>();
         queue.Enqueue((root, 0));
         int visited = 0;
-        string[] known = { "Pick Up", "Move", "Close", "Zoom" };
-        while (queue.Count > 0 && visited < 6000)
+        string[] known = { "Pick Up", "Move", "Close", "Zoom", "Navigate", "Back", "Select", "Confirm" };
+        while (queue.Count > 0 && visited < 8000)
         {
             var (e, d) = queue.Dequeue();
             visited++;
             var kids = Try<IList<Element>>(() => e.Children, null);
             if (kids == null || kids.Count > 500) continue;
-            if (kids.Count >= 30)
+            if (kids.Count >= 20)
             {
                 int hits = 0;
-                foreach (Element k in kids.Skip(Math.Max(0, kids.Count - 20)))
+                foreach (Element k in kids.Skip(Math.Max(0, kids.Count - 16)))
                 {
                     var t = new List<string>();
                     CollectTextAll(k, 3, t);
                     if (t.Any(x => known.Contains(x))) hits++;
                 }
-                if (hits >= 2) return e;
+                if (hits >= 2) { found.Add(e); continue; }
             }
-            if (d >= 4) continue;
+            if (d >= 5) continue;
             foreach (Element k in kids) queue.Enqueue((k, d + 1));
         }
-        return null;
+        return found;
     }
 
     // Text in an element and its children, shown or not (the legend keeps hidden entries).

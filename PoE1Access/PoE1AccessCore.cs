@@ -41,8 +41,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private const int MaxDumpNodes = 5000;
     private const int MaxSpeechChars = 2500;
 
-    // Markup, empty ones too: the Spanish name screen starts with "<>" marks ("< >< >< >Introduce...").
-    private static readonly Regex TagRegex = new Regex("<[^<>]{0,60}>", RegexOptions.Compiled);
+    private static readonly Regex TagRegex = new Regex("<[^<>]{1,60}>", RegexOptions.Compiled);
+    // Grammar marks of the translated texts: "<<set:M>><<set:S>><<set:MS>>Introduce el nombre de tu Templario".
+    private static readonly Regex GrammarRegex = new Regex("<<set:[^<>]{0,20}>>", RegexOptions.Compiled);
     private static readonly Regex ControllerRegex = new Regex("<<\\s*([A-Za-z0-9_]{1,40})\\s*>>", RegexOptions.Compiled);
 
     // "xbox_button_a" -> "A button", "xbox_dpad_up" -> "D-pad up", "xbox_lt" -> "left trigger".
@@ -2711,6 +2712,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private static string CleanText(string s)
     {
         if (string.IsNullOrEmpty(s)) return "";
+        if (s.IndexOf("<<set:", StringComparison.Ordinal) >= 0) s = GrammarRegex.Replace(s, "");
         // Controller prompts: "ok <<xbox_button_a>>" -> "ok, A button".
         if (s.IndexOf("<<", StringComparison.Ordinal) >= 0)
             s = ControllerRegex.Replace(s, m => ", " + PromptName(m.Groups[1].Value) + " ");

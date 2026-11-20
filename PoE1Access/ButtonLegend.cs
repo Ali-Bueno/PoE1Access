@@ -32,11 +32,15 @@ public partial class PoE1AccessCore
         ["0,f9"] = "Start",
         // Checked 20 Nov 2026 against the prompts on screen (PS5 pictures): "L1 Current League
         // Info" on the login screen, "R Navigate Skills" in skill binding, "L Switch League" and
-        // "R1 Toggle Solo Self-Found" on the league screen.
+        // "R1 Toggle Solo Self-Found" on the league screen, "L Switch Waypoint" and "R Browse
+        // Primary Areas" on the world map.
         ["184,120"] = "Left bumper",
         ["0,159"] = "Right bumper",
         ["123,c0"] = "Left stick",
         ["61,f9"] = "Right stick",
+        // "Close" in the character windows, which the View button (Share on PlayStation) opens
+        // and closes; its picture is the sheet's first box.
+        ["0,0"] = "View button",
     };
 
     private List<Element> _legends = new List<Element>();

@@ -32,12 +32,14 @@ public partial class PoE1AccessCore
     private string _legendSig = "";
     private List<string> _legendNow = new List<string>();
     private bool _bindingMode;
+    private long _bindingLastSeenMs;
+    private string _bindingSlot = "";
     private string _bindingDetailsSig = "";
 
     private void PollButtonLegend(long now, bool uiBusy)
     {
         if (now < _nextLegendPollMs) return;
-        _nextLegendPollMs = now + 250;
+        _nextLegendPollMs = now + (_bindingMode ? 100 : 250);   // a slot's mark lasts a third of a second
 
         var entries = LegendEntries(now);
         _legendNow = entries;
@@ -45,16 +47,30 @@ public partial class PoE1AccessCore
         bool binding = entries.Any(e => e.EndsWith("Navigate Skills") || e.EndsWith("Select Skill"));
         var details = binding ? SkillBindingDetails() : new List<string>();
 
-        if (binding != _bindingMode)
+        // The prompts change for a moment as you move in the mode, so it counts as closed only
+        // after a second without them.
+        if (binding) _bindingLastSeenMs = now;
+        if (binding && !_bindingMode)
         {
-            _bindingMode = binding;
+            _bindingMode = true;
             _bindingDetailsSig = "";
-            Say(binding ? "Skill binding" + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") : "Skill binding closed", true);
+            Say("Skill binding" + (entries.Count > 0 ? ". " + string.Join(". ", entries) : ""), true);
             _legendSig = string.Join("|", entries);
             return;
         }
+        if (!binding && _bindingMode && now - _bindingLastSeenMs > 1200)
+        {
+            _bindingMode = false;
+            _bindingSlot = "";
+            Say("Skill binding closed", true);
+            _legendSig = string.Join("|", entries);
+            return;
+        }
+        binding = _bindingMode;
         if (binding)
         {
+            if (_skillsBar == null) SkillBindingDetails();   // finds the skill bar
+            Try(() => { PollBindingSlots(now); return 0; }, 0);
             string dsig = string.Join("|", details);
             if (dsig != _bindingDetailsSig && details.Count > 0)
             {
@@ -104,7 +120,8 @@ public partial class PoE1AccessCore
                 string box = IconBox(p);
                 if (box.Length > 0) buttons.Add(LegendButtons.TryGetValue(box, out string b) ? b : "");
             }
-            buttons = buttons.Where(b => b.Length > 0).ToList();
+            // The picture is held twice in an entry (its frame and its image): each button once.
+            buttons = buttons.Where(b => b.Length > 0).Distinct().ToList();
             result.Add(buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label);
         }
         return result;
@@ -216,4 +233,95 @@ public partial class PoE1AccessCore
 
     private Element _skillsBar;
     private long _nextSkillsBarSearchMs;
+
+    // ---- Binding mode: the slot you move to ----
+    //
+    // The skill bar's slots are named skillA, skillB, skillX, skillY, skillDpadU/R/D/L. Moving
+    // onto one sets a byte at +0x128 (+0x130 after the patch's 8-byte shift) to 1 for about a
+    // third of a second (found 20 Nov 2026); each slot's icon (its "icon1" child, or "icon4" on
+    // the D-pad) holds the picture of the skill bound there ("Art/2DArt/SkillIcons/
+    // ghostlythrow.dds"), which the skill's own data names too.
+    private string _lastSlotSaid = "";
+    private long _slotSaidMs;
+
+    private void PollBindingSlots(long now)
+    {
+        var mem = Mem;
+        Element bar = _skillsBar;
+        if (bar == null) return;
+        Element container = ChildNamed(bar, "skills_container", 3);
+        var slots = Try<IList<Element>>(() => container?.Children, null);
+        if (slots == null) return;
+        foreach (Element slot in slots)
+        {
+            string name = UiText.Name(mem, slot);
+            if (!name.StartsWith("skill") || name == "skills_container") continue;
+            if (Try(() => mem.Read<byte>(slot.Address + 0x128 + UiText.Shift), (byte)0) != 1) continue;
+            if (name == _lastSlotSaid && now - _slotSaidMs < 1500) continue;
+            _lastSlotSaid = name;
+            _slotSaidMs = now;
+            string skill = SlotSkill(slot);
+            Say(SlotButton(name) + ": " + (skill.Length > 0 ? skill : "empty"), true);
+            return;
+        }
+    }
+
+    private static string SlotButton(string slot) => slot switch
+    {
+        "skillA" => "A", "skillB" => "B", "skillX" => "X", "skillY" => "Y",
+        "skillDpadU" => "D-pad up", "skillDpadR" => "D-pad right", "skillDpadD" => "D-pad down", "skillDpadL" => "D-pad left",
+        _ => slot,
+    };
+
+    // The skill on a slot, named from its icon: the skill on your bar with that icon, or the
+    // icon's own file name in words.
+    private string SlotSkill(Element slot)
+    {
+        var mem = Mem;
+        var kids = Try<IList<Element>>(() => slot.Children, null);
+        if (kids == null) return "";
+        foreach (Element k in kids)
+        {
+            string n = UiText.Name(mem, k);
+            if (!n.StartsWith("icon")) continue;
+            if (!Try(() => UiText.VisibleLocal(mem, k), false)) continue;
+            string icon = "";
+            try
+            {
+                long p = mem.Read<long>(k.Address + 0x230 + UiText.Shift);
+                long s = p > 0x10000 ? mem.Read<long>(p + 8) : 0;
+                if (s > 0x10000) icon = ReadAsciiOrWide(s);
+            }
+            catch { }
+            int at = icon.IndexOf("SkillIcons/", StringComparison.OrdinalIgnoreCase);
+            if (at < 0) continue;
+            string file = icon.Substring(at + 11);
+            int cut = file.IndexOfAny(new[] { '.', '|' });
+            if (cut > 0) file = file.Substring(0, cut);
+            return SkillNameForIcon(file);
+        }
+        return "";
+    }
+
+    private string SkillNameForIcon(string iconFile)
+    {
+        var actor = GetComp<ExileCore.PoEMemory.Components.Actor>(GameController.Player);
+        var skills = actor != null ? Try(() => actor.ActorSkills, null) : null;
+        if (skills != null)
+            foreach (var s in skills)
+            {
+                var active = Try(() => s.EffectsPerLevel?.SkillGemWrapper?.ActiveSkill, null);
+                string icon = Try(() => active?.Icon, "") ?? "";
+                if (icon.Length > 0 && icon.IndexOf(iconFile, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    string name = CleanText(Try(() => active.DisplayName, "") ?? "");
+                    if (name.Length > 0) return name;
+                }
+            }
+        // Words from the file name: "ghostlythrow" stays as it is, "iconbasicattack" -> "basic attack".
+        string w = iconFile.StartsWith("icon", StringComparison.OrdinalIgnoreCase) ? iconFile.Substring(4) : iconFile;
+        w = System.Text.RegularExpressions.Regex.Replace(w, "([a-z])([A-Z])", "$1 $2");
+        if (w.Equals("basicattack", StringComparison.OrdinalIgnoreCase)) return "Default Attack";
+        return w.Length > 0 ? w : iconFile;
+    }
 }

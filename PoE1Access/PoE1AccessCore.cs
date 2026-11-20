@@ -1675,6 +1675,37 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (text.Length > 0) Say(text, true);
     }
 
+    // The login screen's news banners are pictures with no text, downloaded into the game's
+    // MOTDCache: their file name says what they are ("public_news_2026-11-07_ExileCon_Packs_Half_
+    // MOTD_EN.png" -> "News: ExileCon Packs").
+    private string NewsPicture(Element e)
+    {
+        string path = "";
+        try
+        {
+            long p = Mem.Read<long>(e.Address + 0x230 + UiText.Shift);
+            if (p >= 0x10000 && p <= 0x7FFF_FFFF_FFFF)
+            {
+                long s = Mem.Read<long>(p + 8);
+                if (s >= 0x10000 && s <= 0x7FFF_FFFF_FFFF) path = ReadAsciiOrWide(s);
+            }
+        }
+        catch { }
+        int at = path.IndexOf("MOTDCache/", StringComparison.OrdinalIgnoreCase);
+        if (at < 0) return "";
+        string name = path.Substring(at + 10);
+        int cut = name.IndexOfAny(new[] { '|', '.' });
+        if (cut > 0) name = name.Substring(0, cut);
+        name = Regex.Replace(name, @"^public_news_\d{4}-\d{2}-\d{2}_", "", RegexOptions.IgnoreCase);
+        var words = name.Split('_').Where(w => w.Length > 0).ToList();
+        int motd = words.FindIndex(w => w.Equals("MOTD", StringComparison.OrdinalIgnoreCase));
+        if (motd >= 0) words = words.Take(motd).ToList();
+        // Layout words ("Half", "ESHalf": a half-width banner, in Spanish) say nothing.
+        words = words.Where(w => !Regex.IsMatch(w, "^([A-Z]{2})?(Half|Full|Wide)$")).ToList();
+        string text = string.Join(" ", words.Select(w => Regex.Replace(w, "(?<=[a-z]{2})(?=[A-Z][a-z]{3,})", " ")));
+        return text.Length > 0 ? "News: " + text : "News";
+    }
+
     // Speaks a slider's or checkbox's new value when it changes on the selected row.
     private Element _focusRow;
     private string _focusValue = "";
@@ -1733,6 +1764,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         {
             string state = ControlValue(row, out _);
             if (state.Length > 0) parts.Add(state);
+        }
+        if (parts.Count == 0)
+        {
+            string news = NewsPicture(e);
+            if (news.Length > 0) parts.Add(news);
         }
         return JoinSpeech(parts);
     }

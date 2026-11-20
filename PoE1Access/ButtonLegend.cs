@@ -172,13 +172,13 @@ public partial class PoE1AccessCore
                 var buttons = new List<string>();
                 var shown = parts.Where(pt => Try(() => UiText.VisibleLocal(mem, pt), false)).ToList();
                 Element labelPart = shown.FirstOrDefault(pt => { var t = new List<string>(); CollectTextAll(pt, 3, t); return t.Count > 0; });
-                // The picture parts name the button; the label part's copy is used only when they
-                // name none, since it can keep a picture from an earlier use too (found 20 Nov
-                // 2026: "R3 and Left bumper" for the login screen's "L1 Current League Info"
-                // after leaving the game).
-                foreach (Element part in shown.Where(pt => pt != labelPart).Append(labelPart))
+                // The label part's copy (+0x230) names the button; the picture parts' own picture
+                // is used only when it names none, since after leaving the game it keeps the
+                // picture of an earlier use (found 20 Nov 2026: R3 for the login screen's "L1
+                // Current League Info", while the label part still had L1).
+                foreach (Element part in new[] { labelPart }.Concat(shown.Where(pt => pt != labelPart)))
                 {
-                    if (part == null || (part == labelPart && buttons.Count > 0)) continue;
+                    if (part == null || (part != labelPart && buttons.Count > 0)) continue;
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
                     if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
                     else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");

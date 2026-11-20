@@ -5,8 +5,9 @@ using System.Runtime.InteropServices;
 namespace PoE1Access;
 
 /// <summary>
-/// Reads the controller (XInput) and turns the mod button gestures into commands, following
-/// the Poe2Access layout. Read-only: it cannot hide a press from the game, which also sees it.
+/// Reads the controller (XInput, or a PlayStation controller through PlayStationPad) and turns
+/// the mod button gestures into commands, following the Poe2Access layout. Read-only: it cannot
+/// hide a press from the game, which also sees it.
 ///
 ///   L3 tap                 -> Tap        (where the scanner's choice is / repeat in menus)
 ///   L3 double tap          -> DoubleTap  (life, mana, energy shield)
@@ -62,7 +63,11 @@ internal sealed class ControllerInput
 
     public Vector2 LeftStick { get; private set; }
     public Vector2 RightStick { get; private set; }
-    public bool Connected => _pad >= 0;
+    public bool Connected => _pad >= 0 || _ps.Connected;
+
+    // A PlayStation controller, used when no XInput controller is connected.
+    private readonly PlayStationPad _ps = new PlayStationPad();
+    private bool _psLogged;
 
     private bool Read(int index, out XInputState s)
     {
@@ -86,21 +91,41 @@ internal sealed class ControllerInput
 
     public Command Poll(long now)
     {
-        if (_pad < 0)
+        if (_pad < 0 && !_ps.Connected)
         {
             if (now < _nextPadSearchMs) return Command.None;
             _nextPadSearchMs = now + 2000;
             for (int i = 0; i < 4; i++)
                 if (Read(i, out _)) { _pad = i; break; }
-            if (_pad < 0) return Command.None;
+            if (_pad < 0)
+            {
+                bool found = false;
+                try { found = _ps.Open(); } catch { }
+                if (found != _psLogged)
+                {
+                    _psLogged = found;
+                    PluginLog.Write(found ? "Controller: " + _ps.Name : "Controller: none found (XInput or PlayStation)");
+                }
+                if (!found) return Command.None;
+            }
         }
 
-        if (!Read(_pad, out XInputState st)) { _pad = -1; return Command.None; }
-
-        var g = st.Gamepad;
-        LeftStick = Stick(g.LX, g.LY);
-        RightStick = Stick(g.RX, g.RY);
-        bool l3 = (g.Buttons & L3) != 0;
+        bool l3;
+        if (_pad >= 0)
+        {
+            if (!Read(_pad, out XInputState st)) { _pad = -1; return Command.None; }
+            var g = st.Gamepad;
+            LeftStick = Stick(g.LX, g.LY);
+            RightStick = Stick(g.RX, g.RY);
+            l3 = (g.Buttons & L3) != 0;
+        }
+        else
+        {
+            if (!_ps.Connected) return Command.None;
+            LeftStick = _ps.LeftStick;
+            RightStick = _ps.RightStick;
+            l3 = _ps.L3;
+        }
 
         Command cmd = Command.None;
 

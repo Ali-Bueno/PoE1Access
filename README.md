@@ -12,8 +12,11 @@ memory. The mod only reads: it never changes the game and never presses anything
 
 ## What it does
 
-- **Menus:** login screen, character selection and creation, the pause menu and the options
-  (rows, tabs, checkbox, slider and dropdown values), read as the controller selection moves.
+- **Menus:** login screen, character selection and creation (with the class each Exile is as
+  you move between them), the pause menu and the options (rows, tabs, checkbox, slider and
+  dropdown values), read as the controller selection moves.
+- **Any client language:** windows, prompts and names are found by the game's own words, so the
+  mod works with the game in any of its languages.
 - **Inventory and equipment:** each item with its mods, gem and currency descriptions; every
   equipment slot, including empty ones; what you pick up, place and equip.
 - **Character sheet and skills panel:** every stat, stepped through one by one.
@@ -90,8 +93,8 @@ you open them. Hold L3 to hear them again.
 - **Left stick**: move, and move the selection in menus and windows.
 - **A, B, X, Y and the D-pad**: the skills on your skill bar, one per button.
 - **R3** (clicking the right stick): skill binding, to choose which skill each button uses.
-  - **Left stick**: move between the buttons; each one says the skill on it, or "empty".
-  - **A**: the skills you can put on that button. Move with the left stick to hear each one with
+  - **Right stick**: move between the buttons; each one says the skill on it, or "empty".
+  - **A**: the skills you can put on that button. Move with the right stick to hear each one with
     its details and its place in the list ("2 of 3"). A puts it on the button.
   - **B**: back, then close skill binding.
 - **Start**: the game menu (options, log out, exit).
@@ -111,7 +114,8 @@ you open them. Hold L3 to hear them again.
    again (versions 0.2.2 and later).
 
 You need Windows 10 or 11 (64-bit), the .NET 10 Desktop Runtime (x64), and Path of Exile 1 in
-windowed or windowed fullscreen mode. A controller is recommended.
+windowed or windowed fullscreen mode. A controller is recommended: Xbox (XInput) controllers
+and PlayStation controllers (DualSense, DualSense Edge, DualShock 4) are read.
 
 ## Building
 

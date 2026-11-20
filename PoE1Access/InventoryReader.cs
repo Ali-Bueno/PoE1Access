@@ -275,6 +275,28 @@ public partial class PoE1AccessCore
 
     private Dictionary<string, string> _currencyDescriptions;
 
+    // ExileApi reads game text up to a fixed length, which cuts long gem descriptions short
+    // ("...causes balls of molten magma"). The full text: the pointer in the record whose text
+    // starts with the short one, read again without the limit.
+    private string FullText(long record, string shortText)
+    {
+        if (record == 0 || shortText.Length < 20) return shortText;
+        var mem = Mem;
+        string start = shortText.Substring(0, 20);
+        for (int off = 0; off < 0x100; off++)
+        {
+            try
+            {
+                long p = mem.Read<long>(record + off);
+                if (p < 0x10000 || p > 0x7FFF_FFFF_FFFF) continue;
+                string s = mem.ReadStringU(p, 4000) ?? "";
+                if (s.StartsWith(start, StringComparison.Ordinal) && s.Length >= shortText.Length) return s;
+            }
+            catch { }
+        }
+        return shortText;
+    }
+
     // A support gem's description ("Supports attack skills."): in its GrantedEffects.dat row, the
     // text pointer right after the gem's name pointer (+0xEB name, +0xF3 description; rows are
     // packed, so these are not 8-aligned). Found 19 Nov 2026 on three support gems.
@@ -309,7 +331,12 @@ public partial class PoE1AccessCore
             if (effect == null) effect = Try(() => gem.GrantedEffect1, null);
             if (effect == null) return "";
             bool support = Try(() => effect.IsSupport, false);
-            if (!support) return CleanText(Try(() => effect.ActiveSkill?.Description, "") ?? "");
+            if (!support)
+            {
+                var active = Try(() => effect.ActiveSkill, null);
+                string shortText = Try(() => active?.Description, "") ?? "";
+                return CleanText(FullText(active?.Address ?? 0, shortText));
+            }
             string supportText = SupportDescription(effect.Address);
             return supportText.Length > 0 ? "Support gem. " + supportText : "Support gem";
         }

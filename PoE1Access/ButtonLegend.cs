@@ -90,9 +90,9 @@ public partial class PoE1AccessCore
         // whatever you stand by, which would be chatter; hold L3 hears it there).
         string sig = string.Join("|", entries);
         if (sig == _legendSig) return;
-        string before = _legendSig;
         _legendSig = sig;
-        if ((uiBusy || binding) && entries.Count > 0 && before.Length > 0)
+        // Said when they appear (a window opening, an item selected) and when they change.
+        if ((uiBusy || binding) && entries.Count > 0)
             Say("Controls: " + string.Join(". ", entries), false);
     }
 

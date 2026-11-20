@@ -1104,7 +1104,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The last state with a screen of its own is the one showing. The game leaves character
         // creation in the list when you go back from it, even after logging out ("PreGameState,
         // LoginState, CreateCharacterState" on the login screen, found 20 Nov 2026), so a screen
-        // whose UI is hidden is passed over while another screen lies below it.
+        // whose UI is hidden, or gone (the left-behind creation state points to no UI element), is
+        // passed over while another screen lies below it.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var st = active[i];
@@ -1120,14 +1121,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     }
 
     // Whether a screen's UI is shown: the first UI element its state points to (its root) is
-    // visible. Checked at most twice a second per state.
+    // visible. A screen left behind keeps no UI at all (its state points to no element), and
+    // counts as hidden. Checked at most twice a second per state.
     private readonly Dictionary<long, (long AtMs, bool Shown)> _stateUiShown = new Dictionary<long, (long, bool)>();
 
     private bool StateUiShown(long stateAddr)
     {
         long now = _clock.ElapsedMilliseconds;
         if (_stateUiShown.TryGetValue(stateAddr, out var c) && now - c.AtMs < 500) return c.Shown;
-        bool shown = true;   // unknown counts as shown, as before
+        bool shown = false;
         byte[] b = TextProbe.ReadUpTo(Mem, stateAddr, 0x800);
         if (b != null)
             for (int o = 0; o + 8 <= b.Length; o += 8)

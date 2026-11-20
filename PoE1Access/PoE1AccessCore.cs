@@ -1570,14 +1570,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _focusState = state;
                 // A highlighted banner inside the selected element is what the screen starts on:
                 // the league screen selects its "Challenge Leagues" group, whose banners are its
-                // grandchildren ([group]/1/n), with the default league's lit (the group's heading
-                // and the banners' own switches are lit too, at other depths).
+                // grandchildren ([group]/1/n), with the default league's lit. The banners' own
+                // switches are lit too, deeper, and so is the group's heading ([group]/0/0), whose
+                // text is only the group's name; a banner has its league's description.
                 int bannerDepth = elements[a].Path.Count(c => c == '/') + 2;
                 string inside = elements[a].Path + "/";
                 long lit = _preGameState != "CreateCharacterState" ? 0 : state.Where(kv => kv.Value.Lit && elements[kv.Key].Path.StartsWith(inside) &&
-                                             elements[kv.Key].Path.Count(c => c == '/') == bannerDepth &&
-                                             DescribeHighlighted(elements[kv.Key].E).Length > 0)
-                                .Select(kv => kv.Key).FirstOrDefault();
+                                             elements[kv.Key].Path.Count(c => c == '/') == bannerDepth)
+                                .Select(kv => (kv.Key, Text: DescribeHighlighted(elements[kv.Key].E)))
+                                .Where(x => x.Text.Length > 0).OrderByDescending(x => x.Text.Length)
+                                .Select(x => x.Key).FirstOrDefault();
                 if (lit != 0) AnnounceFocus(lit, elements[lit].E, elements[lit].Path, "Highlight");
                 else AnnounceFocus(a, elements[a].E, elements[a].Path, "Initial focus");
                 return;

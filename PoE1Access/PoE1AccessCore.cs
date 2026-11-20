@@ -840,7 +840,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // probe marks the offsets that contain it.
     private void RunTextProbe()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         Element hover = state.UIHover;
@@ -955,7 +955,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Element pre = PreGameRoot();
             if (pre != null) return pre;
         }
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return null;
         Element root = Try<Element>(() => state.UIRoot, null);
         if (root == null || root.Address == 0) root = Try<Element>(() => state.IngameUi, null);
@@ -1928,7 +1928,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
     private string ReadHoverText(long now)
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return "";
 
         Element hover = state.UIHover;
@@ -2550,7 +2550,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // F11: the element under the cursor, its tooltip, and what the plugin made of it.
     private void DumpHovered()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         var sb = new StringBuilder();

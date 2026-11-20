@@ -126,28 +126,19 @@ public partial class PoE1AccessCore
         int cast = Try(() => effect.CastTime, 0);
         if (spell && !attack && cast > 0 && cast < 60000) before.Add("Cast time: " + Seconds(cast));
 
-        // Stats.
+        // Stats: the gem's own skill, then a skill it adds (the Prismatic Burst a support
+        // triggers, a Vaal gem's Vaal skill), its lines named after it.
         if (LoadGemData())
         {
-            long set = 0;
-            for (int off = 0; off < 0x200 && set == 0; off++)
+            after.AddRange(EffectStatLines(effect, level, "", true, before));
+            var second = Try(() => gem.GemEffect?.GrantedEffect2, null);
+            if (second != null && second.Address != 0 && second.Address != effect.Address)
             {
-                long p = Try(() => mem.Read<long>(effect.Address + off), 0L);
-                if (_statSets.Holds(p)) set = p;
-            }
-            if (set != 0)
-            {
-                var stats = new List<(string Key, int Value)>();
-                stats.AddRange(StatPairs(set, (int)_statSets.Length));
-                if (_statSetLevels.TryGetValue((set, level), out long levelRow))
-                    stats.AddRange(StatPairs(levelRow, (int)_statSetsPerLevel.Length));
-                var seen = new HashSet<string>();
-                foreach (var (key, value) in stats)
-                {
-                    if (!seen.Add(key) || HiddenGemStat(key)) continue;
-                    string words = GemStatWords(key, value);
-                    if (words.Length > 0) after.Add(words);
-                }
+                string name = Try(() => second.ActiveSkill?.DisplayName, "") ?? "";
+                var extra = new List<string>();
+                var lines = EffectStatLines(second, level, name, false, extra);
+                extra.AddRange(lines);
+                after.AddRange(extra.Select(l => name.Length > 0 ? name + ": " + l : l));
             }
         }
 
@@ -155,6 +146,104 @@ public partial class PoE1AccessCore
         int max = Try(() => gem.MaxLevel, 0);
         if (toNext > 0 && (max == 0 || level < max)) after.Add("Experience to next level: " + toNext);
         return (before, after);
+    }
+
+    // A skill's stat lines at a gem level. The level row (Data/GrantedEffectStatSetsPerLevel,
+    // 0xB8 bytes on the 18 Nov 2026 patch) holds: +0x18 spell critical strike chance and +0x1C
+    // attack critical strike chance (hundredths of a percent), +0x20 attack damage and +0x24
+    // effectiveness of added damage (hundredths of a percent over 100), then lists of 16 bytes
+    // (count, pointer): +0x28 the values of the stats at +0x68 (base damage and the like),
+    // +0x38 the values of the stats at +0x88, +0x58 stats that are simply on.
+    // Spectral Throw's attack damage (0 at level 1, 5000 at 20: 100% to 150%) and Prismatic
+    // Burst's damage (3 to 5 cold at level 1) checked against the game.
+    private List<string> EffectStatLines(ExileCore.PoEMemory.FilesInMemory.GrantedEffect effect, int level, string skillName, bool primary, List<string> headLines)
+    {
+        var lines = new List<string>();
+        var mem = Mem;
+        long set = 0;
+        for (int off = 0; off < 0x200 && set == 0; off++)
+        {
+            long p = Try(() => mem.Read<long>(effect.Address + off), 0L);
+            if (_statSets.Holds(p)) set = p;
+        }
+        if (set == 0) return lines;
+
+        var stats = new List<(string Key, int Value)>();
+        stats.AddRange(StatPairs(set, (int)_statSets.Length));   // the same at every level
+        if (_statSetLevels.TryGetValue((set, level), out long row) && _statSetsPerLevel.Length >= 0xB8)
+        {
+            var types = Try(() => effect.ActiveSkill?.SkillTypes, null);
+            bool attack = types != null && types.Any(t => t.ToString() == "Attack");
+            bool spell = types != null && types.Any(t => t.ToString() == "Spell");
+            int spellCrit = Try(() => mem.Read<int>(row + 0x18), 0), attackCrit = Try(() => mem.Read<int>(row + 0x1C), 0);
+            int multiplier = Try(() => mem.Read<int>(row + 0x20), 0), effectiveness = Try(() => mem.Read<int>(row + 0x24), 0);
+            string Pct(int v) => (100 + v / 100.0).ToString("0.#") + "%";
+            if (attack && multiplier > -10000 && multiplier < 100000) headLines.Add("Attack damage: " + Pct(multiplier) + " of base");
+            int crit = spell ? spellCrit : attackCrit;
+            if (crit > 0 && crit <= 10000) headLines.Add("Critical strike chance: " + (crit / 100.0).ToString("0.##") + "%");
+            if (!attack && (spell || effectiveness != 0) && effectiveness > -10000 && effectiveness < 100000)
+                headLines.Add("Effectiveness of added damage: " + Pct(effectiveness));
+            stats.AddRange(ListPairs(row, 0x68, 0x28));
+            stats.AddRange(ListPairs(row, 0x88, 0x38));
+            foreach (string flag in StatList(row, 0x58)) stats.Add((flag, 1));
+        }
+
+        // "Deals 3 to 5 cold damage": a minimum and a maximum together.
+        var seen = new HashSet<string>();
+        foreach (var (key, value) in stats)
+        {
+            if (seen.Contains(key) || HiddenGemStat(key)) continue;
+            var m = System.Text.RegularExpressions.Regex.Match(key, @"^(.*?)minimum_(.+)$");
+            if (m.Success)
+            {
+                string maxKey = m.Groups[1].Value + "maximum_" + m.Groups[2].Value;
+                var max = stats.FirstOrDefault(s => s.Key == maxKey);
+                if (max.Key != null)
+                {
+                    seen.Add(key); seen.Add(maxKey);
+                    if (value == 0 && max.Value == 0) continue;
+                    string what = m.Groups[2].Value;
+                    if (what.StartsWith("base_")) what = what.Substring(5);
+                    lines.Add("Deals " + value + " to " + max.Value + " " + what.Replace("_", " "));
+                    continue;
+                }
+            }
+            seen.Add(key);
+            if (value == 0) continue;
+            string words = GemStatWords(key, value);
+            if (words.Length > 0) lines.Add(words);
+        }
+        return lines;
+    }
+
+    // Stats at +statsOff (a list of Stats rows) with their values at +valuesOff (as many ints).
+    private List<(string Key, int Value)> ListPairs(long row, int statsOff, int valuesOff)
+    {
+        var result = new List<(string, int)>();
+        var mem = Mem;
+        var keys = StatList(row, statsOff);
+        long n = Try(() => mem.Read<long>(row + valuesOff), 0L), p = Try(() => mem.Read<long>(row + valuesOff + 8), 0L);
+        if (keys.Count == 0 || n != keys.Count || !IsPtr(p)) return result;
+        for (int i = 0; i < n; i++) result.Add((keys[i], Try(() => mem.Read<int>(p + i * 4), 0)));
+        return result;
+    }
+
+    // The stat ids in a list of Stats rows at +off; empty if any entry is not a stat.
+    private List<string> StatList(long row, int off)
+    {
+        var keys = new List<string>();
+        var mem = Mem;
+        var statsFile = Try(() => GameController.Files.Stats, null);
+        long n = Try(() => mem.Read<long>(row + off), 0L), p = Try(() => mem.Read<long>(row + off + 8), 0L);
+        if (statsFile == null || n < 1 || n > 40 || !IsPtr(p)) return keys;
+        for (int i = 0; i < n; i++)
+        {
+            long statRow = Try(() => mem.Read<long>(p + i * 16), 0L);
+            string key = Try(() => statsFile.GetStatByAddress(statRow)?.Key, null);
+            if (string.IsNullOrEmpty(key)) return new List<string>();
+            keys.Add(key);
+        }
+        return keys;
     }
 
     private static string Seconds(int ms) => (ms / 1000.0).ToString("0.##") + " seconds";

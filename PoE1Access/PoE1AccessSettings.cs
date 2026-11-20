@@ -68,6 +68,8 @@ public class PoE1AccessSettings : ISettings
     public RangeNode<int> EnemyVolume { get; set; } = new RangeNode<int>(70, 0, 200);
     // Name enemies as they come into view, a pack in one line: "Zombie, 3, up right".
     public ToggleNode AnnounceEnemies { get; set; } = new ToggleNode(true);
+    // Describe each area on a first visit in the session (size, openness, waypoint, exits).
+    public ToggleNode DescribeAreas { get; set; } = new ToggleNode(true);
     // Say which way those packs are (up, down left...).
     public ToggleNode EnemyDirections { get; set; } = new ToggleNode(true);
     // Two short blips when the game's target lands on a living enemy.

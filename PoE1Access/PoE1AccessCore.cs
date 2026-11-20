@@ -413,6 +413,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.ReachPing = Settings.ReachPing.Value;
                 _nav.ReachDistance = Settings.ReachDistance.Value;
                 _nav.AnnounceEnemies = Settings.AnnounceEnemies.Value;
+                _nav.DescribeAreas = Settings.DescribeAreas.Value;
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;
                 _nav.AnnounceTarget = Settings.AnnounceTarget.Value;
@@ -633,6 +634,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         bool town = Try(() => GameController.Area.CurrentArea.IsTown || GameController.Area.CurrentArea.IsHideout, false);
         if (!town && _nav != null) parts.Add("explored " + _nav.ExploredPercent() + " percent");
+        // The area's description after the rest, without its name and level again.
+        string described = _nav != null ? Try(() => _nav.DescribeArea(), "") : "";
+        int firstStop = described.IndexOf(". ", StringComparison.Ordinal);
+        if (firstStop > 0) parts.Add(described.Substring(firstStop + 2));
         Say(JoinSpeech(parts), true);
     }
 

@@ -19,7 +19,7 @@ namespace PoE1Access;
 ///  * Scanner: categories of things around you, nearest (by walkable route) first.
 ///  * Guide: a chime panned toward where the route goes next, faster as it gets shorter.
 /// </summary>
-internal sealed class Navigator
+internal sealed partial class Navigator
 {
     // World units per grid cell (PoE: 250 / 23).
     private const float GridToWorld = 250f / 23f;
@@ -354,6 +354,7 @@ internal sealed class Navigator
         TrackSpeed(now, p);
         Reveal(p);
         TrackDeath(p);
+        if (!uiBusy) TickAreaDescription(now, p);
 
         if (uiBusy)
         {

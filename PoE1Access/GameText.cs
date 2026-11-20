@@ -130,7 +130,8 @@ public partial class PoE1AccessCore
 
     private Dictionary<string, string> ReadClientStrings()
     {
-        var all = GameController?.Files?.AllFiles;
+        // ExileApi's game, or the launcher's on the screens before the game (login, characters).
+        var all = Game?.Files?.AllFiles;
         if (all == null || all.Count == 0) return null;
         // The client's own language folder first ("Data/Spanish/ClientStrings.datc64"), the
         // English table otherwise.

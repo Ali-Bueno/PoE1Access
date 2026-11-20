@@ -1568,7 +1568,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 long a = flagged[flagged.Count - 1];
                 _initialFocusPending = 0;
                 _focusState = state;
-                AnnounceFocus(a, elements[a].E, elements[a].Path, "Initial focus");
+                // A highlighted entry inside the selected element is what the screen starts on:
+                // the league screen selects its "Challenge Leagues" group, with the default
+                // league's banner lit inside it.
+                string inside = elements[a].Path + "/";
+                long lit = _preGameState != "CreateCharacterState" ? 0 : state.Where(kv => kv.Value.Lit && kv.Key != a && elements[kv.Key].Path.StartsWith(inside) &&
+                                             DescribeHighlighted(elements[kv.Key].E).Length > 0)
+                                .Select(kv => kv.Key).FirstOrDefault();
+                if (lit != 0) AnnounceFocus(lit, elements[lit].E, elements[lit].Path, "Highlight");
+                else AnnounceFocus(a, elements[a].E, elements[a].Path, "Initial focus");
                 return;
             }
             if (now - _initialFocusPending > 1500) _initialFocusPending = 0;

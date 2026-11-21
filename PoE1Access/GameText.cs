@@ -69,6 +69,7 @@ public partial class PoE1AccessCore
     private static readonly GameWord AltBehaviourWord = new("Use Alt Behaviour", "ConsoleSkillBarAlternativeBehaviour");
 
     private Dictionary<string, string> _gameWords;   // row Id -> its text in the client's language
+    private Dictionary<string, string> _gameFormats; // MagicName* row Id -> its raw format ("{0} {1} {2}")
     private string _gameLanguage;
     private long _nextGameWordsTryMs;
     private int _gameWordsTries;
@@ -144,11 +145,14 @@ public partial class PoE1AccessCore
             return s.All(ch => ch >= 0x20 && ch < 0xFFF0 && !char.IsSurrogate(ch)) ? s : "";
         }
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        var formats = new Dictionary<string, string>(StringComparer.Ordinal);
         for (int i = 0; i < file.Count && (i + 1) * file.Length <= block.Length; i++)
         {
             int at = (int)(i * file.Length);
             string id = Str(BitConverter.ToInt64(block, at));
             if (id.Length == 0) continue;
+            // How a magic item's name is put together, kept with its {0} {1} {2} (ItemGrammar).
+            if (id.StartsWith("MagicName", StringComparison.Ordinal)) formats[id] = Str(BitConverter.ToInt64(block, at + 8));
             // The controller interface's text where the row has one: the mod is played with a
             // controller, and the passive tree's mouse title is the skills panel's word.
             string text = CleanText(Str(BitConverter.ToInt64(block, at + 0x10)));
@@ -157,6 +161,7 @@ public partial class PoE1AccessCore
         }
         // The table is right only if a row everyone has reads as an Id with text.
         if (!map.ContainsKey("InventoryPanelTitle")) return null;
+        _gameFormats = formats;
         PluginLog.Write("Game words from " + key + ": inventory is \"" + map["InventoryPanelTitle"] + "\"");
         return map;
     }

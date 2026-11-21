@@ -659,9 +659,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         var list = Try(() => mods.ItemMods, null);
         if (list == null) return baseName;
         string pre = "", suf = "";
+        // Gendered affix names take the base item's form ("sana" for "Almilla raída").
+        string inflection = Try(() => Inflection(item), null);
         foreach (var m in list)
         {
-            string d = CleanText(Try(() => m.DisplayName, "") ?? "");
+            string d = CleanText(PickForm(Try(() => m.DisplayName, "") ?? "", inflection));
             if (d.Length == 0) continue;   // implicit mods carry no name
             // An English suffix's name starts with "of"; in other client languages the mod's
             // record says whether it is a prefix or a suffix.
@@ -670,7 +672,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (suffix) { if (suf.Length == 0) suf = d; }
             else if (pre.Length == 0) pre = d;
         }
-        return string.Join(" ", new[] { pre, baseName, suf }.Where(x => x.Length > 0));
+        return MagicNameInOrder(baseName, pre, suf);
     }
 
     // Life, mana and energy shield, as percentages.

@@ -65,7 +65,8 @@ Each time you start PoE1Access.exe it checks the mod's GitHub page
 (https://github.com/Random4358/PoE1Access/releases) and, when there is a newer version, says
 "Updating Path of Exile access", installs it in this folder and starts again. Exile API is kept
 up to date the same way. Your Exile API settings are kept. Without an internet connection it
-simply starts the version you have.
+simply starts the version you have. After an update it reads what changed (the release notes of
+every version since the last one you had), and keeps them in app\whats-new.txt.
 
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):

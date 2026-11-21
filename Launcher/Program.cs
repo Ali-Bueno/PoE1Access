@@ -72,6 +72,8 @@ internal static class Program
                 SelfUpdate(args.Where(a => !a.Equals("--updated", StringComparison.OrdinalIgnoreCase)).ToArray()))
                 return 0;
             CleanUpOldLauncher();
+            // Just updated: say what changed (once).
+            SayWhatsNew(args.Any(a => a.Equals("--updated", StringComparison.OrdinalIgnoreCase)));
 
             if (!CheckDotNet()) return 1;
             if (!EnsureExileApi()) return 1;
@@ -129,6 +131,72 @@ internal static class Program
     // it renames itself to PoE1Access.old.exe first, then starts the new one and closes.
     private const string ReleasesApi = "https://api.github.com/repos/Random4358/PoE1Access/releases?per_page=10";
     private static readonly string VersionFile = Path.Combine(AppDir, "version.txt");
+
+    // The release notes as plain words, kept in appwhats-new.txt (see SayWhatsNew).
+    private static readonly string WhatsNewFile = Path.Combine(AppDir, "whats-new.txt");
+
+    /// <summary>The notes in plain words, newest version first: markdown, links and the
+    /// "Test version" line taken out.</summary>
+    private static string WhatsNewText(System.Collections.Generic.List<(Version Version, string Body)> notes)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var (v, body) in notes.OrderByDescending(n => n.Version))
+        {
+            sb.AppendLine("Version " + v + ".");
+            foreach (string raw in (body ?? "").Replace("\r", "").Split('\n'))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("Test version", StringComparison.OrdinalIgnoreCase)) continue;
+                line = System.Text.RegularExpressions.Regex.Replace(line, @"\[([^\]]+)\]\([^)]*\)", "$1");   // [text](link) -> text
+                line = line.Replace("**", "").Replace("`", "").Replace("@", "").TrimStart('#', '-', '*', ' ');
+                if (line.Length == 0) continue;
+                if (!".:!?".Contains(line[line.Length - 1])) line += ".";
+                sb.AppendLine(line);
+            }
+        }
+        return sb.ToString();
+    }
+
+    // What changed: on the first start of a new version (after an update, which the old launcher
+    // did, so the new one fetches the notes itself), the release notes of every version since the
+    // one last announced are read once and kept in app\whats-new.txt.
+    private static readonly string WhatsNewSeenFile = Path.Combine(AppDir, "whats-new-seen.txt");
+
+    private static void SayWhatsNew(bool justUpdated)
+    {
+        try
+        {
+            Version current = File.Exists(VersionFile) ? ParseVersion(File.ReadAllText(VersionFile)) : null;
+            if (current == null) return;
+            Version seen = File.Exists(WhatsNewSeenFile) ? ParseVersion(File.ReadAllText(WhatsNewSeenFile)) : null;
+            File.WriteAllText(WhatsNewSeenFile, current.ToString());
+            // A first install says nothing; an update, or a version newer than the last announced, does.
+            if (seen == null ? !justUpdated : current <= seen) return;
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("PoE1Access-launcher");
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            string json = http.GetStringAsync(ReleasesApi).GetAwaiter().GetResult();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var notes = new System.Collections.Generic.List<(Version Version, string Body)>();
+            foreach (var r in doc.RootElement.EnumerateArray())
+            {
+                if (r.GetProperty("draft").GetBoolean()) continue;
+                Version v = ParseVersion(r.GetProperty("tag_name").GetString());
+                // Every version since the last one announced; only this one when that is not known.
+                if (v == null || v > current || (seen != null ? v <= seen : v != current)) continue;
+                string body = r.TryGetProperty("body", out var b) && b.ValueKind == System.Text.Json.JsonValueKind.String ? b.GetString() : "";
+                notes.Add((v, body ?? ""));
+            }
+            if (notes.Count == 0) return;
+            string text = WhatsNewText(notes);
+            File.WriteAllText(WhatsNewFile, text);
+            Log("What's new read for " + string.Join(", ", notes.Select(n => n.Version)));
+            Say("What's new. " + text.Replace(Environment.NewLine, " ").Replace("\n", " "));
+            Say("This is kept in app, whats-new.txt.");
+        }
+        catch (Exception ex) { Log("What's new not read: " + ex.Message); }
+    }
 
     private static Version ParseVersion(string s)
     {

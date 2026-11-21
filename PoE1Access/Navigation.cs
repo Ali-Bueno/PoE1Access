@@ -484,6 +484,8 @@ internal sealed partial class Navigator
 
         TickReach(near.Select(x => (x.E, x.G)).ToList(), p);
         TickDodge(near.Select(x => (x.E, x.Id, x.G, x.Dist, x.Rarity)).ToList(), p, now);
+        TickEnemyStates(near.Select(x => (x.E, x.Id, x.G, x.Dist, x.Rarity)).ToList(), p, now);
+
 
         if (!EnemySounds) return;
 

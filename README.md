@@ -31,8 +31,10 @@ memory. The mod only reads: it never changes the game and never presses anything
   monster starting an attack aimed at you, or of any monster close by if you choose. Things
   worth walking to sound from their side, faster as you get closer: chests (a wooden knock),
   shrines (a shimmer), the nearest waypoint (a drone), portal (a swirl), exit (a rush of air)
-  and stash (a clunk). A harsh repeating cue warns while you stand in harmful ground. All
-  sounds are synthesized by the mod.
+  and stash (a clunk). A harsh repeating cue warns while you stand in harmful ground, and each
+  ailment you put on an enemy (frozen, chilled, ignited, shocked, poisoned, bleeding, cursed) has
+  a short sound of its own from its side. The settings menu's Sound glossary plays every sound
+  with what it means. All sounds are synthesized by the mod.
 - **Alerts:** your harmful states as they begin and end ("Frozen", "No longer frozen",
   "Cursed: Temporal Chains"), frenzy, power and endurance charges as they change, a boss's life
   as it falls past 75, 50, 25 and 10 percent and when it is defeated, and each level up.
@@ -96,6 +98,8 @@ that menu.
 - **Right stick left and right**: open a submenu, turn a switch on or off, or change a value in
   steps of 5. A volume plays its sound as it changes.
 - **Tap L3** (Backspace): back up one level. **Double tap L3**, or hold F3 again: close.
+- **Sound glossary** (last submenu): every sound the mod makes, with what it means; right stick
+  left or right plays it.
 
 ### Game controls (controller)
 

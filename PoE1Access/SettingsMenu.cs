@@ -26,6 +26,8 @@ public partial class PoE1AccessCore
         public int Step = 5;
         public Func<int, string> Words;               // how a number is said ("100 percent")
         public Action<int> OnChange;                  // a sample of what it controls
+        public Action Play;                           // the sound glossary: plays the sound
+        public string Description;                    // ...and says what it means
     }
 
     private List<MenuItem> _menuRoot;
@@ -85,11 +87,82 @@ public partial class PoE1AccessCore
                 },
                 Sw("Targeting blips", Settings.CrosshairBeep),
                 Sw("Melee reach ping", Settings.ReachPing),
+                Sw("Sounds for ailments you put on enemies", Settings.EnemyStateSounds),
                 new MenuItem { Label = "Melee reach distance", Range = Settings.ReachDistance, Words = v => v.ToString() }),
             Sub("Reading",
                 Sw("Read the controller selection", Settings.ReadFocus),
                 Sw("Read what is under the cursor", Settings.ReadOnHover)),
+            Sub("Sound glossary", Glossary().ToArray()),
         };
+    }
+
+    // Every sound the mod makes, what it means, and left or right to hear it (as in Poe2Access's
+    // sound glossary), at the volume of its kind.
+    private List<MenuItem> Glossary()
+    {
+        float V(RangeNode<int> node) => node.Value / 100f;
+        MenuItem S(string label, string meaning, Func<float[]> make, Func<float> volume) =>
+            new MenuItem { Label = label, Description = meaning, Play = () =>
+            {
+                AudioEngine.Master = Settings.MasterVolume.Value / 100f;
+                _audio?.Play("glossary:" + label, make, volume());
+            } };
+        Func<float> radar = () => V(Settings.RadarVolume), enemy = () => V(Settings.EnemyVolume),
+                    loot = () => V(Settings.LootVolume) * 1.4f, guide = () => V(Settings.GuideVolume);
+        var items = new List<MenuItem>
+        {
+            S("Wall", "radar: a wall closes the way on that side", () => Synth.Tock(0f, 1f), radar),
+            S("Open way", "radar: the way opens again on that side", () => Synth.Breath(0f, 0), radar),
+            S("Exit ahead", "radar: an exit lies that way", () => Synth.Tin(0f, 1f), radar),
+            S("Unexplored ground", "pips over the radar: ground you have not seen lies that way", () => Synth.Pips(0f, 1f), radar),
+            S("Wall bump", "you pushed into a wall and stopped", () => Synth.Thud(0f), radar),
+            S("Guide", "the guide: the way to what you chose", () => Synth.Chime(0f, 1f), guide),
+            S("Enemy", "a normal enemy, faster as it gets closer", () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.White, 0f, 1f), enemy),
+            S("Magic enemy", "a magic enemy", () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Magic, 0f, 1f), enemy),
+            S("Rare enemy", "a rare enemy", () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Rare, 0f, 1f), enemy),
+            S("Unique enemy", "a unique enemy, a boss", () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Unique, 0f, 1f), enemy),
+            S("Character", "an NPC near you", () => Synth.Tap(0f, 1f, false), enemy),
+            S("Player", "another player near you", () => Synth.Tap(0f, 1f, true), enemy),
+            S("Target", "the game's target landed on an enemy", Synth.Blips, enemy),
+            S("Melee reach", "an enemy came within melee reach", () => Synth.ReachPing(0f), enemy),
+            S("Dodge warning", "a monster starts an attack aimed at you: dodge", () => Synth.DodgeWarning(0f), enemy),
+            S("Harmful ground", "you stand in burning, caustic or other harmful ground: move", Synth.HarmfulGround, enemy),
+            S("Your ailment", "you are frozen, poisoned, cursed or the like; its name follows", Synth.Ailment, enemy),
+        };
+        foreach (Synth.EnemyState st in Enum.GetValues(typeof(Synth.EnemyState)))
+        {
+            var state = st;
+            items.Add(S("Enemy " + st.ToString().ToLowerInvariant(), "you made an enemy " + st.ToString().ToLowerInvariant(), () => Synth.EnemyStateCue(state, 0f), enemy));
+        }
+        items.Add(S("Charge gained", "a frenzy, power or endurance charge gained; its count follows", () => Synth.Charge(0, true), enemy));
+        items.Add(S("Charge lost", "a charge lost", () => Synth.Charge(0, false), enemy));
+        items.Add(S("Level up", "you gained a level", Synth.LevelUp, enemy));
+        var objects = new (Synth.WorldCue Kind, string Label, string Meaning)[]
+        {
+            (Synth.WorldCue.Chest, "Chest", "a chest you have not opened"),
+            (Synth.WorldCue.Shrine, "Shrine", "a shrine you can still take"),
+            (Synth.WorldCue.Waypoint, "Waypoint", "the nearest waypoint"),
+            (Synth.WorldCue.Portal, "Portal", "the nearest portal"),
+            (Synth.WorldCue.Exit, "Exit", "the nearest way to another area"),
+            (Synth.WorldCue.Stash, "Stash", "the nearest stash"),
+        };
+        foreach (var (kind, label, meaning) in objects)
+        {
+            var k = kind;
+            items.Add(S(label, meaning + ", faster as you get closer", () => Synth.Object(k, 0f, 1f), loot));
+        }
+        var drops = new (Synth.Loot Kind, string Label)[]
+        {
+            (Synth.Loot.Currency, "currency"), (Synth.Loot.Scroll, "a scroll"), (Synth.Loot.Gem, "a gem"), (Synth.Loot.Flask, "a flask"),
+            (Synth.Loot.Map, "a map"), (Synth.Loot.Card, "a divination card"), (Synth.Loot.Jewel, "a jewel"), (Synth.Loot.Quest, "a quest item"),
+            (Synth.Loot.Normal, "a normal item"), (Synth.Loot.Magic, "a magic item"), (Synth.Loot.Rare, "a rare item"), (Synth.Loot.Unique, "a unique item"),
+        };
+        foreach (var (kind, label) in drops)
+        {
+            var k = kind;
+            items.Add(S("Loot: " + label, label + " on the ground", () => Synth.LootCue(k, 0f, 1f), loot));
+        }
+        return items;
     }
 
     private void OpenMenu()
@@ -116,6 +189,7 @@ public partial class PoE1AccessCore
     {
         var (items, index) = _menuStack[^1];
         MenuItem it = items[index];
+        if (it.Play != null) return it.Label + ", " + it.Description + ", " + (index + 1) + " of " + items.Count;
         string value = it.Children != null ? "submenu"
             : it.Toggle != null ? (it.Toggle.Value ? "on" : "off")
             : it.Range != null ? (it.Words ?? (v => v.ToString()))(it.Range.Value)
@@ -137,6 +211,7 @@ public partial class PoE1AccessCore
         }
 
         MenuItem it = items[index];
+        if (it.Play != null) { it.Play(); return; }
         if (it.Children != null)
         {
             if (dx < 0) { Say(DescribeMenuItem(), true); return; }

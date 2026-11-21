@@ -421,6 +421,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.DodgeWarnings = Settings.DodgeWarnings.Value;
                 _nav.DodgeWarningsAll = Settings.DodgeWarningsAll.Value;
                 _nav.ObjectSounds = Settings.ObjectSounds.Value;
+                _nav.EnemyStateSounds = Settings.EnemyStateSounds.Value;
                 _nav.DescribeAreas = Settings.DescribeAreas.Value;
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;

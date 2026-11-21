@@ -33,7 +33,10 @@ with a short buzz: "Frozen", "No longer frozen", ignited, chilled, shocked, pois
 maimed, blinded, hindered, "Cursed: Temporal Chains" (StatusAlerts). Frenzy, power and endurance
 charges play a rising or falling pair of notes and say the count (ChargeAlerts). A boss's life is
 said as it falls past 75, 50, 25 and 10 percent, and "defeated" (AnnounceBossLife); a level up
-plays three rising notes and says the level (AnnounceLevelUp).
+plays three rising notes and says the level (AnnounceLevelUp). Each ailment you put on an enemy in
+sight has a short sound of its own from its side (EnemyStateSounds): frozen an icy ring, chilled a
+glassy note, ignited a crackle, shocked a falling zap, poisoned a bubbling pair, bleeding a wet
+drip, cursed a low swell.
 The two nearest NPCs make a light wooden tap from their side, and
 the nearest other player a quicker, higher double tap (NpcSounds). Life, mana and energy shield
 are spoken as they fall below 75, 50 and 25 percent (AnnounceResources). Double tap L3 for your
@@ -117,7 +120,8 @@ MOD SETTINGS MENU (spoken, as in Poe2Access)
   turn a switch on or off, or change a value in steps of 5; a volume plays its sound.
 - Tap L3 (or Backspace): back up one level. Double tap L3, or hold F3 again: close.
 - Submenus: Sound volumes (master, enemies and combat, loot, radar, guide), Speech (speech speed
-  and what is announced), Sounds on or off, Reading.
+  and what is announced), Sounds on or off, Reading, and Sound glossary: every sound the mod makes
+  with what it means; right stick left or right plays it (as in Poe2Access).
 - Speech speed applies to the Windows voice; NVDA and JAWS keep the speed set in the screen
   reader.
 

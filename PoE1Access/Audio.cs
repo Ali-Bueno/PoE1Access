@@ -386,6 +386,65 @@ internal static class Synth
                       : Seq(Tone(0f, f * 1.26, 0.05, 0.25), 0.01, Tone(0f, f, 0.06, 0.25));
     }
 
+    // An ailment you put on an enemy (Poe2Access's enemy states), each with a sound of its own:
+    // frozen, icy ring; chilled, a soft glassy note; ignited, a crackle; shocked, a falling zap;
+    // poisoned, a bubbling pair; bleeding, a wet drip; cursed, a low swell.
+    public enum EnemyState { Frozen, Chilled, Ignited, Shocked, Poisoned, Bleeding, Cursed }
+
+    public static float[] EnemyStateCue(EnemyState state, float pan)
+    {
+        switch (state)
+        {
+            case EnemyState.Frozen:
+                return Bell(pan, 1760, new[] { 1.0, 2.2, 3.6 }, 0.05, 0.25, 0.0);
+            case EnemyState.Chilled:
+                return Tone(pan, 1320, 0.08, 0.22);
+            case EnemyState.Ignited:
+                return Crackle(pan, 0.14, 0.4);
+            case EnemyState.Shocked:
+                return Sweep(pan, 2200, 500, 0.08, 0.3, true);
+            case EnemyState.Poisoned:
+                return Seq(Sweep(pan, 320, 420, 0.05, 0.3, false), 0.02, Sweep(pan, 280, 380, 0.05, 0.3, false));
+            case EnemyState.Bleeding:
+                return Sweep(pan, 950, 380, 0.07, 0.32, false);
+            default:
+                return Drone(pan, 160, 0.18, 0.32, 0);
+        }
+    }
+
+    private static float[] Sweep(float pan, double from, double to, double seconds, double amp, bool buzzy)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        double phase = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR, x = (double)i / n;
+            phase += 2 * Math.PI * (from + (to - from) * x) / SR;
+            double v = buzzy ? Math.Tanh(3 * Math.Sin(phase)) : Math.Sin(phase);
+            double env = Math.Min(1, t / 0.003) * (1 - x);
+            Put(b, i, (float)(v * env * amp), g);
+        }
+        return b;
+    }
+
+    private static float[] Crackle(float pan, double seconds, double amp)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        var rng = new Random(9);
+        for (int i = 0; i < n; i++)
+        {
+            double x = (double)i / n;
+            // Sparse clicks of noise: a fire's crackle.
+            double v = rng.NextDouble() < 0.02 ? (rng.NextDouble() * 2 - 1) : 0;
+            Put(b, i, (float)(v * (1 - x) * amp * 2.5), g);
+        }
+        return b;
+    }
+
     // Level up: three rising notes.
     public static float[] LevelUp() =>
         Seq(Seq(Tone(0f, 523, 0.09, 0.35), 0.02, Tone(0f, 659, 0.09, 0.35)), 0.02, Tone(0f, 784, 0.18, 0.35));

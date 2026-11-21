@@ -74,6 +74,8 @@ public class PoE1AccessSettings : ISettings
     public ToggleNode DodgeWarningsAll { get; set; } = new ToggleNode(false);
     // Chests, shrines, the nearest waypoint, portal, exit and stash, each with a sound from its side.
     public ToggleNode ObjectSounds { get; set; } = new ToggleNode(true);
+    // A sound of its own for each ailment you put on an enemy (frozen, ignited, shocked...).
+    public ToggleNode EnemyStateSounds { get; set; } = new ToggleNode(true);
     // Your harmful states as they begin and end ("Frozen", "No longer frozen"), with a short buzz.
     public ToggleNode StatusAlerts { get; set; } = new ToggleNode(true);
     // A repeating harsh cue while you stand in harmful ground (burning, caustic...).

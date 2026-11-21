@@ -14,6 +14,7 @@ public partial class PoE1AccessCore
 {
     private HashSet<string> _screenTexts;
     private long _screenTextsRoot, _nextScreenTextsMs;
+    private bool _deleteDialogSaid;
 
     private void PollScreenMessages(long now)
     {
@@ -54,7 +55,26 @@ public partial class PoE1AccessCore
             _screenTextsRoot = root.Address;
             return;
         }
-        var fresh = texts.Where(t => !_screenTexts.Contains(t)).ToList();
+        // The delete confirmation stays in the screen after it closes, so it is said when the
+        // game's prompts turn to its own ("A: Delete Character", "B: Cancel"), not when its text
+        // changes (seen 21 Nov 2026: said on entering the character list, and missed when opened
+        // again for the same character).
+        bool deleting = _legendNow.Any(e => e.StartsWith("A: ", StringComparison.Ordinal) && EndsWithGameWord(e, DeleteCharacterWord));
+        if (deleting && !_deleteDialogSaid)
+        {
+            string question = texts.FirstOrDefault(t => t.Contains('?'));
+            if (question != null)
+            {
+                _deleteDialogSaid = true;
+                PluginLog.Write("Delete confirmation: " + question);
+                Say(question, true);
+            }
+        }
+        if (!deleting) _deleteDialogSaid = false;
+        // A question (a confirmation) only while a dialog is open, which the prompts show with
+        // a way to cancel; one left behind in the screen is not said.
+        bool dialog = deleting || _legendNow.Any(e => e.EndsWith("Cancel", StringComparison.OrdinalIgnoreCase));
+        var fresh = texts.Where(t => !_screenTexts.Contains(t) && (dialog && !deleting || !t.Contains('?'))).ToList();
         _screenTexts = texts;
         foreach (string t in fresh)
         {

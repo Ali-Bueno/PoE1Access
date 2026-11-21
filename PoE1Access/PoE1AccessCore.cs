@@ -1313,7 +1313,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (_charListPendingMs != 0) Guard("character list", () => AnnounceCharacterList(now));
         Guard("screen title", () => PollScreenTitle(now));
         Guard("class outline", () => PollClassOutline(now));
-        Guard("screen messages", () => PollScreenMessages(now));
+
 
         // The class screen's outlined Exile is read from the scene (ClassScreen.cs). Also known:
         // CreateCharacterState +0x240 is non-zero while a class is picked, and [state +0x2E0]
@@ -1322,6 +1322,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Settings.ReadFocus.Value) PollFocus(now);
         // The screen's button prompts (character creation, selection, login): said as they change.
         Guard("button legend", () => PollButtonLegend(now, true));
+        Guard("screen messages", () => PollScreenMessages(now));
     }
 
     // Pre-game screens carry their instructions in an element named "title_frame" ("Creation.

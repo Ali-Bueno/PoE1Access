@@ -5,12 +5,16 @@ items, panels and what is around you through your screen reader, and adds sounds
 way: a wall radar, unexplored-ground pips, and a guide to whatever you choose.
 
 Items on the ground keep making a sound while they are within about a screen of you, from the
-side they are on, higher when up the screen, and more often as you get closer. Each kind has its
-own sound: currency clinks, scrolls rustle, gems ring like glass, flasks bubble, and equipment
-thumps, with one rising note for magic, three for rare and a full chord for unique. Quest items,
-maps, divination cards and jewels each have their own sound too. In Exile API's settings (F12)
-you can turn them off (LootSounds), sound only magic-or-better or only valuable items
-(LootFilter 1 or 2), or change their volume (LootVolume). The mod makes these sounds itself.
+side they are on, higher when up the screen, and more often as you get closer. Each item plays
+the game's own drop sound for its kind (an orb, a scroll, a gem, a flask, a ring, a helm, metal
+or leather armour, a sword...), played from your installed game with the game's own sound
+library; nothing of the game's is copied. A unique adds the game's unique drop sound, a rare or
+magic item the mod's rarity tone (three notes for rare, one for magic). "Loot uses the game's own
+drop sounds" in the F3 menu (GameLootSounds) switches back to the mod's own sounds, which are
+also used if the game's cannot be played. You can turn loot sounds off (LootSounds), sound only
+magic-or-better or only valuable items (LootFilter 1 or 2), or change their volume (LootVolume).
+Other players near you make a quick double tap (PlayerSounds, "Other player sounds" in the F3
+menu), and the scanner lists them under Other players.
 
 Enemies within about a screen growl from the side they are on (the Poe2Access enemy sounds,
 rebuilt): a short low growl, repeated faster as they get closer, lower in pitch when they are
@@ -89,7 +93,8 @@ every version since the last one you had), and keeps them in app\whats-new.txt.
 
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
-- Hold L3 + right stick up or down / Page Up, Page Down: scanner category (Quest lists only what
+- Hold L3 + right stick up or down / Page Up, Page Down: scanner category (among them Other
+  players, each with their name and level) (Quest lists only what
   the game itself marks with a quest icon on the minimap; it is skipped when there is none;
   "Where you died" holds the spot of your last death in the area you are in, to guide you back)
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first

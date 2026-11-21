@@ -26,7 +26,8 @@ memory. The mod only reads: it never changes the game and never presses anything
   characters, enemies, items, chests and unexplored ground, and a guide with turn-by-turn
   prompts.
 - **Sounds:** enemies (growl, buzz for magic and rare, ring for unique), NPCs and players,
-  items on the ground by kind and rarity, a targeting blip and a melee reach ping, and a dodge
+  items on the ground with the game's own drop sound for each kind of item (played from your
+  installed game; the game's unique drop over uniques, a rarity tone over magic and rare), a targeting blip and a melee reach ping, and a dodge
   warning (a blade over a low gong dropping into a bass hit) from the side of a rare or unique
   monster starting an attack aimed at you, or of any monster close by if you choose. Things
   worth walking to sound from their side, faster as you get closer: chests (a wooden knock),
@@ -59,8 +60,8 @@ that menu.
   flask uses, the area and its level, how much you have explored, and the area's description.
 - **Triple tap L3** (Delete): the guide to the chosen thing, on or off.
 - **Hold L3 + right stick up or down** (Page Up, Page Down): the scanner's previous or next
-  category (exits, waypoints, characters, enemies, items, chests, unexplored ground, quest,
-  where you died).
+  category (exits, waypoints, characters, other players, enemies, items, chests, unexplored
+  ground, quest, where you died).
 - **Hold L3 + right stick left or right** (Home, End): the previous or next thing in that
   category, nearest first.
 - **Hold L3 for half a second**: the game's button prompts for what is around you (pick up,

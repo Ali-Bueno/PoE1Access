@@ -533,13 +533,13 @@ internal sealed partial class Navigator
     // pitch and tempo rules as the enemies (600 ms at the screen's edge, 150 ms beside you).
     // ===================================================================
 
-    public bool NpcSounds = true;
+    public bool NpcSounds = true, PlayerSounds = true;
     private readonly Dictionary<long, long> _npcNextMs = new Dictionary<long, long>();
     private long _lastNpcCueMs, _nextNpcTickMs;
 
     private void TickNpcs(long now, Vector2 p)
     {
-        if (!NpcSounds || now < _nextNpcTickMs) return;
+        if (!NpcSounds && !PlayerSounds || now < _nextNpcTickMs) return;
         _nextNpcTickMs = now + 60;
         if (now - _lastNpcCueMs < 100) return;
 
@@ -550,6 +550,7 @@ internal sealed partial class Navigator
             EntityType t = Try(() => e.Type, EntityType.Error);
             bool player = t == EntityType.Player;
             if (t != EntityType.Npc && !player) continue;
+            if (player ? !PlayerSounds : !NpcSounds) continue;
             if (player && Try(() => e.Address, 0L) == me) continue;
             long id; Vector2 g;
             try { id = e.Id; g = e.GridPosNum; } catch { continue; }
@@ -785,7 +786,7 @@ internal sealed partial class Navigator
         foreach (Entity e in Entities())
         {
             Cat cat = Category(e);
-            if (cat == Cat.None || cat == Cat.Enemies) continue;
+            if (cat == Cat.None || cat == Cat.Enemies || cat == Cat.Players && IsMe(e)) continue;
 
             long id;
             Vector2 g;
@@ -1115,13 +1116,13 @@ internal sealed partial class Navigator
     // Scanner
     // ===================================================================
 
-    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
+    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Players, Enemies, Items, Chests, Objects, None }
 
-    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
+    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Players, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
 
     private static readonly Dictionary<Cat, string> CatNames = new Dictionary<Cat, string>
     {
-        { Cat.Quest, "Quest" }, { Cat.Death, "Where you died" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" },
+        { Cat.Quest, "Quest" }, { Cat.Death, "Where you died" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" }, { Cat.Players, "Other players" },
         { Cat.Enemies, "Enemies" }, { Cat.Items, "Items" }, { Cat.Chests, "Chests" }, { Cat.Objects, "Objects" },
     };
 
@@ -1155,6 +1156,8 @@ internal sealed partial class Navigator
     private int _scanIndex = -1;
     private long _lastScanMs;
     private ScanItem _scanChoice;
+
+    private bool IsMe(Entity e) => Try(() => e.Address == _gc.Player.Address, false);
 
     private IEnumerable<Entity> Entities()
     {
@@ -1249,6 +1252,8 @@ internal sealed partial class Navigator
                 return Cat.Waypoints;
             case EntityType.Npc:
                 return Cat.Characters;
+            case EntityType.Player:
+                return Cat.Players;   // yourself is left out where the lists are made (IsMe)
             case EntityType.Monster:
                 try { return e.IsHostile && e.IsAlive && e.IsTargetable ? Cat.Enemies : Cat.None; } catch { return Cat.None; }
             case EntityType.WorldItem:
@@ -1282,7 +1287,7 @@ internal sealed partial class Navigator
     {
         if (cat == Cat.Unexplored) return UnexploredList(p);
         if (cat == Cat.Death) return DeathList();
-        var list = Entities().Where(e => Category(e) == cat);
+        var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
         return list.OrderBy(e => (e.GridPosNum - p).LengthSquared()).Take(40).Select(Of).ToList();
     }
@@ -1433,6 +1438,14 @@ internal sealed partial class Navigator
         string name = NameOf(e, itemName);
         try
         {
+            if (e.Type == EntityType.Player)
+            {
+                var pc = e.GetComponent<Player>();
+                int level = pc?.Level ?? 0;
+                string who = pc?.PlayerName;
+                if (string.IsNullOrWhiteSpace(who)) who = name;
+                return who + (level > 0 ? ", level " + level : "");
+            }
             if (e.Type == EntityType.Monster)
             {
                 string rar = e.Rarity switch

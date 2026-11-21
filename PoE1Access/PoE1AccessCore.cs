@@ -421,6 +421,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.EnemyVolume ??= () => Settings.EnemyVolume.Value / 100f;
                 _nav.EnemySounds = Settings.EnemySounds.Value;
                 _nav.NpcSounds = Settings.NpcSounds.Value;
+                _nav.PlayerSounds = Settings.PlayerSounds.Value;
                 _nav.ReachPing = Settings.ReachPing.Value;
                 _nav.ReachDistance = Settings.ReachDistance.Value;
                 _nav.AnnounceEnemies = Settings.AnnounceEnemies.Value;

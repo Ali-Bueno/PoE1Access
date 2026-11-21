@@ -78,7 +78,8 @@ public partial class PoE1AccessCore
                 Sw("Wall radar", Settings.Radar),
                 Sw("Unexplored ground pips", Settings.UnexploredMark),
                 Sw("Enemy sounds", Settings.EnemySounds),
-                Sw("NPC and player sounds", Settings.NpcSounds),
+                Sw("NPC sounds", Settings.NpcSounds),
+                Sw("Other player sounds", Settings.PlayerSounds),
                 Sw("Loot sounds", Settings.LootSounds),
                 Sw("Loot uses the game's own drop sounds", Settings.GameLootSounds),
                 new MenuItem

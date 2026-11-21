@@ -76,6 +76,8 @@ public class PoE1AccessSettings : ISettings
     public ToggleNode ObjectSounds { get; set; } = new ToggleNode(true);
     // Loot plays the game's own drop sounds (from your installed game) instead of the mod's.
     public ToggleNode GameLootSounds { get; set; } = new ToggleNode(true);
+    // The quick double tap of another player near you (NPCs keep theirs with NpcSounds).
+    public ToggleNode PlayerSounds { get; set; } = new ToggleNode(true);
     // A sound of its own for each ailment you put on an enemy (frozen, ignited, shocked...).
     public ToggleNode EnemyStateSounds { get; set; } = new ToggleNode(true);
     // Your harmful states as they begin and end ("Frozen", "No longer frozen"), with a short buzz.

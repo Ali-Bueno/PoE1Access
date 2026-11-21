@@ -208,7 +208,11 @@ public partial class PoE1AccessCore
         _charIndex = i;
         var (sec, text) = _charLines[i];
         int n = _charLines.Count(l => l.Section == sec), k = _charLines.Take(i + 1).Count(l => l.Section == sec);
-        string say = (newSection ? sec + ". " : "") + text + (edge ? (stat > 0 ? ". Last stat" : ". First stat") : "") +
+        // A line that ends a sentence itself ("Strike your foes down with a powerful blow.") gets no
+        // second full stop before "First stat".
+        string body = text.TrimEnd();
+        string stop = body.EndsWith(".") || body.EndsWith("!") || body.EndsWith("?") ? " " : ". ";
+        string say = (newSection ? sec + ". " : "") + body + (edge ? stop + (stat > 0 ? "Last stat" : "First stat") : "") +
                      (newSection ? ", " + k + " of " + n : "");
         Say(say, true);
     }

@@ -629,9 +629,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         parts.AddRange(new[]
         {
             "Life " + Pct(life.CurHP, life.MaxHP) + " percent",
-            "mana " + Pct(life.CurMana, life.MaxMana) + " percent",
+            "Mana " + Pct(life.CurMana, life.MaxMana) + " percent",
         });
-        if (life.MaxES > 0) parts.Add("energy shield " + Pct(life.CurES, life.MaxES) + " percent");
+        if (life.MaxES > 0) parts.Add("Energy shield " + Pct(life.CurES, life.MaxES) + " percent");
 
         // The flasks' uses left, in slot order: "Small Life Flask, 3 uses".
         ServerData srv = GetServerData();
@@ -1729,8 +1729,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         PluginLog.Write(kind + ": [" + path + "] name=" + UiText.Name(Mem, e) + " -> \"" + text + "\"" +
                         (controlKind.Length > 0 ? " control=" + controlKind : ""));
-        if (text.Length > 0) Say(text, true);
+        // The same line again at once (the screen's first focus, then its highlight settling on
+        // the same character a quarter of a second later) is not said twice.
+        long nowMs = _clock.ElapsedMilliseconds;
+        if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
+        _lastFocusText = text;
+        _lastFocusTextMs = nowMs;
     }
+
+    private string _lastFocusText = "";
+    private long _lastFocusTextMs;
 
     // The login screen's news banners are pictures with no text, downloaded into the game's
     // MOTDCache: their file name says what they are ("public_news_2026-11-07_ExileCon_Packs_Half_

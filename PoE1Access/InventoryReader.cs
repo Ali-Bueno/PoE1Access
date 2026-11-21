@@ -440,7 +440,8 @@ public partial class PoE1AccessCore
                 head = title;
                 break;
         }
-        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = "over " + head;
+        // Holding an item over another: placing it would swap them.
+        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = "Over " + head;
 
         var lines = new List<string> { head };
         string missing = MissingRequirement(item);

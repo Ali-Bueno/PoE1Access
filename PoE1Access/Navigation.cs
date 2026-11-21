@@ -1257,23 +1257,46 @@ internal sealed partial class Navigator
         return i >= 0 && i < _seen.Length && _seen[i];
     }
 
-    // Area transitions are left out until seen; portals (yours and others') are always there.
+    // Exits and quest things seen once, on any character (KnownPlaces): listed from then on.
+    private readonly KnownPlaces _knownPlaces = new KnownPlaces();
+
+    // The area as the game names it in its data ("1_1_2"), the same on every visit and character.
+    private string AreaKey() =>
+        Try(() => _gc.Area.CurrentArea.Area.Id, null) ?? Try(() => _gc.Area.CurrentArea.DisplayName, "") ?? "";
+
+    // Area transitions are left out until seen (on this visit, or once on any character);
+    // portals (yours and others') are always there.
     private bool HiddenExit(Entity e) =>
-        Try(() => e.Type, EntityType.Error) == EntityType.AreaTransition && !ExitSeen(Try(() => e.GridPosNum, Vector2.Zero));
+        Try(() => e.Type, EntityType.Error) == EntityType.AreaTransition && !ExitSeen(Try(() => e.GridPosNum, Vector2.Zero)) &&
+        !_knownPlaces.Contains(AreaKey(), "exit", NameOf(e, _ => null));
+
+    // A quest thing likewise: listed once you have seen where it is, or have seen it in this area before.
+    private bool HiddenQuest(Entity e) =>
+        !ExitSeen(Try(() => e.GridPosNum, Vector2.Zero)) && !_knownPlaces.Contains(AreaKey(), "quest", NameOf(e, _ => null));
 
     private void RememberExits(long now)
     {
         if (now < _nextExitMemoryMs) return;
         _nextExitMemoryMs = now + 500;
         var d = AreaExits();
+        string area = AreaKey();
         foreach (Entity e in Entities())
         {
-            if (Try(() => e.Type, EntityType.Error) != EntityType.AreaTransition) continue;
+            EntityType t = Try(() => e.Type, EntityType.Error);
+            if (t != EntityType.AreaTransition)
+            {
+                // A quest thing seen: known in this area from now on, on every character.
+                if (t != EntityType.Monster && Category(e) == Cat.Quest && ExitSeen(Try(() => e.GridPosNum, Vector2.Zero)))
+                    _knownPlaces.Add(area, "quest", NameOf(e, _ => null));
+                continue;
+            }
             long id = Try(() => (long)e.Id, 0L);
             if (id == 0) continue;
             Vector2 g = Try(() => e.GridPosNum, Vector2.Zero);
             if (g == Vector2.Zero) continue;
-            d[id] = (g, NameOf(e, _ => null));
+            string name = NameOf(e, _ => null);
+            d[id] = (g, name);
+            if (ExitSeen(g)) _knownPlaces.Add(area, "exit", name);
         }
     }
 
@@ -1452,13 +1475,14 @@ internal sealed partial class Navigator
         var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
         if (cat == Cat.Exits) list = list.Where(e => !HiddenExit(e));
+        if (cat == Cat.Quest) list = list.Where(e => !HiddenQuest(e));
         var items = list.Select(Of).ToList();
         if (cat == Cat.Exits)
         {
             // Exits seen earlier in this area and now out of the game's range.
             var live = new HashSet<long>(items.Where(s => s.E != null).Select(s => Try(() => (long)s.E.Id, 0L)));
             foreach (var kv in AreaExits())
-                if (!live.Contains(kv.Key) && ExitSeen(kv.Value.Pos)) items.Add(new ScanItem { Pos = kv.Value.Pos, Label = kv.Value.Name, Cat = Cat.Exits });
+                if (!live.Contains(kv.Key) && (ExitSeen(kv.Value.Pos) || _knownPlaces.Contains(AreaKey(), "exit", kv.Value.Name))) items.Add(new ScanItem { Pos = kv.Value.Pos, Label = kv.Value.Name, Cat = Cat.Exits });
         }
         return items.OrderBy(s => (PosOf(s) - p).LengthSquared()).Take(40).ToList();
     }

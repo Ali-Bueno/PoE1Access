@@ -148,6 +148,7 @@ public partial class PoE1AccessCore
 
     private readonly Dictionary<long, ushort> _passiveIdOfRow = new Dictionary<long, ushort>();
     private readonly Dictionary<long, string> _passiveNameOfRow = new Dictionary<long, string>();
+    private readonly Dictionary<long, string> _passiveIdTextOfRow = new Dictionary<long, string>();
 
     private void LearnPassiveRows()
     {
@@ -158,6 +159,7 @@ public partial class PoE1AccessCore
             {
                 _passiveIdOfRow[p.Address] = (ushort)p.PassiveId;
                 _passiveNameOfRow[p.Address] = CleanText(p.Name ?? "");
+                _passiveIdTextOfRow[p.Address] = p.Id ?? "";
             }
         }
         catch { }

@@ -61,6 +61,11 @@ internal sealed class ControllerInput
     /// holding L3 (they come out as the Scan commands).</summary>
     public bool MenuMode;
 
+    public const int DPadUp = 1, DPadDown = 2, DPadLeft = 4, DPadRight = 8;
+    /// <summary>D-pad directions newly pressed on the last poll (DPadUp | DPadDown...).</summary>
+    public int DPadPressed { get; private set; }
+    private int _dpadDown;
+
     public Vector2 LeftStick { get; private set; }
     public Vector2 RightStick { get; private set; }
     public bool Connected => _pad >= 0 || _ps.Connected;
@@ -111,6 +116,7 @@ internal sealed class ControllerInput
         }
 
         bool l3;
+        int dpad;
         if (_pad >= 0)
         {
             if (!Read(_pad, out XInputState st)) { _pad = -1; return Command.None; }
@@ -118,6 +124,7 @@ internal sealed class ControllerInput
             LeftStick = Stick(g.LX, g.LY);
             RightStick = Stick(g.RX, g.RY);
             l3 = (g.Buttons & L3) != 0;
+            dpad = g.Buttons & 0x0F;   // XInput: up 1, down 2, left 4, right 8
         }
         else
         {
@@ -125,7 +132,11 @@ internal sealed class ControllerInput
             LeftStick = _ps.LeftStick;
             RightStick = _ps.RightStick;
             l3 = _ps.L3;
+            dpad = _ps.DPad;
         }
+        // D-pad directions pressed since the last poll (DPadUp, DPadDown, DPadLeft, DPadRight).
+        DPadPressed = dpad & ~_dpadDown;
+        _dpadDown = dpad;
 
         Command cmd = Command.None;
 

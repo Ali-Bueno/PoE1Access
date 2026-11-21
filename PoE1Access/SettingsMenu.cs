@@ -56,6 +56,7 @@ public partial class PoE1AccessCore
                     OnChange = v => ApplySpeechRate(true),
                 },
                 Sw("Describe areas on arrival", Settings.DescribeAreas),
+                Sw("Passive tree finder on the D-pad", Settings.PassiveFinder),
                 Sw("Name enemies coming into view", Settings.AnnounceEnemies),
                 Sw("Say which way enemies are", Settings.EnemyDirections),
                 Sw("Name the targeted enemy", Settings.AnnounceTarget),

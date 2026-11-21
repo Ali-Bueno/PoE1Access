@@ -45,6 +45,12 @@ internal sealed class PlayStationPad : IDisposable
                              Environment.TickCount64 - Interlocked.Read(ref _lastReportMs) < 3000;
 
     public bool L3 => (_buttons2 & 0x40) != 0;
+    private volatile int _hat = 8;
+    /// <summary>The D-pad as XInput's bits: up 1, down 2, left 4, right 8 (diagonals set two).</summary>
+    public int DPad => _hat switch
+    {
+        0 => 1, 1 => 1 | 8, 2 => 8, 3 => 2 | 8, 4 => 2, 5 => 2 | 4, 6 => 4, 7 => 1 | 4, _ => 0,
+    };
     public Vector2 LeftStick => Stick(_lx, _ly);
     public Vector2 RightStick => Stick(_rx, _ry);
 
@@ -113,6 +119,7 @@ internal sealed class PlayStationPad : IDisposable
         else return false;
         _lx = b[stick]; _ly = b[stick + 1]; _rx = b[stick + 2]; _ry = b[stick + 3];
         _buttons2 = b[buttons + 1];
+        _hat = b[buttons] & 0x0F;   // 0 up, then clockwise in eighths to 7 up left; 8 none
         return true;
     }
 

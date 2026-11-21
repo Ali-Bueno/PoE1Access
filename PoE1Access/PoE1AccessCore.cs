@@ -464,6 +464,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("guide", Settings.GuideHotkey, Keys.Delete)) cmd = ControllerInput.Command.Guide;
         if (Pressed("status", Settings.StatusHotkey, Keys.F1)) cmd = ControllerInput.Command.DoubleTap;
 
+        // The passive tree finder on the D-pad (Path of Exile 2 Access's): only with the tree open.
+        int dpad = Settings.ControllerCommands.Value ? _pad.DPadPressed : 0;
+        if (dpad != 0 && !MenuOpen && Settings.PassiveFinder.Value && _openPanels != null && _openPanels.Any(t => IsGameWord(t, PassivesTitle)))
+            Guard("passive finder", () => FinderStep(dpad));
+
         // The mod's settings menu: while open it takes the mod's gestures and the arrow keys.
         if (MenuOpen)
         {
@@ -2157,6 +2162,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         catch (Exception ex) { Report("passive links", ex); }
         var parts = new List<string> { name + ", " + kind + (status.Length > 0 ? ", " + status : "") +
                                         (!allocated && !string.IsNullOrEmpty(distance) && status == "not linked" ? ", " + distance : "") };
+        // The finder's guide (D-pad), right after the node's name, so it is heard first.
+        _passiveHover = hover;
+        _passiveHoverRow = skill.Address;
+        string guide = Try(() => FinderGuide(skill.Address), "");
+        if (guide.Length > 0) parts.Add(guide);
 
         // What the node does: the game's own tooltip text when it can be found on screen,
         // otherwise the node's stats in plain words.

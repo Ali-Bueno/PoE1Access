@@ -81,6 +81,11 @@ In game (controller, L3 = left stick click / keyboard):
   each section
 - In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
   up and down for its details (description, speed, cost, cooldown, damage, linked supports)
+- Passive tree finder, D-pad (as in Poe2Access): up and down choose a list (Position, Keystones,
+  Notables, Jewel sockets, Can be allocated now), left and right go through it, fewest points
+  first. The node named becomes the target: each node you move to says which way it lies and,
+  while it is not linked, the next node to allocate on the cheapest way ("Allocate this one").
+  Position drops the target. Nothing is allocated for you.
 - World map (from a waypoint): opening it says the act and your current quest; moving the
   selection says the place and its kind ("Lioneye's Watch, Town"); tap L3 for its flavour text
 - Triple tap L3 / Delete: guide to the chosen thing on or off (R3 is left to the game, which

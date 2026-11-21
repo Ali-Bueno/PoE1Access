@@ -70,6 +70,9 @@ public class PoE1AccessSettings : ISettings
     public ToggleNode AnnounceEnemies { get; set; } = new ToggleNode(true);
     // Describe each area on a first visit in the session (size, openness, waypoint, exits).
     public ToggleNode DescribeAreas { get; set; } = new ToggleNode(true);
+    // In the passive tree, the D-pad finds keystones, notables, jewel sockets and nodes to
+    // allocate, and guides to the one chosen.
+    public ToggleNode PassiveFinder { get; set; } = new ToggleNode(true);
     // Say which way those packs are (up, down left...).
     public ToggleNode EnemyDirections { get; set; } = new ToggleNode(true);
     // Two short blips when the game's target lands on a living enemy.

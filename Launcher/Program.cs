@@ -132,7 +132,7 @@ internal static class Program
     private const string ReleasesApi = "https://api.github.com/repos/Random4358/PoE1Access/releases?per_page=10";
     private static readonly string VersionFile = Path.Combine(AppDir, "version.txt");
 
-    // The release notes as plain words, kept in appwhats-new.txt (see SayWhatsNew).
+    // The release notes as plain words, kept in app\whats-new.txt (see SayWhatsNew).
     private static readonly string WhatsNewFile = Path.Combine(AppDir, "whats-new.txt");
 
     /// <summary>The notes in plain words, newest version first: markdown, links and the

@@ -18,6 +18,7 @@ using SocketsComp = ExileCore.PoEMemory.Components.Sockets;
 using StackComp = ExileCore.PoEMemory.Components.Stack;
 using NormalInventoryItem = ExileCore.PoEMemory.Elements.InventoryElements.NormalInventoryItem;
 using TreePassiveElement = ExileCore.PoEMemory.Elements.TreePassiveElement;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -56,28 +57,72 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         switch (t)
         {
-            case "lt": case "left_trigger": return "left trigger";
-            case "rt": case "right_trigger": return "right trigger";
-            case "lb": case "left_bumper": return "left bumper";
-            case "rb": case "right_bumper": return "right bumper";
-            case "ls": case "left_stick": return "left stick";
-            case "rs": case "right_stick": return "right stick";
+            case "lt": case "left_trigger": return T("left trigger", "LT");
+            case "rt": case "right_trigger": return T("right trigger", "RT");
+            case "lb": case "left_bumper": return T("left bumper", "LB");
+            case "rb": case "right_bumper": return T("right bumper", "RB");
+            case "ls": case "left_stick": return T("left stick", "stick izquierdo");
+            case "rs": case "right_stick": return T("right stick", "stick derecho");
         }
         if (t.StartsWith("button_")) t = t.Substring(7);
         switch (t)
         {
             case "a": case "b": case "x": case "y": return t.ToUpperInvariant();
-            case "lb": return "left bumper";
-            case "rb": return "right bumper";
-            case "lt": return "left trigger";
-            case "rt": return "right trigger";
+            case "lb": return T("left bumper", "LB");
+            case "rb": return T("right bumper", "RB");
+            case "lt": return T("left trigger", "LT");
+            case "rt": return T("right trigger", "RT");
             case "lstick": return "L3";
             case "rstick": return "R3";
             case "menu": case "start": return "Start";
             case "view": case "back": case "select": return "View";
         }
-        if (t.StartsWith("dpad_")) return "D-pad " + t.Substring(5).Replace('_', ' ');
+        if (t.StartsWith("dpad_"))
+        {
+            string dir = t.Substring(5).Replace('_', ' ');
+            return T($"D-pad {CoreDirection(dir)}", $"Cruceta {CoreDirection(dir)}");
+        }
         return t.Replace('_', ' ');
+    }
+
+    // A direction word of a controller prompt ("up", "down left"), in the mod's language.
+    private static string CoreDirection(string dir)
+    {
+        switch (dir)
+        {
+            case "up": return T("up", "arriba");
+            case "down": return T("down", "abajo");
+            case "left": return T("left", "izquierda");
+            case "right": return T("right", "derecha");
+            case "up left": return T("up left", "arriba a la izquierda");
+            case "up right": return T("up right", "arriba a la derecha");
+            case "down left": return T("down left", "abajo a la izquierda");
+            case "down right": return T("down right", "abajo a la derecha");
+        }
+        return dir;
+    }
+
+    /// <summary>The spoken name of an equipment slot, from its English label in EquipmentSlots
+    /// (those stay English: other code compares against them).</summary>
+    internal static string EquipmentSlotName(string label)
+    {
+        switch (label)
+        {
+            case "Main hand": return T("Main hand", "Mano principal");
+            case "Off hand": return T("Off hand", "Mano secundaria");
+            case "Helmet": return T("Helmet", "Casco");
+            case "Body armour": return T("Body armour", "Armadura corporal");
+            case "Gloves": return T("Gloves", "Guantes");
+            case "Boots": return T("Boots", "Botas");
+            case "Belt": return T("Belt", "Cinturón");
+            case "Amulet": return T("Amulet", "Amuleto");
+            case "Ring 1": return T("Ring 1", "Anillo 1");
+            case "Ring 2": return T("Ring 2", "Anillo 2");
+            case "Flask": return T("Flask", "Frasco");
+            case "Swap main hand": return T("Swap main hand", "Mano principal alternativa");
+            case "Swap off hand": return T("Swap off hand", "Mano secundaria alternativa");
+        }
+        return label;
     }
 
     private ISpeech _speech;
@@ -110,6 +155,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
             p?.SetValue(this, new PoE1AccessSettings());
         }
+        Loc.UseGameLanguage(PluginLog.Write);
         _speech = SpeechFactory.Create();
         PluginLog.Write("Standalone mode started (launcher). Speech: " + _speech.Name);
     }
@@ -208,6 +254,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         try
         {
             PluginLog.Write("Initialise. Base folder: " + AppContext.BaseDirectory);
+            Loc.UseGameLanguage(PluginLog.Write);
             _speech = SpeechFactory.Create();
             PluginLog.Write("Speech: " + _speech.Name);
 
@@ -218,8 +265,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             _nav = new Navigator(GameController, _audio, t => Say(t, true), t => Say(t, false),
                 () => Settings.RadarVolume.Value / 100f, () => Settings.GuideVolume.Value / 100f);
 
-            Say("Path of Exile access plugin loaded. Using " + _speech.Name + "." +
-                (_audio.Available ? "" : " Sounds are not available."), true);
+            Say(T($"Path of Exile access plugin loaded. Using {_speech.Name}.", $"Complemento de accesibilidad de Path of Exile cargado. Usando {_speech.Name}.") +
+                (_audio.Available ? "" : T(" Sounds are not available.", " Los sonidos no están disponibles.")), true);
             StartBackgroundLoop();
 
             // Tell the launcher that ExileApi now runs the plugin.
@@ -388,6 +435,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (Settings.AnnouncePanels.Value) PollPanels(now);
             if (Settings.ReadFocus.Value) PollFocus(now);
             if (Settings.ReadOnHover.Value) PollHover(now);
+            Guard("socket selection", () => PollSocketSelection(now));
 
             // Navigation: silent while a panel, window or menu is open.
             bool uiBusy = _escWasOpen ||
@@ -545,7 +593,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 // Nothing to read there: the window's controls.
                 if (uiBusy && !TooltipAll() && !SayControlsAgain() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
                 // In play: the game's button prompts for what is around you (pick up, talk...).
-                if (!uiBusy && !SayControlsAgain()) Say("No button prompts on screen", true);
+                if (!uiBusy && !SayControlsAgain()) Say(T("No button prompts on screen", "No hay indicaciones de botones en pantalla"), true);
                 break;
             case ControllerInput.Command.LongHold:
                 // In the inventory: every item in the bag, or every equipment slot when the
@@ -586,16 +634,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         string unique = mods != null && (rarity == ItemRarity.Unique || rarity == ItemRarity.Rare)
             ? CleanText(Try(() => mods.UniqueName, "")) : "";
 
-        string prefix = rarity switch
+        string body = unique.Length > 0 && !string.Equals(unique, baseName, StringComparison.OrdinalIgnoreCase)
+            ? unique + ", " + baseName
+            : MagicFullName(item, baseName);
+        return rarity switch
         {
-            ItemRarity.Magic => "Magic ",
-            ItemRarity.Rare => "Rare ",
-            ItemRarity.Unique => "Unique ",
-            _ => "",
+            ItemRarity.Magic => T($"Magic {body}", $"Mágico, {body}"),
+            ItemRarity.Rare => T($"Rare {body}", $"Raro, {body}"),
+            ItemRarity.Unique => T($"Unique {body}", $"Único, {body}"),
+            _ => body,
         };
-        if (unique.Length > 0 && !string.Equals(unique, baseName, StringComparison.OrdinalIgnoreCase))
-            return prefix + unique + ", " + baseName;
-        return prefix + MagicFullName(item, baseName);
     }
 
     /// <summary>
@@ -630,18 +678,23 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private void SayStatus()
     {
         var life = GetComp<ExileCore.PoEMemory.Components.Life>(GameController.Player);
-        if (life == null) { Say("No player data", true); return; }
+        if (life == null) { Say(T("No player data", "Sin datos del jugador"), true); return; }
 
         static int Pct(int cur, int max) => max > 0 ? (int)Math.Round(100.0 * cur / max) : 0;
         var parts = new List<string>();
         string level = LevelText();
         if (level.Length > 0) parts.Add(level);
+        int lifePct = Pct(life.CurHP, life.MaxHP), manaPct = Pct(life.CurMana, life.MaxMana);
         parts.AddRange(new[]
         {
-            "Life " + Pct(life.CurHP, life.MaxHP) + " percent",
-            "Mana " + Pct(life.CurMana, life.MaxMana) + " percent",
+            T($"Life {lifePct} percent", $"Vida {lifePct} por ciento"),
+            T($"Mana {manaPct} percent", $"Maná {manaPct} por ciento"),
         });
-        if (life.MaxES > 0) parts.Add("Energy shield " + Pct(life.CurES, life.MaxES) + " percent");
+        if (life.MaxES > 0)
+        {
+            int esPct = Pct(life.CurES, life.MaxES);
+            parts.Add(T($"Energy shield {esPct} percent", $"Escudo de energía {esPct} por ciento"));
+        }
 
         // The flasks' uses left, in slot order: "Small Life Flask, 3 uses".
         ServerData srv = GetServerData();
@@ -650,16 +703,23 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             {
                 int uses = FlaskUses(f.Item);
                 if (uses >= 0)
-                    parts.Add(CleanText(Try(() => GetComp<BaseComp>(f.Item)?.Name, "") ?? "flask") + ", " + uses + (uses == 1 ? " use" : " uses"));
+                {
+                    string flaskName = CleanText(Try(() => GetComp<BaseComp>(f.Item)?.Name, "") ?? T("flask", "frasco"));
+                    parts.Add(uses == 1 ? T($"{flaskName}, {uses} use", $"{flaskName}, {uses} uso") : T($"{flaskName}, {uses} uses", $"{flaskName}, {uses} usos"));
+                }
             }
 
         string area = Try(() => GameController.Area.CurrentArea.Name, "") ?? "";
         if (area.Length == 0) area = Try(() => GameController.Area.CurrentArea.DisplayName, "") ?? "";
         int areaLevel = Try(() => GameController.Area.CurrentArea.RealLevel, 0);
-        if (area.Length > 0) parts.Add(area + (areaLevel > 0 ? ", area level " + areaLevel : ""));
+        if (area.Length > 0) parts.Add(areaLevel > 0 ? T($"{area}, area level {areaLevel}", $"{area}, nivel de área {areaLevel}") : area);
 
         bool town = Try(() => GameController.Area.CurrentArea.IsTown || GameController.Area.CurrentArea.IsHideout, false);
-        if (!town && _nav != null) parts.Add("explored " + _nav.ExploredPercent() + " percent");
+        if (!town && _nav != null)
+        {
+            var explored = _nav.ExploredPercent();
+            parts.Add(T($"explored {explored} percent", $"explorado {explored} por ciento"));
+        }
         // The area's description after the rest, without its name and level again.
         string described = _nav != null ? Try(() => _nav.DescribeArea(), "") : "";
         int firstStop = described.IndexOf(". ", StringComparison.Ordinal);
@@ -677,14 +737,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         long xp = Try(() => (long)player.XP, -1L);
         if (level <= 0) return "";
         uint[] table = ExileCore.Shared.Constants.PlayerXpLevels;
-        if (xp < 0 || table == null || level + 1 >= table.Length) return "Level " + level;
+        if (xp < 0 || table == null || level + 1 >= table.Length) return T($"Level {level}", $"Nivel {level}");
         long start = table[level], next = table[level + 1];
-        if (next <= start) return "Level " + level;
+        if (next <= start) return T($"Level {level}", $"Nivel {level}");
         // How far through the level you are, so the number rises as you gain experience
         // (saying what was left made it fall, which read as losing progress).
         double done = Math.Max(0, Math.Min(1, (xp - start) / (double)(next - start)));
         int pct = (int)Math.Floor(100 * done);
-        return "Level " + level + ", " + pct + " percent of the way to level " + (level + 1);
+        int nextLevel = level + 1;
+        return T($"Level {level}, {pct} percent of the way to level {nextLevel}", $"Nivel {level}, {pct} por ciento del camino al nivel {nextLevel}");
     }
 
     // ---- Life, mana and energy shield: spoken as they fall past 75, 50 and 25 percent ----
@@ -713,7 +774,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 // Fell past one or more lines: say the lowest one crossed.
                 _resourceStep[name] = step;
                 if (cur > 0 || name != "Life")
-                    Say(name + " below " + ((step + 1) * 25) + " percent", urgent && step <= 1);
+                {
+                    string spokenName = name == "Life" ? T("Life", "Vida") : name == "Mana" ? T("Mana", "Maná") : T("Energy shield", "Escudo de energía");
+                    int below = (step + 1) * 25;
+                    Say(T($"{spokenName} below {below} percent", $"{spokenName} por debajo del {below} por ciento"), urgent && step <= 1);
+                }
             }
             else if (step > last && pct >= step * 25 + 5)
                 _resourceStep[name] = step;   // recovered (5 points past the line, so it does not chatter)
@@ -748,7 +813,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("repeat", Settings.RepeatHotkey, Keys.F9))
         {
             if (_lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
-            else Say("Nothing to repeat yet", true);
+            else Say(T("Nothing to repeat yet", "Nada que repetir todavía"), true);
         }
 
         if (Pressed("previous item", Settings.PreviousItemHotkey, Keys.F5)) Guard("browse", () => BrowseStep(-1));
@@ -1075,7 +1140,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _escLoggedRoot = 0;
         _initialFocusPending = open ? _clock.ElapsedMilliseconds : 0;
         PluginLog.Write("Pause menu " + (open ? "open" : "closed"));
-        Say("Game menu " + (open ? "open" : "closed"), true);
+        Say(open ? T("Game menu open", "Menú del juego abierto") : T("Game menu closed", "Menú del juego cerrado"), true);
     }
 
     // ===================================================================
@@ -1103,6 +1168,22 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         { "EscapeState", "" },
         { "InGameState", "" },
     };
+
+    // The spoken name of a pre-game screen, from its English name in StateNames (the dictionary
+    // stays English: the empty names are compared).
+    private static string StateSpoken(string en)
+    {
+        switch (en)
+        {
+            case "Login screen": return T("Login screen", "Pantalla de inicio de sesión");
+            case "Character selection": return T("Character selection", "Selección de personaje");
+            case "Character creation": return T("Character creation", "Creación de personaje");
+            case "Delete character": return T("Delete character", "Eliminar personaje");
+            case "Change password": return T("Change password", "Cambiar contraseña");
+            case "Credits": return T("Credits", "Créditos");
+        }
+        return en;
+    }
 
     private string _preGameState = "";
     private long _preGameStateAddr;
@@ -1306,7 +1387,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // up 6 seconds. At the game's start it is said straight away.
         if (!_preGameAnnounced)
         {
-            string spoken = StateNames.TryGetValue(type, out string s) ? s : type;
+            string spoken = StateNames.TryGetValue(type, out string s) ? StateSpoken(s) : type;
             bool leavingGame = now - _lastInGameMs < 10000;
             long wait = type == "LoginState" && leavingGame ? 6000 : 0;
             // The game passes through the change password state for a few seconds as it starts,
@@ -1439,10 +1520,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private string _classScreenLine = "";
     private bool _classHintGiven;
 
-    private const string ClassBrowseHint =
-        "The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. " +
-        "Nothing is created until you enter a name, so choose back to try another.";
-    private const string ClassBackHint = "Choose back to try another class.";
+    private static string ClassBrowseHint =>
+        T("The classes are Exiles standing in front of you. Move the left stick to hear each one, and select it to hear its story. Nothing is created until you enter a name, so choose back to try another.",
+          "Las clases son exiliados que están frente a ti. Mueve el stick izquierdo para oír cada una y selecciónala para oír su historia. No se crea nada hasta que introduzcas un nombre, así que elige volver para probar otra.");
+    private static string ClassBackHint => T("Choose back to try another class.", "Elige volver para probar otra clase.");
 
     // First visible descendant with this internal name, up to `depth` levels down.
     private Element FindNamed(Element e, string name, int depth)
@@ -1504,7 +1585,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             return;
         }
         _charListPendingMs = 0;
-        string text = entries.Count + (entries.Count == 1 ? " character: " : " characters: ") + string.Join(". ", entries.Take(10));
+        int characterCount = entries.Count;
+        string characterList = string.Join(". ", entries.Take(10));
+        string text = characterCount == 1
+            ? T($"{characterCount} character: {characterList}", $"{characterCount} personaje: {characterList}")
+            : T($"{characterCount} characters: {characterList}", $"{characterCount} personajes: {characterList}");
         PluginLog.Write("Character list: " + text);
         Say(text, false);
     }
@@ -1562,8 +1647,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             var opened = titles.Where(t => !_openPanels.Contains(t)).ToList();
             var closed = _openPanels.Where(t => !titles.Contains(t)).ToList();
             var parts = new List<string>();
-            foreach (string t in closed) parts.Add(t + " closed");
-            foreach (string t in opened) parts.Add(t + " open");
+            if (opened.Count > 0 || closed.Count > 0) _panelsChangedMs = _clock.ElapsedMilliseconds;
+            foreach (string t in closed) parts.Add(T($"{t} closed", $"Se cierra {t}"));
+            foreach (string t in opened) parts.Add(T($"{t} open", $"Se abre {t}"));
             if (parts.Count > 0)
             {
                 PluginLog.Write("Panels: " + string.Join(", ", parts));
@@ -1584,6 +1670,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private long _lastFocusAddr;
     private Element _lastFocusElement;
     private const int FocusScanMaxElements = 6000;
+    private long _focusCapLoggedMs, _panelsChangedMs;
+    private readonly Dictionary<string, long> _gameMessageSaid = new Dictionary<string, long>();
     private const int TabSelectedValue = 0x100;
 
     private void PollFocus(long now)
@@ -1656,6 +1744,54 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         var prev = _focusState;
         _focusState = state;
         if (prev == null) return;
+        if (state.Count >= FocusScanMaxElements && now - _focusCapLoggedMs > 60000)
+        {
+            _focusCapLoggedMs = now;
+            PluginLog.Write("Focus scan stopped at " + FocusScanMaxElements + " elements");
+        }
+
+        // A pop-up (an item's action menu): controls that were not there before, one of them
+        // focused. Not right after a panel opened or closed, whose new elements are its own.
+        var fresh = state.Keys.Where(k => !prev.ContainsKey(k)).ToList();
+        if (fresh.Count > 0 && fresh.Count <= 400 && now - _panelsChangedMs > 600)
+        {
+            var texts = fresh.Select(k => (Key: k, Text: CleanText(UiText.Text(mem, elements[k].E)))).Where(x => x.Text.Length > 0).ToList();
+            var freshFocus = fresh.Where(k => state[k].Flag && elements[k].Path.Count(c => c == '/') > 1).ToList();
+            // A message of the game (not enough currency, an item in hand): a sentence that
+            // appears as its own element four levels down ("root/1/65/5/0", found 21 Nov 2026),
+            // not deep inside a panel, the chat or a tooltip.
+            foreach (var x in texts)
+            {
+                string p = elements[x.Key].Path;
+                if (!p.StartsWith("root/") || p.Count(c => c == '/') != 4 || x.Text.Split(' ').Length < 3) continue;
+                if (!(x.Text.EndsWith(".") || x.Text.EndsWith("!") || x.Text.EndsWith("?"))) continue;   // a sentence, not a label
+                if (_gameMessageSaid.TryGetValue(x.Text, out long at) && now - at < 3000) continue;
+                _gameMessageSaid[x.Text] = now;
+                PluginLog.Write("Game message: [" + p + "] " + x.Text);
+                Say(x.Text, true);
+            }
+            if (freshFocus.Count >= 1 && freshFocus.Count <= 2)
+            {
+                long addr = freshFocus[freshFocus.Count - 1];
+                if (addr != _lastFocusAddr && DescribeFocused(elements[addr].E).Length > 0)
+                {
+                    // A dialog: its title and message ("Warning. You are holding an item...")
+                    // before the button, all new with it (root/1/65/0/0: title_label,
+                    // message_label, then the buttons in /3 or /2; found 21 Nov 2026).
+                    string fp = elements[addr].Path;
+                    int cut = fp.LastIndexOf('/');
+                    cut = cut > 0 ? fp.LastIndexOf('/', cut - 1) : -1;
+                    string dialog = cut > 0 ? fp.Substring(0, cut) : "";
+                    string buttons = cut > 0 ? fp.Substring(0, fp.LastIndexOf('/')) : "";
+                    var lines = dialog.Length == 0 ? new List<string>() : texts
+                        .Where(x => elements[x.Key].Path.StartsWith(dialog + "/") && !elements[x.Key].Path.StartsWith(buttons + "/") && elements[x.Key].Path != buttons)
+                        .OrderBy(x => elements[x.Key].Path, StringComparer.Ordinal).Select(x => x.Text).Distinct().ToList();
+                    AnnounceFocus(addr, elements[addr].E, elements[addr].Path, "Pop-up focus",
+                                  lines.Count > 0 && lines.Count <= 4 ? JoinSpeech(lines) : "");
+                    return;
+                }
+            }
+        }
 
         // Only elements that were visible last time count, so a panel opening (many elements
         // appearing at once) does not trigger a flood of speech.
@@ -1681,7 +1817,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             var (tab, tabPath) = elements[tabOn[0]];
             string name = CleanText(FirstText(tab, 4, null));
             PluginLog.Write("Tab: [" + tabPath + "] -> \"" + name + "\"");
-            if (name.Length > 0) Say(name + " tab", true);
+            if (name.Length > 0) Say(T($"{name} tab", $"Pestaña {name}"), true);
             return;
         }
 
@@ -1726,7 +1862,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         }
     }
 
-    private void AnnounceFocus(long addr, Element e, string path, string kind)
+    private void AnnounceFocus(long addr, Element e, string path, string kind, string lead = "")
     {
         _lastFocusEventMs = _clock.ElapsedMilliseconds;
         _lastFocusAddr = addr;
@@ -1742,7 +1878,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The same line again at once (the screen's first focus, then its highlight settling on
         // the same character a quarter of a second later) is not said twice.
         long nowMs = _clock.ElapsedMilliseconds;
-        if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
+        if (lead.Length > 0) Say(text.Length > 0 ? JoinSpeech(new List<string> { lead, text }) : lead, true);
+        else if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
         _lastFocusText = text;
         _lastFocusTextMs = nowMs;
     }
@@ -1781,7 +1918,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // Layout words ("Half", "ESHalf": a half-width banner, in Spanish) say nothing.
         words = words.Where(w => !Regex.IsMatch(w, "^([A-Z]{2})?(Half|Full|Wide)$")).ToList();
         string text = string.Join(" ", words.Select(w => Regex.Replace(w, "(?<=[a-z]{2})(?=[A-Z][a-z]{3,})", " ")));
-        return text.Length > 0 ? "News: " + text : "News";
+        return text.Length > 0 ? T($"News: {text}", $"Noticias: {text}") : T("News", "Noticias");
     }
 
     // Speaks a slider's or checkbox's new value when it changes on the selected row.
@@ -1887,7 +2024,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (index < 0 || index >= 200) { kind = "dropdown open=" + open + " index=" + index; return ""; }
             string name = CleanText(UiText.DropdownChoice(mem, control.Address, index, out int count));
             kind = "dropdown open=" + open + " index=" + index + " count=" + count + " name=\"" + name + "\"";
-            string position = count > 0 ? (index + 1) + " of " + count : "choice " + (index + 1);
+            int shown = index + 1;
+            string position = count > 0 ? T($"{shown} of {count}", $"{shown} de {count}") : T($"choice {shown}", $"opción {shown}");
             return name.Length > 0 ? name + ", " + position : position;
         }
 
@@ -1896,7 +2034,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         {
             byte c = b[UiText.CheckboxStateOffset];
             kind = "checkbox b602=" + c;
-            return c == 1 ? "checked" : c == 0 ? "not checked" : "";
+            return c == 1 ? T("checked", "marcado") : c == 0 ? T("not checked", "no marcado") : "";
         }
 
         // Sliders: volume sliders have no children, Sharpness has two. Ranges differ (Master
@@ -2158,29 +2296,34 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         bool mastery = id.StartsWith("mastery_", StringComparison.OrdinalIgnoreCase)
             || (id.StartsWith("affliction_", StringComparison.OrdinalIgnoreCase) && id.IndexOf("mastery", StringComparison.OrdinalIgnoreCase) >= 0)
             || name.EndsWith("Mastery", StringComparison.OrdinalIgnoreCase);
-        string kind = keystone ? "keystone"
-            : notable ? "notable"
-            : mastery ? "mastery"
-            : id.StartsWith("jewel_slot", StringComparison.OrdinalIgnoreCase) ? "jewel socket"
-            : "passive";
+        string kind = keystone ? T("keystone", "piedra angular")
+            : notable ? T("notable", "notable")
+            : mastery ? T("mastery", "maestría")
+            : id.StartsWith("jewel_slot", StringComparison.OrdinalIgnoreCase) ? T("jewel socket", "engarce de joya")
+            : T("passive", "pasiva");
 
         bool allocated = false;
         var ids = GameController.IngameState.ServerData?.PassiveSkillIds;
         if (ids != null) allocated = ids.Contains((ushort)skill.PassiveId);
 
-        string status = allocated ? "allocated"
-            : node.CanAllocate ? "can be allocated"
+        string notLinkedText = T("not linked", "sin enlazar");
+        string status = allocated ? T("allocated", "asignada")
+            : node.CanAllocate ? T("can be allocated", "se puede asignar")
             : Try(() => _passiveLinks != null && _passiveLinks.TryGetValue(skill.Address, out var near) && ids != null &&
-                        near.Any(o => _passiveIdOfRow.TryGetValue(o, out ushort op) && ids.Contains(op)), false) ? "linked"
-            : "not linked";
+                        near.Any(o => _passiveIdOfRow.TryGetValue(o, out ushort op) && ids.Contains(op)), false) ? T("linked", "enlazada")
+            : notLinkedText;
 
         // Class starts are stored as "MARAUDER", "SIX" (Shadow) and "Seven" (Scion).
         string[] starts = { "marauder", "witch", "ranger", "duelist", "templar", "six", "seven" };
         string startId = starts.FirstOrDefault(s => id.StartsWith(s, StringComparison.OrdinalIgnoreCase) && id.Length > s.Length && char.IsDigit(id[s.Length]));
         if (startId != null)
         {
-            name = startId == "six" ? "Shadow" : startId == "seven" ? "Scion" : char.ToUpper(startId[0]) + startId.Substring(1);
-            kind = "class start";
+            // The game's own class name, in the client's language (ClassScreen.cs), by class number.
+            name = ClassName(startId switch
+            {
+                "marauder" => 1, "witch" => 3, "ranger" => 2, "duelist" => 4, "templar" => 5, "six" => 6, _ => 0,
+            });
+            kind = T("class start", "inicio de clase");
             status = "";
         }
 
@@ -2188,7 +2331,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         try { (distance, links) = DescribePassiveLinks(hover, skill.Address); }
         catch (Exception ex) { Report("passive links", ex); }
         var parts = new List<string> { name + ", " + kind + (status.Length > 0 ? ", " + status : "") +
-                                        (!allocated && !string.IsNullOrEmpty(distance) && status == "not linked" ? ", " + distance : "") };
+                                        (!allocated && !string.IsNullOrEmpty(distance) && status == notLinkedText ? ", " + distance : "") };
         // The finder's guide (D-pad), right after the node's name, so it is heard first.
         _passiveHover = hover;
         _passiveHoverRow = skill.Address;
@@ -2283,13 +2426,28 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (k.StartsWith(pre)) k = k.Substring(pre.Length);
         string Words(string s) => s.Replace("_", " ").Replace("  ", " ").Trim();
         int a = Math.Abs(value);
-        if (k.EndsWith("_+%_final")) return a + "% " + (value >= 0 ? "more " : "less ") + Words(k[..^9]);
-        if (k.EndsWith("_+%")) return a + "% " + (value >= 0 ? "increased " : "reduced ") + Words(k[..^3]);
-        if (k.EndsWith("_+")) return (value >= 0 ? "+" : "-") + a + " to " + Words(k[..^2]);
+        if (k.EndsWith("_+%_final"))
+        {
+            string wFinal = Words(k[..^9]);
+            return value >= 0 ? T($"{a}% more {wFinal}", $"{a}% más {wFinal}") : T($"{a}% less {wFinal}", $"{a}% menos {wFinal}");
+        }
+        if (k.EndsWith("_+%"))
+        {
+            string wPct = Words(k[..^3]);
+            return value >= 0 ? T($"{a}% increased {wPct}", $"{a}% de aumento de {wPct}") : T($"{a}% reduced {wPct}", $"{a}% de reducción de {wPct}");
+        }
+        if (k.EndsWith("_+"))
+        {
+            string signPlus = value >= 0 ? "+" : "-";
+            string wPlus = Words(k[..^2]);
+            return T($"{signPlus}{a} to {wPlus}", $"{signPlus}{a} a {wPlus}");
+        }
         if (k.EndsWith("_%")) return value + "% " + Words(k[..^2]);
         if (k.EndsWith("_pct")) return value + "% " + Words(k[..^4]);
         if (value == 1) return Words(k);
-        return (value >= 0 ? "+" : "") + value + " to " + Words(k);
+        string signAny = value >= 0 ? "+" : "";
+        string wAny = Words(k);
+        return T($"{signAny}{value} to {wAny}", $"{signAny}{value} a {wAny}");
     }
 
     // ===================================================================
@@ -2334,10 +2492,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         string rarityWord = rarity switch
         {
-            ItemRarity.Normal => "Normal",
-            ItemRarity.Magic => "Magic",
-            ItemRarity.Rare => "Rare",
-            ItemRarity.Unique => "Unique",
+            ItemRarity.Normal => T("Normal", "Normal"),
+            ItemRarity.Magic => T("Magic", "Mágico"),
+            ItemRarity.Rare => T("Rare", "Raro"),
+            ItemRarity.Unique => T("Unique", "Único"),
             _ => "",
         };
 
@@ -2353,37 +2511,37 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (baseName.Length > 0) parts.Add(baseName);
 
         int stackSize = stack != null ? Try(() => stack.Size, 0) : 0;
-        if (stackSize > 1) parts.Add("stack of " + stackSize);
+        if (stackSize > 1) parts.Add(T($"stack of {stackSize}", $"pila de {stackSize}"));
 
         int itemLevel = mods != null ? Try(() => mods.ItemLevel, 0) : 0;
-        if (itemLevel > 0) parts.Add("item level " + itemLevel);
+        if (itemLevel > 0) parts.Add(T($"item level {itemLevel}", $"nivel de objeto {itemLevel}"));
 
         int qualityValue = quality != null ? Try(() => quality.ItemQuality, 0) : 0;
-        if (qualityValue > 0) parts.Add("quality " + qualityValue + " percent");
+        if (qualityValue > 0) parts.Add(T($"quality {qualityValue} percent", $"calidad {qualityValue} por ciento"));
 
         int socketCount = sockets != null ? Try(() => sockets.NumberOfSockets, 0) : 0;
         if (socketCount > 0)
         {
             int link = Try(() => sockets.LargestLinkSize, 0);
-            parts.Add(socketCount + (socketCount == 1 ? " socket" : " sockets") +
-                      (link > 1 ? ", largest link " + link : ""));
+            string socketText = socketCount == 1 ? T($"{socketCount} socket", $"{socketCount} engarce") : T($"{socketCount} sockets", $"{socketCount} engarces");
+            parts.Add(link > 1 ? socketText + T($", largest link {link}", $", enlace más largo {link}") : socketText);
         }
 
-        if (baseC != null && Try(() => baseC.isCorrupted, false)) parts.Add("corrupted");
-        if (mods != null && Try(() => mods.IsMirrored, false)) parts.Add("mirrored");
+        if (baseC != null && Try(() => baseC.isCorrupted, false)) parts.Add(T("corrupted", "corrupto"));
+        if (mods != null && Try(() => mods.IsMirrored, false)) parts.Add(T("mirrored", "reflejado"));
         if (mods != null && !Try(() => mods.Identified, true) &&
             (rarity == ItemRarity.Magic || rarity == ItemRarity.Rare || rarity == ItemRarity.Unique))
-            parts.Add("unidentified");
+            parts.Add(T("unidentified", "sin identificar"));
 
         if (mods != null)
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int before = parts.Count;
 
-            AddStats(parts, "Enchant", Try<IEnumerable<string>>(() => mods.EnchantedStats, null), seen);
-            AddStats(parts, "Implicit", Try<IEnumerable<string>>(() => mods.HumanImpStats, null), seen);
-            AddStats(parts, "Fractured", Try<IEnumerable<string>>(() => mods.FracturedStats, null), seen);
-            AddStats(parts, "Crafted", Try<IEnumerable<string>>(() => mods.HumanCraftedStats, null), seen);
+            AddStats(parts, T("Enchant", "Encantamiento"), Try<IEnumerable<string>>(() => mods.EnchantedStats, null), seen);
+            AddStats(parts, T("Implicit", "Implícito"), Try<IEnumerable<string>>(() => mods.HumanImpStats, null), seen);
+            AddStats(parts, T("Fractured", "Fracturado"), Try<IEnumerable<string>>(() => mods.FracturedStats, null), seen);
+            AddStats(parts, T("Crafted", "Fabricado"), Try<IEnumerable<string>>(() => mods.HumanCraftedStats, null), seen);
             AddStats(parts, "", Try<IEnumerable<string>>(() => mods.HumanStats, null), seen);
 
             // If the readable stat lists came back empty, fall back to the raw modifier names.
@@ -2401,7 +2559,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                         if (string.IsNullOrWhiteSpace(t)) t = Try(() => mod.Name, "");
                         lines.Add(t);
                     }
-                    AddStats(parts, "Modifiers", lines, seen);
+                    AddStats(parts, T("Modifiers", "Modificadores"), lines, seen);
                 }
             }
         }
@@ -2473,12 +2631,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         else
         {
             foreach (var (slot, label) in EquipmentSlots)
-                AddSlotItems(list, server.GetPlayerInventoryBySlot(slot), label, slot == InventorySlotE.Flask1);
+                AddSlotItems(list, server.GetPlayerInventoryBySlot(slot), EquipmentSlotName(label), slot == InventorySlotE.Flask1);
         }
         return list;
     }
 
-    private string BrowseListName => _browseEquipment ? "Equipment" : "Inventory";
+    private string BrowseListName => _browseEquipment ? T("Equipment", "Equipamiento") : T("Inventory", "Inventario");
 
     private void SwitchList()
     {
@@ -2486,7 +2644,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _browseIndex = -1;
 
         List<BrowseEntry> list = BuildBrowseList();
-        string summary = BrowseListName + ", " + list.Count + (list.Count == 1 ? " item" : " items");
+        string listName = BrowseListName;
+        int itemCount = list.Count;
+        string summary = itemCount == 1 ? T($"{listName}, {itemCount} item", $"{listName}, {itemCount} objeto") : T($"{listName}, {itemCount} items", $"{listName}, {itemCount} objetos");
 
         if (!_browseEquipment)
         {
@@ -2497,7 +2657,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 var slots = inv.InventorySlotItems;
                 if (slots != null) foreach (var s in slots) cells += Math.Max(1, s.SizeX) * Math.Max(1, s.SizeY);
                 int total = inv.Columns * inv.Rows;
-                if (total > 0) summary += ", " + cells + " of " + total + " cells used";
+                if (total > 0) summary += T($", {cells} of {total} cells used", $", {cells} de {total} casillas usadas");
             }
         }
         Say(summary, true);
@@ -2508,7 +2668,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         List<BrowseEntry> list = BuildBrowseList();
         if (list.Count == 0)
         {
-            Say(BrowseListName + " is empty, or its data is not available", true);
+            string emptyName = BrowseListName;
+            Say(T($"{emptyName} is empty, or its data is not available", $"{emptyName} está vacío, o sus datos no están disponibles"), true);
             return;
         }
 
@@ -2522,7 +2683,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The same wording as selecting the item in the inventory.
         string head = _browseEquipment
             ? (entry.Label.Length > 0 ? entry.Label + ": " : "") + ItemTitle(entry.Item)
-            : ItemTitle(entry.Item) + ", column " + entry.Col + ", row " + entry.Row;
+            : T($"{ItemTitle(entry.Item)}, column {entry.Col}, row {entry.Row}", $"{ItemTitle(entry.Item)}, columna {entry.Col}, fila {entry.Row}");
         var lines = new List<string> { head };
         string missing = MissingRequirement(entry.Item);
         if (missing.Length > 0) lines.Add(missing);
@@ -2530,7 +2691,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _tipLines = lines;
         _tipIndex = 0;
 
-        Say(JoinSpeech(new List<string> { (_browseIndex + 1) + " of " + list.Count }.Concat(lines).ToList()), true);
+        int shownIndex = _browseIndex + 1, listCount = list.Count;
+        Say(JoinSpeech(new List<string> { T($"{shownIndex} of {listCount}", $"{shownIndex} de {listCount}") }.Concat(lines).ToList()), true);
     }
 
     // ===================================================================

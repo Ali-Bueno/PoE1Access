@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore.PoEMemory;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -63,7 +64,7 @@ public partial class PoE1AccessCore
         bool opened = !_dialogueAnnounced;
         _dialogueAnnounced = true;
         _dialogueOptions = rows.Select(r => r.Text).ToList();
-        if (opened) Say(rows.Count + " options. Move to hear each", false);
+        if (opened) { int optionCount = rows.Count; Say(T($"{optionCount} options. Move to hear each", $"{optionCount} opciones. Muévete para oír cada una"), false); }
 
         // The game adds its highlight to the selected option as one more child. Options differ in
         // their own children (some carry an 18x18 icon), and one can keep an extra child after the
@@ -92,7 +93,9 @@ public partial class PoE1AccessCore
         if (sel == _dialogueSelected) return;
         _dialogueSelected = sel;
         _lastHoverSpoken = JoinSpeech(_dialogueOptions);   // the list as one is not said again
-        Say(rows[idx].Text + ", " + (idx + 1) + " of " + rows.Count, true);
+        string optionText = rows[idx].Text;
+        int optionNo = idx + 1, optionTotal = rows.Count;
+        Say(T($"{optionText}, {optionNo} of {optionTotal}", $"{optionText}, {optionNo} de {optionTotal}"), true);
     }
 
     // Every shown option list of the dialogue window: the found list, its siblings' lists and

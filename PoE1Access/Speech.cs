@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -187,7 +188,7 @@ public sealed class AutoSpeech : ISpeech
 
     public string Name
     {
-        get { lock (_lock) return _nvdaRunning ? "NVDA" : "the Windows voice"; }
+        get { lock (_lock) return _nvdaRunning ? "NVDA" : T("the Windows voice", "la voz de Windows"); }
     }
 
     public void Speak(string text, bool interrupt = false)

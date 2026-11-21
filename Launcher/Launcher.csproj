@@ -21,5 +21,8 @@
   <ItemGroup>
     <!-- The same speech code as the plugin: NVDA, else the Windows voice. -->
     <Compile Include="..\PoE1Access\Speech.cs" Link="Speech.cs" />
+    <Compile Include="..\PoE1Access\Localization.cs" Link="Localization.cs" />
+    <Compile Include="..\PoE1Access\Phrase.cs" Link="Phrase.cs" />
+    <EmbeddedResource Include="..\PoE1Access\lang\*.json" LogicalName="lang.%(Filename).json" />
   </ItemGroup>
 </Project>

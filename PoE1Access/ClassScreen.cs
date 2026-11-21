@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -72,7 +73,18 @@ public partial class PoE1AccessCore
     {
         _classNames ??= Try(ReadClassNames, null);
         if (_classNames != null && _classNames[number].Length > 0) return _classNames[number];
-        return Classes[number].English;
+        // The English fallback names are the keys; spoken in the mod's language.
+        return number switch
+        {
+            0 => T("Scion", "Heredera"),
+            1 => T("Marauder", "Merodeador"),
+            2 => T("Ranger", "Exploradora"),
+            3 => T("Witch", "Bruja"),
+            4 => T("Duelist", "Duelista"),
+            5 => T("Templar", "Templario"),
+            6 => T("Shadow", "Sombra"),
+            _ => Classes[number].English,
+        };
     }
 
     // The client's Characters table ("es:Data/Characters.dat" in a Spanish client).

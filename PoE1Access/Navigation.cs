@@ -6,6 +6,7 @@ using ExileCore;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Enums;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -162,15 +163,25 @@ internal sealed partial class Navigator
         return v.Length() > 1e-6f ? Vector2.Normalize(v) : Vector2.Zero;
     }
 
-    private static readonly string[] DirNames = { "right", "up right", "up", "up left", "left", "down left", "down", "down right" };
+    private static string DirNameAt(int sector) => sector switch
+    {
+        0 => T("right", "derecha"),
+        1 => T("up right", "arriba a la derecha"),
+        2 => T("up", "arriba"),
+        3 => T("up left", "arriba a la izquierda"),
+        4 => T("left", "izquierda"),
+        5 => T("down left", "abajo a la izquierda"),
+        6 => T("down", "abajo"),
+        _ => T("down right", "abajo a la derecha"),
+    };
 
     public static string DirName(Vector2 screenDir)
     {
-        if (screenDir == Vector2.Zero) return "here";
+        if (screenDir == Vector2.Zero) return T("here", "aquí");
         double ang = Math.Atan2(screenDir.Y, screenDir.X);
         int sector = (int)Math.Round(ang / (Math.PI / 4));
         sector = ((sector % 8) + 8) % 8;
-        return DirNames[sector];
+        return DirNameAt(sector);
     }
 
     // ===================================================================
@@ -446,7 +457,7 @@ internal sealed partial class Navigator
                     if (named != _lastTargetName || now - _lastTargetNameMs > 2000)
                     {
                         int life = (int)Math.Round(Try(() => targeted.GetComponent<Life>().HPPercentage, 1f) * 100);
-                        _say(named + (life < 100 ? ", " + life + " percent" : ""));
+                        _say(named + (life < 100 ? T($", {life} percent", $", {life} por ciento") : ""));
                     }
                     _lastTargetName = named;
                     _lastTargetNameMs = now;
@@ -467,13 +478,13 @@ internal sealed partial class Navigator
                 {
                     string rar = grp.Key.Rarity switch
                     {
-                        MonsterRarity.Magic => ", magic",
-                        MonsterRarity.Rare => ", rare",
-                        MonsterRarity.Unique => ", unique",
+                        MonsterRarity.Magic => T(", magic", ", mágico"),
+                        MonsterRarity.Rare => T(", rare", ", raro"),
+                        MonsterRarity.Unique => T(", unique", ", único"),
                         _ => "",
                     };
                     var mid = new Vector2(grp.Average(x => x.G.X), grp.Average(x => x.G.Y));
-                    string dir = EnemyDirections ? ", " + ((mid - p).Length() < 2.5f ? "here" : DirName(ScreenDir(p, mid))) : "";
+                    string dir = EnemyDirections ? ", " + ((mid - p).Length() < 2.5f ? T("here", "aquí") : DirName(ScreenDir(p, mid))) : "";
                     int n = grp.Count();
                     parts.Add(grp.Key.Name + (n > 1 ? ", " + n : "") + rar + dir);
                     if (parts.Count >= 4) break;
@@ -801,7 +812,7 @@ internal sealed partial class Navigator
                        (st.WentAway && (cat == Cat.Items || now - st.SaidAtMs >= RearmMs));
             if (!due) continue;
 
-            string dir = dist < 2.5f ? "here" : DirName(ScreenDir(p, g));
+            string dir = dist < 2.5f ? T("here", "aquí") : DirName(ScreenDir(p, g));
             toSay.Add((dist, Describe(e, itemName) + ", " + dir, id));
         }
 
@@ -1098,18 +1109,25 @@ internal sealed partial class Navigator
     private string RouteText(Vector2 p, Vector2 target)
     {
         float straight = (target - p).Length();
-        if (straight < 2.5f) return "here";
+        if (straight < 2.5f) return T("here", "aquí");
 
         var path = FindPath(p, target);
         if (path == null || path.Count < 2)
-            return Steps(straight) + " steps, " + DirName(ScreenDir(p, target)) + ", no route";
+            {
+            string toward = DirName(ScreenDir(p, target));
+            return T($"{Steps(straight)} steps, {toward}, no route", $"{Steps(straight)} pasos, {toward}, sin ruta");
+        }
 
         float total = PathLength(path);
         var legs = BuildLegs(path);
-        if (legs.Count == 0) return Steps(total) + " steps, " + DirName(ScreenDir(p, target));
-        string text = Steps(total) + " steps, " + legs[0].Dir;
-        if (legs.Count > 1) text += " " + Steps(legs[0].Len) + ", then " + legs[1].Dir;
-        return text;
+        if (legs.Count == 0)
+        {
+            string toward = DirName(ScreenDir(p, target));
+            return T($"{Steps(total)} steps, {toward}", $"{Steps(total)} pasos, {toward}");
+        }
+        if (legs.Count > 1)
+            return T($"{Steps(total)} steps, {legs[0].Dir} {Steps(legs[0].Len)}, then {legs[1].Dir}", $"{Steps(total)} pasos, {legs[0].Dir} {Steps(legs[0].Len)}, luego {legs[1].Dir}");
+        return T($"{Steps(total)} steps, {legs[0].Dir}", $"{Steps(total)} pasos, {legs[0].Dir}");
     }
 
     // ===================================================================
@@ -1120,10 +1138,20 @@ internal sealed partial class Navigator
 
     private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Players, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
 
-    private static readonly Dictionary<Cat, string> CatNames = new Dictionary<Cat, string>
+    private static string CatName(Cat c) => c switch
     {
-        { Cat.Quest, "Quest" }, { Cat.Death, "Where you died" }, { Cat.Exits, "Exits" }, { Cat.Unexplored, "Unexplored" }, { Cat.Waypoints, "Waypoints" }, { Cat.Characters, "Characters" }, { Cat.Players, "Other players" },
-        { Cat.Enemies, "Enemies" }, { Cat.Items, "Items" }, { Cat.Chests, "Chests" }, { Cat.Objects, "Objects" },
+        Cat.Quest => T("Quest", "Misión"),
+        Cat.Death => T("Where you died", "Donde moriste"),
+        Cat.Exits => T("Exits", "Salidas"),
+        Cat.Unexplored => T("Unexplored", "Sin explorar"),
+        Cat.Waypoints => T("Waypoints", "Transportadores"),
+        Cat.Characters => T("Characters", "Personajes"),
+        Cat.Players => T("Other players", "Otros jugadores"),
+        Cat.Enemies => T("Enemies", "Enemigos"),
+        Cat.Items => T("Items", "Objetos"),
+        Cat.Chests => T("Chests", "Cofres"),
+        Cat.Objects => T("Objects", "Objetos del entorno"),
+        _ => "",
     };
 
     /// <summary>A scanner entry: a game object, or a place on the map (unexplored ground).</summary>
@@ -1198,8 +1226,10 @@ internal sealed partial class Navigator
         long area = Try(() => (long)_gc.Area.CurrentArea.Hash, 0L);
         if (!_deaths.TryGetValue(area, out var d)) return new List<ScanItem>();
         int mins = (int)(DateTime.Now - d.When).TotalMinutes;
-        string ago = mins < 1 ? "just now" : mins == 1 ? "1 minute ago" : mins + " minutes ago";
-        return new List<ScanItem> { new ScanItem { Pos = d.At, Label = "Where you died, " + ago, Cat = Cat.Death } };
+        string label = mins < 1 ? T("Where you died, just now", "Donde moriste, hace un momento")
+            : mins == 1 ? T("Where you died, 1 minute ago", "Donde moriste, hace 1 minuto")
+            : T($"Where you died, {mins} minutes ago", $"Donde moriste, hace {mins} minutos");
+        return new List<ScanItem> { new ScanItem { Pos = d.At, Label = label, Cat = Cat.Death } };
     }
 
     /// <summary>The game shows a quest icon for it on the minimap (shown, not hidden).</summary>
@@ -1394,10 +1424,10 @@ internal sealed partial class Navigator
             var (size, reach, capped) = regions[id];
             int rank;
             string label;
-            if (!capped && reach <= RevealCells && size < RevealDisc) { rank = 3; label = "Unexplored nook"; }
-            else if (!capped && size < 2 * RevealDisc) { rank = 2; label = "Small unexplored ground"; }
-            else if (capped || size >= 10 * RevealDisc) { rank = 0; label = "Large unexplored ground"; }
-            else { rank = 1; label = "Unexplored ground"; }
+            if (!capped && reach <= RevealCells && size < RevealDisc) { rank = 3; label = T("Unexplored nook", "Rincón sin explorar"); }
+            else if (!capped && size < 2 * RevealDisc) { rank = 2; label = T("Small unexplored ground", "Terreno pequeño sin explorar"); }
+            else if (capped || size >= 10 * RevealDisc) { rank = 0; label = T("Large unexplored ground", "Terreno grande sin explorar"); }
+            else { rank = 1; label = T("Unexplored ground", "Terreno sin explorar"); }
 
             entries.Add((rank, (at - p).Length(), new ScanItem { Pos = at, Label = label, Cat = Cat.Unexplored }));
             if (entries.Count >= 30) break;
@@ -1430,7 +1460,7 @@ internal sealed partial class Navigator
             int i = path.LastIndexOf('/');
             return i >= 0 ? path.Substring(i + 1) : path;
         }
-        catch { return "Unknown"; }
+        catch { return T("Unknown", "Desconocido"); }
     }
 
     private static string Describe(Entity e, Func<Entity, string> itemName)
@@ -1444,18 +1474,18 @@ internal sealed partial class Navigator
                 int level = pc?.Level ?? 0;
                 string who = pc?.PlayerName;
                 if (string.IsNullOrWhiteSpace(who)) who = name;
-                return who + (level > 0 ? ", level " + level : "");
+                return who + (level > 0 ? T($", level {level}", $", nivel {level}") : "");
             }
             if (e.Type == EntityType.Monster)
             {
                 string rar = e.Rarity switch
                 {
-                    MonsterRarity.Magic => "magic ",
-                    MonsterRarity.Rare => "rare ",
-                    MonsterRarity.Unique => "unique ",
-                    _ => "",
+                    MonsterRarity.Magic => T($"magic {name}", $"{name} mágico"),
+                    MonsterRarity.Rare => T($"rare {name}", $"{name} raro"),
+                    MonsterRarity.Unique => T($"unique {name}", $"{name} único"),
+                    _ => name,
                 };
-                return rar + name;
+                return rar;
             }
         }
         catch { }
@@ -1466,7 +1496,7 @@ internal sealed partial class Navigator
     public void Scan(int dCat, int dItem, long now, Func<Entity, string> itemName)
     {
         Vector2 p = PlayerGrid();
-        if (_grid == null || p.X < 0) { _say("No map yet"); return; }
+        if (_grid == null || p.X < 0) { _say(T("No map yet", "Aún no hay mapa")); return; }
 
         // After ten quiet seconds the next flick starts again from the nearest entry.
         if (now - _lastScanMs > 10000) _scanIndex = -1;
@@ -1485,7 +1515,7 @@ internal sealed partial class Navigator
         }
 
         var list = List(Order[_catIndex], p);
-        if (list.Count == 0) { _say(CatNames[Order[_catIndex]] + ", none"); _scanChoice = null; return; }
+        if (list.Count == 0) { _say(T($"{CatName(Order[_catIndex])}, none", $"{CatName(Order[_catIndex])}, ninguno")); _scanChoice = null; return; }
 
         if (dItem != 0 || _scanIndex < 0)
             _scanIndex = _scanIndex < 0 ? 0 : ((_scanIndex + dItem) % list.Count + list.Count) % list.Count;
@@ -1493,7 +1523,7 @@ internal sealed partial class Navigator
 
         _scanChoice = list[_scanIndex];
         string text = Describe(_scanChoice, itemName) + ", " + RouteText(p, PosOf(_scanChoice));
-        if (catChanged) text = CatNames[Order[_catIndex]] + ". " + text;
+        if (catChanged) text = T($"{CatName(Order[_catIndex])}. {text}", $"{CatName(Order[_catIndex])}. {text}");
         _say(text);
     }
 
@@ -1502,7 +1532,7 @@ internal sealed partial class Navigator
     {
         if (_scanChoice == null) return false;
         Vector2 p = PlayerGrid();
-        if (!StillThere(_scanChoice)) { _say(NameOf(_scanChoice, itemName) + " is gone"); _scanChoice = null; return true; }
+        if (!StillThere(_scanChoice)) { _say(T($"{NameOf(_scanChoice, itemName)} is gone", $"{NameOf(_scanChoice, itemName)} ya no está")); _scanChoice = null; return true; }
         _say(Describe(_scanChoice, itemName) + ", " + RouteText(p, PosOf(_scanChoice)));
         return true;
     }
@@ -1614,7 +1644,10 @@ internal sealed partial class Navigator
             if (!_offRouteSaid && now - _offRouteSinceMs >= 2000)
             {
                 _offRouteSaid = true;
-                _say("Off the route. Go " + DirName(ScreenDir(p, new Vector2(_guidePath[nearest].X, _guidePath[nearest].Y))));
+                {
+                    string back = DirName(ScreenDir(p, new Vector2(_guidePath[nearest].X, _guidePath[nearest].Y)));
+                    _say(T($"Off the route. Go {back}", $"Fuera de la ruta. Ve {back}"));
+                }
                 _lastPromptMs = now;
             }
             return;
@@ -1635,7 +1668,7 @@ internal sealed partial class Navigator
             else if (leg.Dir != _lastPromptDir && now - _lastPromptMs > 1500 && toTurn >= 4f)
             {
                 // Not announced before the turn: say it now.
-                _say("Now " + leg.Dir + ", " + Steps(toTurn));
+                _say(T($"Now {leg.Dir}, {Steps(toTurn)}", $"Ahora {leg.Dir}, {Steps(toTurn)}"));
                 _lastPromptDir = leg.Dir;
                 _lastPromptMs = now;
             }
@@ -1648,7 +1681,7 @@ internal sealed partial class Navigator
 
         Leg next = _guideLegs[k + 1];
         _legPrompted = true;
-        _say("Now " + next.Dir + ", " + Steps(next.Len));
+        _say(T($"Now {next.Dir}, {Steps(next.Len)}", $"Ahora {next.Dir}, {Steps(next.Len)}"));
         _lastPromptDir = next.Dir;
         _lastPromptMs = now;
     }
@@ -1657,11 +1690,11 @@ internal sealed partial class Navigator
     {
         if (_guideTarget != null)
         {
-            _say("Guide off");
+            _say(T("Guide off", "Guía desactivada"));
             _guideTarget = null;
             return;
         }
-        if (_scanChoice == null) { _say("Choose something with the scanner first"); return; }
+        if (_scanChoice == null) { _say(T("Choose something with the scanner first", "Primero elige algo con el escáner")); return; }
 
         _guideTarget = _scanChoice;
         _guideCat = _guideTarget.Cat;
@@ -1672,7 +1705,7 @@ internal sealed partial class Navigator
         _guidePathMs = 0;
         ResetPrompts();
         Vector2 p = PlayerGrid();
-        _say("Guiding to " + _guideName + ", " + RouteText(p, _guideLastPos));
+        _say(T($"Guiding to {_guideName}, {RouteText(p, _guideLastPos)}", $"Guiando a {_guideName}, {RouteText(p, _guideLastPos)}"));
     }
 
     private void TickGuide(long now, Vector2 p)
@@ -1688,7 +1721,7 @@ internal sealed partial class Navigator
         // new ground on), then the list is worked out again.
         if (_guideTarget.E == null && dist < 13f)
         {
-            _say("Arrived at " + _guideName + ". Scan unexplored again to go on.");
+            _say(T($"Arrived at {_guideName}. Scan unexplored again to go on.", $"Llegaste a {_guideName}. Escanea de nuevo lo sin explorar para seguir."));
             _guideTarget = null;
             _uxCache = null;
             return;
@@ -1699,13 +1732,13 @@ internal sealed partial class Navigator
         float arrive = _guideCat == Cat.Items ? 6f : 13f;
         if (dist < arrive)
         {
-            _say("Arrived at " + _guideName);
+            _say(T($"Arrived at {_guideName}", $"Llegaste a {_guideName}"));
             _guideTarget = null;
             return;
         }
         if (!valid && dist < arrive + 4f)
         {
-            _say("Arrived where " + _guideName + " was");
+            _say(T($"Arrived where {_guideName} was", $"Llegaste a donde estaba {_guideName}"));
             _guideTarget = null;
             return;
         }

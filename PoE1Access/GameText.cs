@@ -87,25 +87,7 @@ public partial class PoE1AccessCore
 
     private bool EnglishClient => GameLanguage == "en";
 
-    private static string ReadGameLanguage()
-    {
-        string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string path = Path.Combine(docs, "My Games", "Path of Exile", "production_Config.ini");
-        if (!File.Exists(path)) return null;
-        bool inSection = false;
-        foreach (string raw in File.ReadLines(path))
-        {
-            string line = raw.Trim();
-            if (line.StartsWith("[")) { inSection = line.Equals("[LANGUAGE]", StringComparison.OrdinalIgnoreCase); continue; }
-            int eq = line.IndexOf('=');
-            if (inSection && eq > 0 && line.Substring(0, eq).Trim().Equals("language", StringComparison.OrdinalIgnoreCase))
-            {
-                string v = line.Substring(eq + 1).Trim();
-                return v.Length > 0 ? v : null;
-            }
-        }
-        return null;
-    }
+    private static string ReadGameLanguage() => Loc.ReadGameLanguage();
 
     /// <summary>True if `text` is the word, in English or in the client's language.</summary>
     private bool IsGameWord(string text, GameWord word) =>

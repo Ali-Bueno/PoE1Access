@@ -4,6 +4,7 @@ using System.Linq;
 using Vector2 = SharpDX.Vector2;
 using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.Elements;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -35,9 +36,20 @@ public partial class PoE1AccessCore
     }
 
     /// <summary>A D-pad press in the passive tree.</summary>
+    // How a list is said; FinderLists keeps the English names.
+    private static string FinderListName(int i) => i switch
+    {
+        0 => T("Position", "Posición"),
+        1 => T("Keystones", "Piedras angulares"),
+        2 => T("Notables", "Notables"),
+        3 => T("Jewel sockets", "Engarces de joya"),
+        4 => T("Next to your nodes", "Junto a tus nodos"),
+        _ => FinderLists[i],
+    };
+
     private void FinderStep(int dpad)
     {
-        if (_passiveHover == null || _passiveHoverRow == 0) { Say("Move onto a passive node first", true); return; }
+        if (_passiveHover == null || _passiveHoverRow == 0) { Say(T("Move onto a passive node first", "Ponte primero sobre un nodo pasivo"), true); return; }
         if ((dpad & (ControllerInput.DPadUp | ControllerInput.DPadDown)) != 0)
         {
             int step = (dpad & ControllerInput.DPadDown) != 0 ? 1 : -1;
@@ -55,27 +67,33 @@ public partial class PoE1AccessCore
     {
         bool had = _finderTarget != 0;
         _finderTarget = 0;
-        string here = _passiveNameOfRow.TryGetValue(_passiveHoverRow, out string n) && n.Length > 0 ? n : "this node";
-        Say("Position: " + here + (had ? ". Target dropped" : ""), true);
+        string here = _passiveNameOfRow.TryGetValue(_passiveHoverRow, out string n) && n.Length > 0 ? n : T("this node", "este nodo");
+        Say(had ? T($"Position: {here}. Target dropped", $"Posición: {here}. Objetivo descartado") : T($"Position: {here}", $"Posición: {here}"), true);
     }
 
     private void FinderMove(int step, bool announceList)
     {
         var nodes = FinderNodes(_finderList);
-        string list = FinderLists[_finderList];
-        if (nodes.Count == 0) { Say(list + ": none on this tree", true); return; }
+        string list = FinderListName(_finderList);
+        if (nodes.Count == 0) { Say(T($"{list}: none on this tree", $"{list}: ninguno en este árbol"), true); return; }
         _finderIndex = _finderIndex < 0 ? 0 : (_finderIndex + step + nodes.Count) % nodes.Count;
         var node = nodes[_finderIndex];
         _finderTarget = node.Row;
 
         var parts = new List<string>();
         if (announceList) parts.Add(list + ", " + nodes.Count);
-        string cost = node.Cost == 0 ? "allocated" : node.Cost == 1 ? (CanAllocate(node.Row) ? "can be allocated" : "1 point away") : node.Cost + " points away";
-        parts.Add(node.Name + ", " + cost + ", " + (_finderIndex + 1) + " of " + nodes.Count);
+        int pointsAway = node.Cost;
+        string cost = node.Cost == 0 ? T("allocated", "asignado") : node.Cost == 1 ? (CanAllocate(node.Row) ? T("can be allocated", "se puede asignar") : T("1 point away", "a 1 punto"))
+            : T($"{pointsAway} points away", $"a {pointsAway} puntos");
+        int position = _finderIndex + 1, total = nodes.Count;
+        parts.Add(T($"{node.Name}, {cost}, {position} of {total}", $"{node.Name}, {cost}, {position} de {total}"));
         string way = WayTo(node.Row);
         if (way.Length > 0) parts.Add(way);
         if (node.Path != null && node.Path.Count > 0)
-            parts.Add("Allocate first: " + NodeName(node.Path[0]) + WayDirection(node.Path[0]));
+        {
+            string first = NodeName(node.Path[0]) + WayDirection(node.Path[0]);
+            parts.Add(T($"Allocate first: {first}", $"Asigna primero: {first}"));
+        }
         // What the node does, last, so the way is heard first.
         parts.AddRange(PassiveStatLines(node.Row));
         // The node under the cursor, whose reading now ends with the new target's way, is not
@@ -94,22 +112,29 @@ public partial class PoE1AccessCore
         if (_passiveIdOfRow.TryGetValue(_finderTarget, out ushort tid) && allocated.Contains(tid))
         {
             _finderTarget = 0;
-            return "You have " + target + ". Guide off";
+            return T($"You have {target}. Guide off", $"Ya tienes {target}. Guía desactivada");
         }
         if (row == _finderTarget)
         {
             var path = PathTo(_finderTarget);
-            if (path == null || path.Count == 0) return "Arrived at " + target + (CanAllocate(row) ? ", allocate this one" : "");
-            return "Arrived at " + target + ", " + (path.Count + 1) + " points to go. Allocate first: " + NodeName(path[0]) + WayDirection(path[0]);
+            if (path == null || path.Count == 0)
+                return CanAllocate(row) ? T($"Arrived at {target}, allocate this one", $"Has llegado a {target}, asigna este")
+                    : T($"Arrived at {target}", $"Has llegado a {target}");
+            int toGo = path.Count + 1;
+            string first = NodeName(path[0]) + WayDirection(path[0]);
+            return T($"Arrived at {target}, {toGo} points to go. Allocate first: {first}", $"Has llegado a {target}, faltan {toGo} puntos. Asigna primero: {first}");
         }
         var steps = PathTo(_finderTarget);
         if (steps != null && steps.Count > 0)
         {
-            if (steps[0] == row) return "Allocate this one for " + target + ", " + (steps.Count + 1) + " points to go";
-            if (steps.Contains(row)) return "On the way to " + target + ". Next to allocate: " + NodeName(steps[0]) + WayDirection(steps[0]);
-            return target + ", " + (steps.Count + 1) + " points to go. Next to allocate: " + NodeName(steps[0]) + WayDirection(steps[0]);
+            int toGo = steps.Count + 1;
+            string next = NodeName(steps[0]) + WayDirection(steps[0]);
+            if (steps[0] == row) return T($"Allocate this one for {target}, {toGo} points to go", $"Asigna este para {target}, faltan {toGo} puntos");
+            if (steps.Contains(row)) return T($"On the way to {target}. Next to allocate: {next}", $"De camino a {target}. Siguiente a asignar: {next}");
+            return T($"{target}, {toGo} points to go. Next to allocate: {next}", $"{target}, faltan {toGo} puntos. Siguiente a asignar: {next}");
         }
-        return "Toward " + target + WayDirection(_finderTarget);
+        string way = WayDirection(_finderTarget);
+        return T($"Toward {target}{way}", $"Hacia {target}{way}");
     }
 
     private long _finderQuietRow;
@@ -131,7 +156,7 @@ public partial class PoE1AccessCore
         return lines;
     }
 
-    private string NodeName(long row) => _passiveNameOfRow.TryGetValue(row, out string n) && n.Length > 0 ? n : "unnamed node";
+    private string NodeName(long row) => _passiveNameOfRow.TryGetValue(row, out string n) && n.Length > 0 ? n : T("unnamed node", "nodo sin nombre");
 
     // ": up left", from the node under the cursor; "" without screen positions.
     private string WayDirection(long row)
@@ -140,14 +165,14 @@ public partial class PoE1AccessCore
         if (elements == null || _passiveHover == null || !elements.TryGetValue(row, out Element el)) return "";
         Vector2 here = Centre(_passiveHover), there = Centre(el);
         if (here == Vector2.Zero || there == Vector2.Zero) return "";
-        if (row == _passiveHoverRow) return ": here";
-        return ": " + Directions[DirectionIndex(here, there)];
+        if (row == _passiveHoverRow) return T(": here", ": aquí");
+        return ": " + DirectionName(DirectionIndex(here, there));
     }
 
     private string WayTo(long row)
     {
         string d = WayDirection(row);
-        return d.Length > 0 ? "From here" + d : "";
+        return d.Length > 0 ? T($"From here{d}", $"Desde aquí{d}") : "";
     }
 
     private HashSet<ushort> AllocatedPassives() =>

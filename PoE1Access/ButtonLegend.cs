@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ExileCore.PoEMemory;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -47,7 +48,7 @@ public partial class PoE1AccessCore
     private readonly HashSet<string> _unnamedPictures = new HashSet<string>();
     private long _legendRoot;
     private long _nextLegendSearchMs, _nextLegendPollMs;
-    private string _legendSig = "";
+    private string _legendSig = "", _actionMenuSig = "";
     private List<string> _legendNow = new List<string>();
     private bool _bindingMode, _legendWasBusy, _bindingHowSaid, _bindingListOpen;
     private string _bindingDetailsPending = "";
@@ -71,6 +72,21 @@ public partial class PoE1AccessCore
 
         var entries = LegendEntries(now);
         _legendNow = entries;
+
+        // An item's action menu (B on an item: unsocket, sell, split): said as it opens and as
+        // its actions change.
+        // Its entries stay "visible" while it is closed, changing with the selected item, so it
+        // is said only right after a face button is pressed.
+        if (now - _pad.FacePressedMs < 1500)
+        {
+            var actions = Try(ActionMenuEntries, new List<string>());
+            string asig = _pad.FacePressedMs + "|" + string.Join("|", actions);
+            if (asig != _actionMenuSig && actions.Count > 0)
+            {
+                _actionMenuSig = asig;
+                Say(T($"More actions: {string.Join(". ", actions)}", $"Más acciones: {string.Join(". ", actions)}"), true);
+            }
+        }
         // Skill binding mode is the legend offering to navigate and select skills, in play (the
         // skills panel offers "Select Skill" too, which is not the mode).
         bool panelOpen = _openPanels != null && _openPanels.Count > 0;
@@ -85,9 +101,9 @@ public partial class PoE1AccessCore
             _bindingMode = true;
             _bindingDetailsSig = "";
             string why = "";
-            string how = _bindingHowSaid ? "" : ". Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back";
+            string how = _bindingHowSaid ? "" : ". " + T("Move to a slot and its skill is said; A opens the skills you can put there, and the one you move to is read; B goes back", "Muévete a una ranura y se dice su habilidad; A abre las habilidades que puedes poner ahí, y se lee la que seleccionas; B vuelve atrás");
             _bindingHowSaid = true;
-            Say("Skill binding" + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);
+            Say(T("Skill binding", "Asignación de habilidades") + why + (entries.Count > 0 ? ". " + string.Join(". ", entries) : "") + how, true);
             _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
@@ -96,7 +112,7 @@ public partial class PoE1AccessCore
             _bindingMode = false;
             _bindingSlot = "";
             _bindingListOpen = false;
-            Say("Skill binding closed", true);
+            Say(T("Skill binding closed", "Asignación de habilidades cerrada"), true);
             _legendSig = string.Join("|", entries.OrderBy(x => x, StringComparer.Ordinal));
             return;
         }
@@ -131,7 +147,7 @@ public partial class PoE1AccessCore
         _legendSig = sig;
         // Said when they appear (a window opening, an item selected) and when they change.
         if ((uiBusy || binding) && entries.Count > 0)
-            Say("Controls: " + string.Join(". ", entries), false);
+            Say(T($"Controls: {string.Join(". ", entries)}", $"Controles: {string.Join(". ", entries)}"), false);
     }
 
     /// <summary>The legend as "X: Select Skill", one entry each, in screen order. There are
@@ -167,12 +183,25 @@ public partial class PoE1AccessCore
             foreach (Element entry in kids)
             {
                 if (!Try(() => UiText.VisibleLocal(mem, entry), false)) continue;
+                string line = LegendLine(entry);
+                if (line.Length > 0 && !result.Contains(line)) result.Add(line);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>One legend entry as "X: Select Skill", or "" when it is not one.</summary>
+    private string LegendLine(Element entry)
+    {
+        var mem = Mem;
+        {
+            {
                 var parts = Try<IList<Element>>(() => entry.Children, null);
-                if (parts == null || parts.Count < 2) continue;
+                if (parts == null || parts.Count < 2) return "";
                 var labels = new List<string>();
                 CollectText(entry, 3, labels);
                 string label = string.Join(" ", labels.Where(l => l != "+"));
-                if (label.Length == 0) continue;
+                if (label.Length == 0) return "";
                 // The button picture. An entry is a picture part and a label part, both reused
                 // from a pool: the picture part's main picture (+0x510) is the button, and the
                 // label part keeps the same one second (+0x230) while its main picture is left
@@ -189,12 +218,44 @@ public partial class PoE1AccessCore
                 {
                     if (part == null || (part != labelPart && buttons.Count > 0)) continue;
                     string box = part == labelPart ? IconBox(part, 0x230, 0x280) : IconBox(part, 0x510, 0x560);
-                    if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(b);
+                    if (box.Length > 0 && LegendButtons.TryGetValue(box, out string b)) buttons.Add(ButtonWord(b));
                     else if (box.Length > 0 && _unnamedPictures.Add(box)) PluginLog.Write("Legend picture not named: " + box + " (" + label + ")");
                 }
                 buttons = buttons.Where(x => x.Length > 0).Distinct().ToList();
-                string line = buttons.Count > 0 ? string.Join(" and ", buttons) + ": " + label : label;
-                if (!result.Contains(line)) result.Add(line);
+                return buttons.Count > 0 ? string.Join(T(" and ", " y "), buttons) + ": " + label : label;
+            }
+        }
+    }
+
+    /// <summary>An item's action menu ("Compare / More Actions": "Unsocket", "Pick Up Gem",
+    /// "Sell Item"), beside the legend under the same parent: each action an entry wrapped in a
+    /// box, as "X: Unsocket" (found 21 Nov 2026 at root/1/67/2/n/0, the legend at root/1/67/1).</summary>
+    private List<string> ActionMenuEntries()
+    {
+        var mem = Mem;
+        var result = new List<string>();
+        foreach (Element legend in _legends)
+        {
+            Element parent = UiText.ParentOf(mem, legend);
+            var groups = parent != null && parent.Address != 0 ? Try<IList<Element>>(() => parent.Children, null) : null;
+            if (groups == null || groups.Count > 12) continue;
+            // The menu comes after the legend; before it is the selected item's name.
+            bool pastLegend = false;
+            foreach (Element group in groups)
+            {
+                if (group != null && group.Address == legend.Address) { pastLegend = true; continue; }
+                if (group == null || !pastLegend || _legends.Any(l => l.Address == group.Address)) continue;
+                if (!Try(() => UiText.Visible(mem, group), false)) continue;
+                var boxes = Try<IList<Element>>(() => group.Children, null);
+                if (boxes == null || boxes.Count > 12) continue;
+                foreach (Element box in boxes)
+                {
+                    if (!Try(() => UiText.VisibleLocal(mem, box), false)) continue;
+                    Element entry = Try<Element>(() => box.GetChildAtIndex(0), null);
+                    if (entry == null || entry.Address == 0 || !Try(() => UiText.VisibleLocal(mem, entry), false)) continue;
+                    string line = LegendLine(entry);
+                    if (line.Length > 0 && !result.Contains(line)) result.Add(line);
+                }
             }
         }
         return result;
@@ -368,9 +429,9 @@ public partial class PoE1AccessCore
             names.Add(SkillNameForIcon(file));
         }
         if (names.Count == 0) return "";
-        if (names.Count == 1) return "the only skill you can put here; socket skill gems in your gear for more";
+        if (names.Count == 1) return T("the only skill you can put here; socket skill gems in your gear for more", "la única habilidad que puedes poner aquí; engarza gemas de habilidad en tu equipo para tener más");
         int at = names.FindIndex(n => string.Equals(n, skillName, StringComparison.OrdinalIgnoreCase));
-        return at >= 0 ? (at + 1) + " of " + names.Count : names.Count + " skills";
+        return at >= 0 ? T($"{at + 1} of {names.Count}", $"{at + 1} de {names.Count}") : T($"{names.Count} skills", $"{names.Count} habilidades");
     }
 
     private void PollBindingSlots(long now)
@@ -406,7 +467,7 @@ public partial class PoE1AccessCore
             _lastSlotSaid = name;
             _slotSaidMs = now;
             string skill = SlotSkill(slot);
-            Say(SlotButton(name) + ": " + (skill.Length > 0 ? skill : "empty"), true);
+            Say(SlotButton(name) + ": " + (skill.Length > 0 ? skill : T("empty", "vacía")), true);
             return;
         }
     }
@@ -414,8 +475,23 @@ public partial class PoE1AccessCore
     private static string SlotButton(string slot) => slot switch
     {
         "skillA" => "A", "skillB" => "B", "skillX" => "X", "skillY" => "Y",
-        "skillDpadU" => "D-pad up", "skillDpadR" => "D-pad right", "skillDpadD" => "D-pad down", "skillDpadL" => "D-pad left",
+        "skillDpadU" => ButtonWord("D-pad up"), "skillDpadR" => ButtonWord("D-pad right"), "skillDpadD" => ButtonWord("D-pad down"), "skillDpadL" => ButtonWord("D-pad left"),
         _ => slot,
+    };
+
+    // A button's spoken name: LegendButtons holds the English names, said in the mod's language here.
+    private static string ButtonWord(string english) => english switch
+    {
+        "D-pad up" => T("D-pad up", "Cruceta arriba"),
+        "D-pad down" => T("D-pad down", "Cruceta abajo"),
+        "D-pad left" => T("D-pad left", "Cruceta izquierda"),
+        "D-pad right" => T("D-pad right", "Cruceta derecha"),
+        "Left bumper" => T("Left bumper", "LB"),
+        "Right bumper" => T("Right bumper", "RB"),
+        "Left stick" => T("Left stick", "Stick izquierdo"),
+        "Right stick" => T("Right stick", "Stick derecho"),
+        "View button" => T("View button", "Botón View"),
+        _ => english,   // A, B, X, Y, L3, R3, Start
     };
 
     // The skill on a slot, named from its icon: the skill on your bar with that icon, or the

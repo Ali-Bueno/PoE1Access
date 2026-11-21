@@ -6,6 +6,7 @@ using ExileCore.PoEMemory.MemoryObjects;
 using BaseComp = ExileCore.PoEMemory.Components.Base;
 using SocketsComp = ExileCore.PoEMemory.Components.Sockets;
 using GemComp = ExileCore.PoEMemory.Components.SkillGem;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -39,7 +40,8 @@ public partial class PoE1AccessCore
                 if (first)
                 {
                     _charIndex = -1;
-                    Say(summary + ". Hold L3 and move the right stick: up and down for each stat, left and right for each section", false);
+                    Say(T($"{summary}. Hold L3 and move the right stick: up and down for each stat, left and right for each section",
+                        $"{summary}. Mantén L3 y mueve el stick derecho: arriba y abajo para cada estadística, izquierda y derecha para cada sección"), false);
                 }
                 else _charIndex = Math.Min(_charIndex, lines.Count - 1);
             }
@@ -64,7 +66,9 @@ public partial class PoE1AccessCore
                 {
                     _charIndex = -1;
                     var names = lines.Select(l => l.Section).Distinct().ToList();
-                    Say("Skills: " + string.Join(", ", names) + ". Hold L3 and move the right stick: left and right for each skill, up and down for its details", false);
+                    string skillList = string.Join(", ", names);
+                    Say(T($"Skills: {skillList}. Hold L3 and move the right stick: left and right for each skill, up and down for its details",
+                        $"Habilidades: {skillList}. Mantén L3 y mueve el stick derecho: izquierda y derecha para cada habilidad, arriba y abajo para sus detalles"), false);
                 }
                 else _charIndex = Math.Min(_charIndex, lines.Count - 1);
             }
@@ -102,23 +106,44 @@ public partial class PoE1AccessCore
             bool attack = Try(() => s.IsAttack, false);
             int aps100 = Try(() => s.HundredTimesAttacksPerSecond, 0);
             double cast = Try(() => s.CastTime.TotalSeconds, 0d);
-            if (attack && aps100 > 0) Add((aps100 / 100.0).ToString("0.##") + " attacks per second");
-            else if (cast > 0) Add("Cast time " + cast.ToString("0.##") + " seconds");
+            if (attack && aps100 > 0)
+            {
+                string aps = (aps100 / 100.0).ToString("0.##");
+                Add(T($"{aps} attacks per second", $"{aps} ataques por segundo"));
+            }
+            else if (cast > 0)
+            {
+                string castText = cast.ToString("0.##");
+                Add(T($"Cast time {castText} seconds", $"Tiempo de lanzamiento {castText} segundos"));
+            }
 
             int mana = Try(() => s.Cost, 0), life = Try(() => s.LifeCost, 0), es = Try(() => s.EsCost, 0);
             var cost = new List<string>();
-            if (mana > 0) cost.Add(mana + " mana");
-            if (life > 0) cost.Add(life + " life");
-            if (es > 0) cost.Add(es + " energy shield");
-            Add(cost.Count > 0 ? "Costs " + string.Join(" and ", cost) : "No cost");
+            if (mana > 0) cost.Add(T($"{mana} mana", $"{mana} de maná"));
+            if (life > 0) cost.Add(T($"{life} life", $"{life} de vida"));
+            if (es > 0) cost.Add(T($"{es} energy shield", $"{es} de escudo de energía"));
+            string costList = string.Join(T(" and ", " y "), cost);
+            Add(cost.Count > 0 ? T($"Costs {costList}", $"Cuesta {costList}") : T("No cost", "Sin coste"));
 
             double cd = Try(() => (double)s.Cooldown, 0d);   // seconds
-            if (cd > 0) Add("Cooldown " + cd.ToString("0.##") + " seconds");
+            if (cd > 0)
+            {
+                string cdText = cd.ToString("0.##");
+                Add(T($"Cooldown {cdText} seconds", $"Reutilización {cdText} segundos"));
+            }
             float dps = Try(() => s.Dps, 0f);
-            if (dps > 0) Add("About " + Math.Round(dps) + " damage per second");
+            if (dps > 0)
+            {
+                double dpsRounded = Math.Round(dps);
+                Add(T($"About {dpsRounded} damage per second", $"Unos {dpsRounded} de daño por segundo"));
+            }
 
             var supports = LinkedSupports(name);
-            if (supports.Count > 0) Add("Supported by " + string.Join(", ", supports));
+            if (supports.Count > 0)
+            {
+                string supportList = string.Join(", ", supports);
+                Add(T($"Supported by {supportList}", $"Con asistencia de {supportList}"));
+            }
         }
         return lines;
     }
@@ -187,7 +212,7 @@ public partial class PoE1AccessCore
             {
                 int j = i + 1;
                 while (j < _charLines.Count && _charLines[j].Section == cur) j++;
-                if (j >= _charLines.Count) { Say("Last section", true); return; }
+                if (j >= _charLines.Count) { Say(T("Last section", "Última sección"), true); return; }
                 i = j;
             }
             else
@@ -212,9 +237,31 @@ public partial class PoE1AccessCore
         // second full stop before "First stat".
         string body = text.TrimEnd();
         string stop = body.EndsWith(".") || body.EndsWith("!") || body.EndsWith("?") ? " " : ". ";
-        string say = (newSection ? sec + ". " : "") + body + (edge ? stop + (stat > 0 ? "Last stat" : "First stat") : "") +
-                     (newSection ? ", " + k + " of " + n : "");
+        string say = (newSection ? SectionName(sec) + ". " : "") + body +
+                     (edge ? stop + (stat > 0 ? T("Last stat", "Última estadística") : T("First stat", "Primera estadística")) : "") +
+                     (newSection ? T($", {k} of {n}", $", {k} de {n}") : "");
         Say(say, true);
+    }
+
+    // The sections are keyed in English (compared in code); this is how one is said. A skill's
+    // section is its own name, which is the game's text.
+    private static string SectionName(string section)
+    {
+        if (section != null && section.StartsWith("More stats ", StringComparison.Ordinal))
+        {
+            string n = section.Substring(11);
+            return T($"More stats {n}", $"Más estadísticas {n}");
+        }
+        return section switch
+        {
+            "Attributes" => T("Attributes", "Atributos"),
+            "Stats" => T("Stats", "Estadísticas"),
+            "Resistances" => T("Resistances", "Resistencias"),
+            "Charges" => T("Charges", "Cargas"),
+            "Leech and recovery" => T("Leech and recovery", "Robo y recuperación"),
+            "Misc" => T("Misc", "Varios"),
+            _ => section,
+        };
     }
 
     // "Strength 23, ... Life: 61, ...", and every stat with its section.
@@ -227,7 +274,7 @@ public partial class PoE1AccessCore
             Element e = ChildNamed(panel, name, 2);
             return e != null ? CleanText(UiText.Text(mem, e)) : "";
         }
-        var attrs = new[] { ("Strength", "label_strength_value"), ("Dexterity", "label_dexterity_value"), ("Intelligence", "label_intelligence_value") }
+        var attrs = new[] { (T("Strength", "Fuerza"), "label_strength_value"), (T("Dexterity", "Destreza"), "label_dexterity_value"), (T("Intelligence", "Inteligencia"), "label_intelligence_value") }
             .Select(a => (a.Item1, Label(a.Item2))).Where(a => a.Item2.Length > 0).Select(a => a.Item1 + ": " + a.Item2).ToList();
         foreach (string a in attrs) lines.Add(("Attributes", a));
 
@@ -259,7 +306,11 @@ public partial class PoE1AccessCore
         var summary = new List<string>();
         if (attrs.Count > 0) summary.Add(string.Join(", ", attrs));
         if (main.Count > 0) summary.Add(string.Join(", ", main));
-        if (res.Count > 0) summary.Add("Resistances: " + string.Join(", ", res));
+        if (res.Count > 0)
+        {
+            string resList = string.Join(", ", res);
+            summary.Add(T($"Resistances: {resList}", $"Resistencias: {resList}"));
+        }
         return (JoinSpeech(summary), lines);
     }
 

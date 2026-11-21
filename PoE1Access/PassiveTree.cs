@@ -5,6 +5,7 @@ using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.Elements;
 using ExileCore.Shared.Enums;
 using SharpDX;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -121,7 +122,27 @@ public partial class PoE1AccessCore
         return map;
     }
 
-    private static readonly string[] Directions = { "up", "up right", "right", "down right", "down", "down left", "left", "up left" };
+    private static string DirectionName(int i) => i switch
+    {
+        0 => T("up", "arriba"),
+        1 => T("up right", "arriba a la derecha"),
+        2 => T("right", "derecha"),
+        3 => T("down right", "abajo a la derecha"),
+        4 => T("down", "abajo"),
+        5 => T("down left", "abajo a la izquierda"),
+        6 => T("left", "izquierda"),
+        _ => T("up left", "arriba a la izquierda"),
+    };
+
+    // The states are keyed in English (compared in code); this is how one is said.
+    private static string StateName(string state) => state switch
+    {
+        "allocated" => T("allocated", "asignado"),
+        "can be allocated" => T("can be allocated", "se puede asignar"),
+        "linked" => T("linked", "enlazado"),
+        "not linked" => T("not linked", "sin enlazar"),
+        _ => state,
+    };
 
     // 0 = up, clockwise in eighths; screen y grows downward.
     private static int DirectionIndex(Vector2 from, Vector2 to)
@@ -187,26 +208,27 @@ public partial class PoE1AccessCore
         var parts = new List<(int Dir, string Text)>();
         foreach (long other in mine)
         {
-            string name = _passiveNameOfRow.TryGetValue(other, out string n) && n.Length > 0 ? n : "unnamed node";
+            string name = _passiveNameOfRow.TryGetValue(other, out string n) && n.Length > 0 ? n : T("unnamed node", "nodo sin nombre");
             if (!elements.TryGetValue(other, out Element el)) continue;   // not on this tree (another tree's node)
             Vector2 there = Centre(el);
             // No usable screen positions (ExileApi misreads them after a game patch): the link
             // is named without a direction rather than with a wrong one.
             if (here == Vector2.Zero || there == Vector2.Zero || there == here)
             {
-                parts.Add((8, name + ", " + PassiveState(other, allocated, elements)));
+                parts.Add((8, name + ", " + StateName(PassiveState(other, allocated, elements))));
                 continue;
             }
             int dir = DirectionIndex(here, there);
-            parts.Add((dir, Directions[dir] + ", " + name + ", " + PassiveState(other, allocated, elements)));
+            parts.Add((dir, DirectionName(dir) + ", " + name + ", " + StateName(PassiveState(other, allocated, elements))));
         }
-        string linkText = parts.Count == 0 ? "" : "Links: " + string.Join("; ", parts.OrderBy(p => p.Dir).Select(p => p.Text));
+        string linkList = string.Join("; ", parts.OrderBy(p => p.Dir).Select(p => p.Text));
+        string linkText = parts.Count == 0 ? "" : T($"Links: {linkList}", $"Enlaces: {linkList}");
 
         // Points away, counted from your nodes along the links (PassiveCosts).
         string distance = "";
         string state = PassiveState(row, allocated, elements);
         if (state == "not linked" && PassiveCosts(elements, links, out _).TryGetValue(row, out int d) && d > 0)
-            distance = d + (d == 1 ? " point away" : " points away");
+            distance = d == 1 ? T("1 point away", "a 1 punto") : T($"{d} points away", $"a {d} puntos");
         return (distance, linkText);
     }
 }

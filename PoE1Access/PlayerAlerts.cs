@@ -4,6 +4,7 @@ using System.Linq;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Enums;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -31,6 +32,56 @@ public partial class PoE1AccessCore
     private static readonly string[] SafeGround = { "ground_consecration", "ground_haste", "ground_tar_gold" };
     private static readonly string[] ChargeIds = { "frenzy_charge", "power_charge", "endurance_charge" };
     private static readonly string[] ChargeWords = { "frenzy", "power", "endurance" };
+
+    // The states are kept by their English names (AilmentNames, "Cursed: ..."); this is how one
+    // is said when it starts and when it ends.
+    private static string AilmentSaid(string state) => state switch
+    {
+        "Ignited" => T("Ignited", "En llamas"),
+        "Chilled" => T("Chilled", "Helado"),
+        "Frozen" => T("Frozen", "Congelado"),
+        "Shocked" => T("Shocked", "Electrocutado"),
+        "Poisoned" => T("Poisoned", "Envenenado"),
+        "Bleeding" => T("Bleeding", "Sangrando"),
+        "Corrupted blood" => T("Corrupted blood", "Sangre corrupta"),
+        "Maimed" => T("Maimed", "Mutilado"),
+        "Blinded" => T("Blinded", "Cegado"),
+        "Hindered" => T("Hindered", "Entorpecido"),
+        _ when state.StartsWith("Cursed: ") => CursedSaid(state.Substring(8)),
+        _ => state,
+    };
+
+    private static string CursedSaid(string curse) => T($"Cursed: {curse}", $"Maldito: {curse}");
+
+    private static string AilmentEnded(string state) => state switch
+    {
+        "Ignited" => T("No longer ignited", "Ya no estás en llamas"),
+        "Chilled" => T("No longer chilled", "Ya no estás helado"),
+        "Frozen" => T("No longer frozen", "Ya no estás congelado"),
+        "Shocked" => T("No longer shocked", "Ya no estás electrocutado"),
+        "Poisoned" => T("No longer poisoned", "Ya no estás envenenado"),
+        "Bleeding" => T("No longer bleeding", "Ya no estás sangrando"),
+        "Corrupted blood" => T("No longer corrupted blood", "Ya no tienes sangre corrupta"),
+        "Maimed" => T("No longer maimed", "Ya no estás mutilado"),
+        "Blinded" => T("No longer blinded", "Ya no estás cegado"),
+        "Hindered" => T("No longer hindered", "Ya no estás entorpecido"),
+        _ when state.StartsWith("Cursed") => T("No longer cursed", "Ya no estás maldito"),
+        _ => state,
+    };
+
+    // "No frenzy charges", "1 power charge", "3 endurance charges".
+    private static string ChargeSaid(int kind, int count) => (kind, count) switch
+    {
+        (0, 0) => T("No frenzy charges", "Sin cargas de frenesí"),
+        (1, 0) => T("No power charges", "Sin cargas de poder"),
+        (2, 0) => T("No endurance charges", "Sin cargas de aguante"),
+        (0, 1) => T("1 frenzy charge", "1 carga de frenesí"),
+        (1, 1) => T("1 power charge", "1 carga de poder"),
+        (2, 1) => T("1 endurance charge", "1 carga de aguante"),
+        (0, _) => T($"{count} frenzy charges", $"{count} cargas de frenesí"),
+        (1, _) => T($"{count} power charges", $"{count} cargas de poder"),
+        _ => T($"{count} endurance charges", $"{count} cargas de aguante"),
+    };
 
     private HashSet<string> _states = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _groundNamed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -78,9 +129,9 @@ public partial class PoE1AccessCore
             if (said.Count > 0)
             {
                 _audio?.Play("ailment", Synth.Ailment, vol);
-                Say(string.Join(". ", said), false);
+                Say(string.Join(". ", said.Select(AilmentSaid)), false);
             }
-            if (ended.Count > 0) Say(string.Join(". ", ended.Select(s => "No longer " + (s.StartsWith("Cursed") ? "cursed" : s.ToLowerInvariant()))), false);
+            if (ended.Count > 0) Say(string.Join(". ", ended.Select(AilmentEnded)), false);
             _states = now2;
         }
 
@@ -96,7 +147,7 @@ public partial class PoE1AccessCore
                     if (_groundNamed.Add(id))
                     {
                         string n = Try(() => b.DisplayName, "") ?? "";
-                        Say(n.Length > 0 ? n : "Harmful ground", false);
+                        Say(n.Length > 0 ? n : T("Harmful ground", "Suelo dañino"), false);
                     }
             }
         }
@@ -113,7 +164,7 @@ public partial class PoE1AccessCore
                     bool gained = count > _charges[k];
                     int kind = k;
                     _audio?.Play("charge:" + k + ":" + gained, () => Synth.Charge(kind, gained), vol);
-                    Say(count == 0 ? "No " + ChargeWords[k] + " charges" : count + " " + ChargeWords[k] + (count == 1 ? " charge" : " charges"), false);
+                    Say(ChargeSaid(k, count), false);
                 }
                 _charges[k] = count;
             }
@@ -125,7 +176,7 @@ public partial class PoE1AccessCore
             if (_lastLevel > 0 && level > _lastLevel && Settings.AnnounceLevelUp.Value)
             {
                 _audio?.Play("levelup", Synth.LevelUp, vol);
-                Say("Level " + level, true);
+                Say(T($"Level {level}", $"Nivel {level}"), true);
             }
             _lastLevel = level;
         }
@@ -153,13 +204,13 @@ public partial class PoE1AccessCore
             {
                 if (!alive || dist > 90) continue;
                 string name = Try(() => e.RenderName, "") ?? "";
-                if (name.Length == 0) name = "The boss";
+                if (name.Length == 0) name = T("The boss", "El jefe");
                 _bosses[id] = known = (name, 0);
             }
             seen.Add(id);
             if (!alive)
             {
-                if (known.Step >= 0) Say(known.Name + " defeated", true);
+                if (known.Step >= 0) Say(T($"{known.Name} defeated", $"{known.Name} derrotado"), true);
                 _bosses[id] = (known.Name, -1);
                 continue;
             }
@@ -170,7 +221,7 @@ public partial class PoE1AccessCore
             if (step != known.Step)
             {
                 _bosses[id] = (known.Name, step);
-                Say(known.Name + ", " + pct + " percent", false);
+                Say(T($"{known.Name}, {pct} percent", $"{known.Name}, {pct} por ciento"), false);
             }
         }
         // Bosses gone from the list (left behind or unloaded) are forgotten after a while.

@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading;
 using PoE1Access;
+using static PoE1Access.Loc;
 
 namespace PoE1AccessLauncher;
 
@@ -55,13 +56,14 @@ internal static class Program
         }
         if (!first)
         {
-            Box("Path of Exile access is already running.", "Path of Exile access", MB_ICONINFO);
+            Box(T("Path of Exile access is already running.", "Path of Exile access ya se está ejecutando."), "Path of Exile access", MB_ICONINFO);
             return 0;
         }
 
         Directory.CreateDirectory(AppDir);
+        try { Loc.UseGameLanguage(Log); } catch { }
         try { _speech = SpeechFactory.Create(); Log("Speech: " + _speech.Name); } catch { }
-        Say("Path of Exile access starting.");
+        Say(T("Path of Exile access starting.", "Path of Exile access se está iniciando."));
 
         try
         {
@@ -83,7 +85,7 @@ internal static class Program
             if (args.Any(a => a.Equals("--setup-only", StringComparison.OrdinalIgnoreCase)))
             {
                 Log("Setup only: done");
-                Say("Setup finished.");
+                Say(T("Setup finished.", "Configuración terminada."));
                 Thread.Sleep(1500);
                 return 0;
             }
@@ -108,7 +110,7 @@ internal static class Program
             Process loader = StartLoader();
             if (loader == null) { StopReader(reader); return 1; }
 
-            Say("Ready.");
+            Say(T("Ready.", "Listo."));
             WaitForGameToClose(game, loader, args.Any(a => a.Equals("--show-exileapi", StringComparison.OrdinalIgnoreCase)));
             StopReader(reader);
             return 0;
@@ -116,8 +118,8 @@ internal static class Program
         catch (Exception ex)
         {
             Log("Failed: " + ex);
-            Say("Path of Exile access could not start. " + ex.Message);
-            Box("Path of Exile access could not start:\n\n" + ex.Message + "\n\nDetails are in " + LogFile, "Path of Exile access", MB_ICONERROR);
+            Say(T($"Path of Exile access could not start. {ex.Message}", $"Path of Exile access no pudo iniciarse. {ex.Message}"));
+            Box(T($"Path of Exile access could not start:\n\n{ex.Message}\n\nDetails are in {LogFile}", $"Path of Exile access no pudo iniciarse:\n\n{ex.Message}\n\nLos detalles están en {LogFile}"), "Path of Exile access", MB_ICONERROR);
             return 1;
         }
     }
@@ -142,7 +144,7 @@ internal static class Program
         var sb = new System.Text.StringBuilder();
         foreach (var (v, body) in notes.OrderByDescending(n => n.Version))
         {
-            sb.AppendLine("Version " + v + ".");
+            sb.AppendLine(T($"Version {v}.", $"Versión {v}."));
             foreach (string raw in (body ?? "").Replace("\r", "").Split('\n'))
             {
                 string line = raw.Trim();
@@ -192,8 +194,9 @@ internal static class Program
             string text = WhatsNewText(notes);
             File.WriteAllText(WhatsNewFile, text);
             Log("What's new read for " + string.Join(", ", notes.Select(n => n.Version)));
-            Say("What's new. " + text.Replace(Environment.NewLine, " ").Replace("\n", " "));
-            Say("This is kept in app, whats-new.txt.");
+            string spoken = text.Replace(Environment.NewLine, " ").Replace("\n", " ");
+            Say(T($"What's new. {spoken}", $"Novedades. {spoken}"));
+            Say(T("This is kept in app, whats-new.txt.", "Esto se guarda en app, whats-new.txt."));
         }
         catch (Exception ex) { Log("What's new not read: " + ex.Message); }
     }
@@ -240,7 +243,7 @@ internal static class Program
         if (have != null && latest <= have) { Log("Path of Exile access is up to date: " + have); return false; }
 
         Log("Mod update: " + (have?.ToString() ?? "unknown") + " -> " + latest);
-        Say("Updating Path of Exile access to version " + latest + ". Please wait.");
+        Say(T($"Updating Path of Exile access to version {latest}. Please wait.", $"Actualizando Path of Exile access a la versión {latest}. Espera, por favor."));
         string zip = Path.Combine(AppDir, "update-download.zip");
         string temp = Path.Combine(AppDir, "update-extract");
         try
@@ -281,7 +284,7 @@ internal static class Program
             }
             File.WriteAllText(VersionFile, latest.ToString());   // also for releases that did not ship one
             Log("Mod updated to " + latest + ": " + files + " files");
-            Say("Updated to version " + latest + ". Starting.");
+            Say(T($"Updated to version {latest}. Starting.", $"Actualizado a la versión {latest}. Iniciando."));
 
             // Start the new launcher (it removes PoE1Access.old.exe) and close this one.
             var psi = new ProcessStartInfo(Path.Combine(Root, "PoE1Access.exe")) { UseShellExecute = false, WorkingDirectory = Root };
@@ -301,7 +304,7 @@ internal static class Program
                 if (!File.Exists(self) && File.Exists(old)) File.Move(old, self);
             }
             catch { }
-            Say("Path of Exile access could not be updated. Starting the version you have.");
+            Say(T("Path of Exile access could not be updated. Starting the version you have.", "Path of Exile access no se pudo actualizar. Se inicia la versión que tienes."));
             return false;
         }
         finally
@@ -337,9 +340,8 @@ internal static class Program
         Log(".NET 10 Desktop Runtime: " + (ok ? "found" : "missing"));
         if (ok) return true;
 
-        const string msg = "Exile API needs the Microsoft .NET 10 Desktop Runtime, which is not installed. " +
-                           "Open the download page now? Choose the Desktop Runtime for Windows x64, install it, " +
-                           "then start Path of Exile access again.";
+        string msg = T("Exile API needs the Microsoft .NET 10 Desktop Runtime, which is not installed. Open the download page now? Choose the Desktop Runtime for Windows x64, install it, then start Path of Exile access again.",
+                       "Exile API necesita el Microsoft .NET 10 Desktop Runtime, que no está instalado. ¿Abrir la página de descarga ahora? Elige el Desktop Runtime para Windows x64, instálalo y vuelve a iniciar Path of Exile access.");
         Say(msg);
         if (Box(msg, "Path of Exile access", MB_YESNO | MB_ICONWARNING) == IDYES) Open(DotNetPage);
         return false;
@@ -379,7 +381,7 @@ internal static class Program
         if (have == latest) { Log("ExileApi is up to date: " + latest); return; }
 
         Log("ExileApi update: " + (have.Length > 0 ? have : "unknown") + " -> " + latest);
-        Say("Updating Exile API to its newest version. Please wait.");
+        Say(T("Updating Exile API to its newest version. Please wait.", "Actualizando Exile API a su versión más reciente. Espera, por favor."));
         string zip = Path.Combine(AppDir, "exileapi-download.zip");
         string temp = Path.Combine(AppDir, "exileapi-extract");
         try
@@ -418,12 +420,12 @@ internal static class Program
             }
             File.WriteAllText(ExileApiVersionFile, latest);
             Log("ExileApi updated: " + files + " files");
-            Say("Exile API updated.");
+            Say(T("Exile API updated.", "Exile API actualizado."));
         }
         catch (Exception ex)
         {
             Log("ExileApi update failed: " + ex);
-            Say("Exile API could not be updated. Starting with the version you have.");
+            Say(T("Exile API could not be updated. Starting with the version you have.", "Exile API no se pudo actualizar. Se inicia con la versión que tienes."));
         }
         finally
         {
@@ -440,17 +442,16 @@ internal static class Program
             return true;
         }
 
-        string msg = "Path of Exile access runs on Exile API, a separate program that reads the game. " +
-                     "It is not included in this download. Download it now from " + ExileApiPage + "? " +
-                     "About 25 megabytes. Like any tool that reads the game, Grinding Gear Games has not approved it.";
+        string msg = T($"Path of Exile access runs on Exile API, a separate program that reads the game. It is not included in this download. Download it now from {ExileApiPage}? About 25 megabytes. Like any tool that reads the game, Grinding Gear Games has not approved it.",
+                       $"Path of Exile access funciona sobre Exile API, un programa aparte que lee el juego. No está incluido en esta descarga. ¿Descargarlo ahora desde {ExileApiPage}? Unos 25 megabytes. Como cualquier herramienta que lee el juego, Grinding Gear Games no la ha aprobado.");
         Say(msg);
-        if (Box(msg, "Download Exile API", MB_YESNO | MB_ICONQUESTION) != IDYES)
+        if (Box(msg, T("Download Exile API", "Descargar Exile API"), MB_YESNO | MB_ICONQUESTION) != IDYES)
         {
-            Say("Exile API was not downloaded. Path of Exile access cannot start without it.");
+            Say(T("Exile API was not downloaded. Path of Exile access cannot start without it.", "Exile API no se descargó. Path of Exile access no puede iniciarse sin él."));
             return false;
         }
 
-        Say("Downloading Exile API. Please wait.");
+        Say(T("Downloading Exile API. Please wait.", "Descargando Exile API. Espera, por favor."));
         string zip = Path.Combine(AppDir, "exileapi-download.zip");
         string temp = Path.Combine(AppDir, "exileapi-extract");
         using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) })
@@ -473,7 +474,7 @@ internal static class Program
         string version = LatestExileApiVersion();
         if (version != null) File.WriteAllText(ExileApiVersionFile, version);
 
-        Say("Exile API downloaded.");
+        Say(T("Exile API downloaded.", "Exile API descargado."));
         return true;
     }
 
@@ -534,7 +535,7 @@ internal static class Program
         game = FindGame();
         if (game != null) { Log("Game already running: " + game.ProcessName); return true; }
 
-        Say("Starting Path of Exile through Steam.");
+        Say(T("Starting Path of Exile through Steam.", "Iniciando Path of Exile a través de Steam."));
         try { Open(SteamPoE1); }
         catch (Exception ex) { Log("Steam start failed: " + ex.Message); }
 
@@ -545,7 +546,7 @@ internal static class Program
         }
         if (game != null) { Log("Game started: " + game.ProcessName); return true; }
 
-        const string msg = "Path of Exile did not start. Start the game yourself, then start Path of Exile access again.";
+        string msg = T("Path of Exile did not start. Start the game yourself, then start Path of Exile access again.", "Path of Exile no se inició. Inicia el juego tú mismo y luego vuelve a iniciar Path of Exile access.");
         Say(msg);
         Box(msg, "Path of Exile access", MB_ICONWARNING);
         return false;
@@ -572,7 +573,7 @@ internal static class Program
         OverlayWindow.KeepQuietUntilExit(game, loader, showExileApi, Log);
         Log("Game closed");
         try { if (!loader.HasExited) loader.Kill(true); } catch { }
-        Say("Path of Exile closed. Path of Exile access stopped.");
+        Say(T("Path of Exile closed. Path of Exile access stopped.", "Path of Exile se cerró. Path of Exile access se detuvo."));
         Thread.Sleep(2500);   // let the last line be spoken
     }
 

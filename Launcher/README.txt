@@ -83,6 +83,13 @@ GETTING STARTED
 
 When you close the game, the mod closes too.
 
+LANGUAGES
+
+The mod follows the language set in the game's options, after the game and the mod start again.
+Windows, prompts and class names are read in that language, and the mod speaks its own phrases
+in it too: English, Spanish, Brazilian Portuguese, French, German, Russian, Thai, Japanese,
+Korean or Traditional Chinese. A phrase not yet translated is said in English.
+
 UPDATES
 Each time you start PoE1Access.exe it checks the mod's GitHub page
 (https://github.com/Random4358/PoE1Access/releases) and, when there is a newer version, says

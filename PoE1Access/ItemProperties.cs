@@ -8,6 +8,7 @@ using WeaponComp = ExileCore.PoEMemory.Components.Weapon;
 using ArmourComp = ExileCore.PoEMemory.Components.Armour;
 using ShieldComp = ExileCore.PoEMemory.Components.Shield;
 using ReqComp = ExileCore.PoEMemory.Components.AttributeRequirements;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -57,19 +58,37 @@ public partial class PoE1AccessCore
             double phys = 1 + (L("local_physical_damage_+%") + quality) / 100.0;
             int min = Round((Try(() => weapon.DamageMin, 0) + L("local_minimum_added_physical_damage")) * phys);
             int max = Round((Try(() => weapon.DamageMax, 0) + L("local_maximum_added_physical_damage")) * phys);
-            if (max > 0) lines.Add("Physical damage: " + min + " to " + max);
+            if (max > 0) lines.Add(T($"Physical damage: {min} to {max}", $"Daño físico: {min} a {max}"));
             foreach (string element in new[] { "fire", "cold", "lightning", "chaos" })
             {
                 int emin = L("local_minimum_added_" + element + "_damage"), emax = L("local_maximum_added_" + element + "_damage");
-                if (emax > 0) lines.Add(char.ToUpper(element[0]) + element.Substring(1) + " damage: " + emin + " to " + emax);
+                if (emax > 0) lines.Add(element switch
+            {
+                "fire" => T($"Fire damage: {emin} to {emax}", $"Daño de fuego: {emin} a {emax}"),
+                "cold" => T($"Cold damage: {emin} to {emax}", $"Daño de frío: {emin} a {emax}"),
+                "lightning" => T($"Lightning damage: {emin} to {emax}", $"Daño de rayo: {emin} a {emax}"),
+                _ => T($"Chaos damage: {emin} to {emax}", $"Daño de caos: {emin} a {emax}"),
+            });
             }
             int crit = Try(() => weapon.CritChance, 0);
-            if (crit > 0) lines.Add("Critical strike chance: " + (crit / 100.0 * (1 + L("local_critical_strike_chance_+%") / 100.0)).ToString("0.00") + "%");
+            if (crit > 0)
+        {
+            string critText = (crit / 100.0 * (1 + L("local_critical_strike_chance_+%") / 100.0)).ToString("0.00");
+            lines.Add(T($"Critical strike chance: {critText}%", $"Probabilidad de golpe crítico: {critText}%"));
+        }
             int attackTime = Try(() => weapon.AttackTime, 0);
-            if (attackTime > 0) lines.Add("Attacks per second: " + (1000.0 / attackTime * (1 + L("local_attack_speed_+%") / 100.0)).ToString("0.00"));
+            if (attackTime > 0)
+        {
+            string aps = (1000.0 / attackTime * (1 + L("local_attack_speed_+%") / 100.0)).ToString("0.00");
+            lines.Add(T($"Attacks per second: {aps}", $"Ataques por segundo: {aps}"));
+        }
             // Melee weapons only: bows and wands carry a long range (120) the tooltip does not show.
             int range = Try(() => weapon.WeaponRange, 0) + L("local_weapon_range_+");
-            if (range > 0 && range < 50) lines.Add("Weapon range: " + (range / 10.0).ToString("0.#") + " metres");
+            if (range > 0 && range < 50)
+        {
+            string metres = (range / 10.0).ToString("0.#");
+            lines.Add(T($"Weapon range: {metres} metres", $"Alcance del arma: {metres} metros"));
+        }
         }
 
         var armour = GetComp<ArmourComp>(item);
@@ -88,15 +107,15 @@ public partial class PoE1AccessCore
                 "local_armour_and_evasion_+%", "local_evasion_and_energy_shield_+%", "local_armour_and_evasion_and_energy_shield_+%");
             int es = Defence(Try(() => armour.EnergyShieldScore, 0), "local_energy_shield", "local_energy_shield_+%",
                 "local_armour_and_energy_shield_+%", "local_evasion_and_energy_shield_+%", "local_armour_and_evasion_and_energy_shield_+%");
-            if (ar > 0) lines.Add("Armour: " + ar);
-            if (ev > 0) lines.Add("Evasion rating: " + ev);
-            if (es > 0) lines.Add("Energy shield: " + es);
+            if (ar > 0) lines.Add(T($"Armour: {ar}", $"Armadura: {ar}"));
+            if (ev > 0) lines.Add(T($"Evasion rating: {ev}", $"Evasión: {ev}"));
+            if (es > 0) lines.Add(T($"Energy shield: {es}", $"Escudo de energía: {es}"));
         }
         var shield = GetComp<ShieldComp>(item);
         if (shield != null)
         {
             int block = Try(() => shield.ChanceToBlock, 0) + L("local_additional_block_chance_%");
-            if (block > 0) lines.Add("Chance to block: " + block + "%");
+            if (block > 0) lines.Add(T($"Chance to block: {block}%", $"Probabilidad de bloqueo: {block}%"));
         }
 
         // Requirements: only gear and flasks have them (not currency, maps or jewels).
@@ -107,16 +126,20 @@ public partial class PoE1AccessCore
         var req = new List<string>();
         int baseLevel = Try(() => GameController.Files.BaseItemTypes.Translate(item.Path)?.DropLevel ?? 0, 0);
         int level = Math.Max(baseLevel, (int)Math.Floor(highestModLevel * 0.8));
-        if (level > 1) req.Add("level " + level);
+        if (level > 1) req.Add(T($"level {level}", $"nivel {level}"));
         var attrs = GetComp<ReqComp>(item);
         if (attrs != null)
         {
             int str = Try(() => attrs.strength, 0), dex = Try(() => attrs.dexterity, 0), intel = Try(() => attrs.intelligence, 0);
-            if (str > 0) req.Add(str + " Str");
-            if (dex > 0) req.Add(dex + " Dex");
-            if (intel > 0) req.Add(intel + " Int");
+            if (str > 0) req.Add(T($"{str} Str", $"{str} Fue"));
+            if (dex > 0) req.Add(T($"{dex} Dex", $"{dex} Des"));
+            if (intel > 0) req.Add(T($"{intel} Int", $"{intel} Int"));
         }
-        if (req.Count > 0) lines.Add("Requires " + string.Join(", ", req));
+        if (req.Count > 0)
+        {
+            string needs = string.Join(", ", req);
+            lines.Add(T($"Requires {needs}", $"Requiere {needs}"));
+        }
         return lines;
     }
 }

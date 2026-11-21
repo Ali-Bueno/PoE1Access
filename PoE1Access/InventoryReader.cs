@@ -13,6 +13,7 @@ using GemComp = ExileCore.PoEMemory.Components.SkillGem;
 using ReqComp = ExileCore.PoEMemory.Components.AttributeRequirements;
 using StatsComp = ExileCore.PoEMemory.Components.Stats;
 using NormalInventoryItem = ExileCore.PoEMemory.Elements.InventoryElements.NormalInventoryItem;
+using static PoE1Access.Loc;
 
 namespace PoE1Access;
 
@@ -60,8 +61,9 @@ public partial class PoE1AccessCore
 
     // ---- What an item is ----
 
-    // "Rusted Sword", "Rare Grim Bane, Iron Hat", "Orb of Transmutation, 6".
-    private string ItemTitle(Entity item)
+    // "Rusted Sword", "Rare Grim Bane, Iron Hat", "Orb of Transmutation, 6" (without the
+    // stack's size when withStack is false).
+    private string ItemTitle(Entity item, bool withStack = true)
     {
         BaseComp baseC = GetComp<BaseComp>(item);
         ModsComp mods = GetComp<ModsComp>(item);
@@ -78,15 +80,15 @@ public partial class PoE1AccessCore
             ? unique + ", " + baseName : MagicFullName(item, baseName);
         string rarityWord = rarity switch
         {
-            ItemRarity.Magic => "magic",
-            ItemRarity.Rare => "rare",
-            ItemRarity.Unique => "unique",
+            ItemRarity.Magic => T("magic", "mágico"),
+            ItemRarity.Rare => T("rare", "raro"),
+            ItemRarity.Unique => T("unique", "único"),
             _ => "",
         };
         if (rarityWord.Length > 0) title += ", " + rarityWord;
 
         int size = stack != null ? Try(() => stack.Size, 0) : 0;
-        if (size > 1) title += ", " + size;
+        if (withStack && size > 1) title += ", " + size;
         return title;
     }
 
@@ -106,9 +108,9 @@ public partial class PoE1AccessCore
             int str = Try(() => req.strength, 0), dex = Try(() => req.dexterity, 0), intel = Try(() => req.intelligence, 0);
             if (stats != null)
             {
-                if (str > Have(GameStat.Strength)) parts.Add(str + " Str");
-                if (dex > Have(GameStat.Dexterity)) parts.Add(dex + " Dex");
-                if (intel > Have(GameStat.Intelligence)) parts.Add(intel + " Int");
+                if (str > Have(GameStat.Strength)) parts.Add(T($"{str} Str", $"{str} Fue"));
+                if (dex > Have(GameStat.Dexterity)) parts.Add(T($"{dex} Dex", $"{dex} Des"));
+                if (intel > Have(GameStat.Intelligence)) parts.Add(T($"{intel} Int", $"{intel} Int"));
             }
         }
         GemComp gem = GetComp<GemComp>(item);
@@ -116,9 +118,10 @@ public partial class PoE1AccessCore
         {
             int need = Try(() => gem.RequiredLevel, 0);
             int level = Try(() => GameController.Player.GetComponent<ExileCore.PoEMemory.Components.Player>().Level, 0);
-            if (need > 0 && level > 0 && need > level) parts.Insert(0, "level " + need);
+            if (need > 0 && level > 0 && need > level) parts.Insert(0, T($"level {need}", $"nivel {need}"));
         }
-        return parts.Count > 0 ? "Cannot use: " + string.Join(", ", parts) : "";
+        string needs = string.Join(", ", parts);
+        return parts.Count > 0 ? T($"Cannot use: {needs}", $"No puedes usarlo: {needs}") : "";
     }
 
     // The tooltip, one line per entry: item level, quality, sockets, gem level, mods...
@@ -138,14 +141,15 @@ public partial class PoE1AccessCore
             string tags = GemTags(gem);
             if (tags.Length > 0) lines.Add(tags);
             int lvl = Try(() => gem.Level, 0), max = Try(() => gem.MaxLevel, 0);
-            if (lvl > 0) lines.Add("Gem level " + lvl + (max > 0 ? " of " + max : ""));
+            if (lvl > 0)
+                lines.Add(max > 0 ? T($"Gem level {lvl} of {max}", $"Nivel de gema {lvl} de {max}") : T($"Gem level {lvl}", $"Nivel de gema {lvl}"));
             int need = Try(() => gem.RequiredLevel, 0);
-            if (need > 1) lines.Add("Requires level " + need);
+            if (need > 1) lines.Add(T($"Requires level {need}", $"Requiere nivel {need}"));
         }
         int itemLevel = mods != null ? Try(() => mods.ItemLevel, 0) : 0;
-        if (itemLevel > 0 && gem == null) lines.Add("Item level " + itemLevel);
+        if (itemLevel > 0 && gem == null) lines.Add(T($"Item level {itemLevel}", $"Nivel de objeto {itemLevel}"));
         int q = quality != null ? Try(() => quality.ItemQuality, 0) : 0;
-        if (q > 0) lines.Add("Quality " + q + " percent");
+        if (q > 0) lines.Add(T($"Quality {q} percent", $"Calidad {q} por ciento"));
         // Damage, speed and defences, and what the item requires, as the tooltip has them.
         if (gem == null) lines.AddRange(Try(() => ItemProperties(item), new List<string>()));
 
@@ -153,7 +157,9 @@ public partial class PoE1AccessCore
         if (socketCount > 0)
         {
             int link = Try(() => sockets.LargestLinkSize, 0);
-            lines.Add(socketCount + (socketCount == 1 ? " socket" : " sockets") + (link > 1 ? ", largest link " + link : ""));
+            lines.Add(socketCount == 1 ? T($"{socketCount} socket", $"{socketCount} engarce")
+                : link > 1 ? T($"{socketCount} sockets, largest link {link}", $"{socketCount} engarces, enlace más grande {link}")
+                : T($"{socketCount} sockets", $"{socketCount} engarces"));
             lines.AddRange(SocketLines(sockets));
         }
 
@@ -165,10 +171,10 @@ public partial class PoE1AccessCore
         string charges = FlaskChargesText(item);
         if (charges.Length > 0) lines.Add(charges);
 
-        if (baseC != null && Try(() => baseC.isCorrupted, false)) lines.Add("Corrupted");
-        if (mods != null && Try(() => mods.IsMirrored, false)) lines.Add("Mirrored");
+        if (baseC != null && Try(() => baseC.isCorrupted, false)) lines.Add(T("Corrupted", "Corrupto"));
+        if (mods != null && Try(() => mods.IsMirrored, false)) lines.Add(T("Mirrored", "Reflejado"));
         ItemRarity rarity = mods != null ? Try(() => mods.ItemRarity, ItemRarity.Normal) : ItemRarity.Normal;
-        if (mods != null && !Try(() => mods.Identified, true) && rarity != ItemRarity.Normal) lines.Add("Unidentified");
+        if (mods != null && !Try(() => mods.Identified, true) && rarity != ItemRarity.Normal) lines.Add(T("Unidentified", "Sin identificar"));
 
         if (mods != null)
         {
@@ -183,10 +189,10 @@ public partial class PoE1AccessCore
                     if (c.Length > 0 && seen.Add(c)) lines.Add(label.Length > 0 ? label + ": " + c : c);
                 }
             }
-            Add("Enchant", Try<IEnumerable<string>>(() => mods.EnchantedStats, null));
-            Add("Implicit", Try<IEnumerable<string>>(() => mods.HumanImpStats, null));
-            Add("Fractured", Try<IEnumerable<string>>(() => mods.FracturedStats, null));
-            Add("Crafted", Try<IEnumerable<string>>(() => mods.HumanCraftedStats, null));
+            Add(T("Enchant", "Encantamiento"), Try<IEnumerable<string>>(() => mods.EnchantedStats, null));
+            Add(T("Implicit", "Implícito"), Try<IEnumerable<string>>(() => mods.HumanImpStats, null));
+            Add(T("Fractured", "Fracturado"), Try<IEnumerable<string>>(() => mods.FracturedStats, null));
+            Add(T("Crafted", "Fabricado"), Try<IEnumerable<string>>(() => mods.HumanCraftedStats, null));
             Add("", Try<IEnumerable<string>>(() => mods.HumanStats, null));
 
             if (lines.Count == before)
@@ -254,9 +260,14 @@ public partial class PoE1AccessCore
     // ---- Sockets: each linked group, each socket's colour and the gem in it ----
 
     // "Linked: red, Double Strike level 3; green, empty", one line per group of linked sockets.
+    // Each socket of the item last read, in order: its colour, its gem or "empty", and whether
+    // it is linked to another (SocketSelection says them in the game's socket mode).
+    private readonly List<(string Colour, string Gem, bool Linked)> _socketTexts = new List<(string, string, bool)>();
+
     private List<string> SocketLines(SocketsComp sockets)
     {
         var lines = new List<string>();
+        _socketTexts.Clear();
         var groups = Try(() => sockets.SocketGroup, null);
         if (groups == null || groups.Count == 0) return lines;
 
@@ -270,13 +281,14 @@ public partial class PoE1AccessCore
                 string name = CleanText(Try(() => GetComp<BaseComp>(gem)?.Name, "") ?? "");
                 if (name.Length == 0) continue;
                 int level = Try(() => GetComp<GemComp>(gem)?.Level ?? 0, 0);
-                gemAt[Try(() => g.SocketIndex, -1)] = name + (level > 0 ? " level " + level : "");
+                gemAt[Try(() => g.SocketIndex, -1)] = level > 0 ? T($"{name} level {level}", $"{name} nivel {level}") : name;
             }
 
         static string Colour(char c) => char.ToUpperInvariant(c) switch
         {
-            'R' => "red", 'G' => "green", 'B' => "blue", 'W' => "white", 'A' => "abyss", 'D' => "resonator",
-            _ => "socket",
+            'R' => T("red", "rojo"), 'G' => T("green", "verde"), 'B' => T("blue", "azul"), 'W' => T("white", "blanco"),
+            'A' => T("abyss", "abismo"), 'D' => T("resonator", "resonador"),
+            _ => T("socket", "engarce"),
         };
 
         int index = 0;
@@ -286,10 +298,12 @@ public partial class PoE1AccessCore
             var parts = new List<string>();
             foreach (char c in group)
             {
-                parts.Add(Colour(c) + ", " + (gemAt.TryGetValue(index, out string g) ? g : "empty"));
+                parts.Add(Colour(c) + ", " + (gemAt.TryGetValue(index, out string g) ? g : T("empty", "vacío")));
+                _socketTexts.Add((Colour(c), gemAt.TryGetValue(index, out string g2) ? g2 : T("empty", "vacío"), group.Length > 1));
                 index++;
             }
-            lines.Add((group.Length > 1 ? "Linked: " : "Socket: ") + string.Join("; ", parts));
+            string joined = string.Join("; ", parts);
+            lines.Add(group.Length > 1 ? T($"Linked: {joined}", $"Enlazados: {joined}") : T($"Socket: {joined}", $"Engarce: {joined}"));
         }
         return lines;
     }
@@ -402,7 +416,7 @@ public partial class PoE1AccessCore
             }
             string gemName = CleanText(Try(() => GetComp<BaseComp>(item)?.Name, "") ?? "");
             string supportText = SupportDescription(effect.Address, gemName);
-            return supportText.Length > 0 ? "Support gem. " + supportText : "Support gem";
+            return supportText.Length > 0 ? T($"Support gem. {supportText}", $"Gema de asistencia. {supportText}") : T("Support gem", "Gema de asistencia");
         }
 
         string path = Try(() => item.Path, "") ?? "";
@@ -431,6 +445,7 @@ public partial class PoE1AccessCore
     private List<string> _tipLines = new List<string>();
     private int _tipIndex;
     private long _tipItemAddr;
+    private Entity _tipItem;
 
     /// <summary>What is said when the selection lands on an inventory item (or equipment slot).</summary>
     private string DescribeInventoryFocus(Element hover)
@@ -438,6 +453,7 @@ public partial class PoE1AccessCore
         NormalInventoryItem slot = hover.AsObject<NormalInventoryItem>();
         Entity item = slot?.Item;
         if (item == null || item.Address == 0 || !item.IsValid) return null;
+        _tipElement = hover;
 
         var (place, label, col, row) = Locate(item);
         _lastFocusWasEquipment = place == ItemPlace.Equipped;
@@ -445,15 +461,15 @@ public partial class PoE1AccessCore
         string head;
         switch (place)
         {
-            case ItemPlace.Bag: head = title + ", column " + col + ", row " + row; break;
-            case ItemPlace.Equipped: head = label + ": " + title; break;
+            case ItemPlace.Bag: head = T($"{title}, column {col}, row {row}", $"{title}, columna {col}, fila {row}"); break;
+            case ItemPlace.Equipped: head = SlotName(label) + ": " + title; break;
             default:
                 // Not in the player's own lists (a stash or merchant): the name only for now.
                 head = title;
                 break;
         }
         // Holding an item over another: placing it would swap them.
-        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = "Over " + head;
+        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = T($"Over {head}", $"Sobre {head}");
 
         var lines = new List<string> { head };
         string missing = MissingRequirement(item);
@@ -463,6 +479,7 @@ public partial class PoE1AccessCore
         _tipLines = lines;
         _tipIndex = 0;
         _tipItemAddr = item.Address;
+        _tipItem = item;
         return JoinSpeech(lines);
     }
 
@@ -478,6 +495,17 @@ public partial class PoE1AccessCore
     };
 
     private bool _lastFocusWasEquipment;
+
+    // The equipment slot keys are English (the code compares them); this is how one is said.
+    private static string SlotName(string key)
+    {
+        if (key != null && key.StartsWith("Flask ", StringComparison.Ordinal))
+        {
+            string n = key.Substring(6);
+            return T($"Flask {n}", $"Frasco {n}");
+        }
+        return EquipmentSlotName(key);
+    }
 
     /// <summary>The equipment slot the element is (or lies in), or null: walks up to the slot
     /// area that sits directly in the inventory panel and counts its place among the slot areas.</summary>
@@ -523,7 +551,7 @@ public partial class PoE1AccessCore
             var worn = Slots(server, known.Slot).FirstOrDefault();
             if (worn?.Item != null)
             {
-                string t = slot + ": " + ItemTitle(worn.Item);
+                string t = SlotName(slot) + ": " + ItemTitle(worn.Item);
                 _tipLines = new List<string> { t };
                 _tipLines.AddRange(ItemLines(worn.Item));
                 _tipIndex = 0;
@@ -531,10 +559,11 @@ public partial class PoE1AccessCore
                 return t;
             }
         }
-        _tipLines = new List<string> { slot + ", empty" };
+        string emptySlot = T($"{SlotName(slot)}, empty", $"{SlotName(slot)}, vacío");
+        _tipLines = new List<string> { emptySlot };
         _tipIndex = 0;
         _tipItemAddr = 0;
-        return slot + ", empty";
+        return emptySlot;
     }
 
     // The controller selection in the inventory panel. The game reports no hovered element on an
@@ -588,10 +617,11 @@ public partial class PoE1AccessCore
             _lastFocusWasEquipment = true;
             var known = EquipmentSlots.FirstOrDefault(s => s.Label == label);
             if (known.Label == null || Slots(server, known.Slot).Any()) return;   // filled: the item reader speaks
-            _tipLines = new List<string> { label + ", empty" };
+            string emptyLabel = T($"{SlotName(label)}, empty", $"{SlotName(label)}, vacío");
+            _tipLines = new List<string> { emptyLabel };
             _tipIndex = 0;
             _tipItemAddr = 0;
-            Say(label + ", empty", true);
+            Say(emptyLabel, true);
             return;
         }
 
@@ -600,7 +630,8 @@ public partial class PoE1AccessCore
             _lastFocusWasEquipment = true;
             if (cell < 0 || cell > 4) return;
             if (Slots(server, InventorySlotE.Flask1).Any(f => f.PosX == cell)) return;
-            string text = "Flask " + (cell + 1) + ", empty";
+            int flaskNo = cell + 1;
+            string text = T($"Flask {flaskNo}, empty", $"Frasco {flaskNo}, vacío");
             _tipLines = new List<string> { text };
             _tipIndex = 0;
             _tipItemAddr = 0;
@@ -617,8 +648,8 @@ public partial class PoE1AccessCore
     private void SayAllEquipment()
     {
         ServerData server = GetServerData();
-        if (server == null) { Say("No equipment data", true); return; }
-        var parts = new List<string> { "Equipment" };
+        if (server == null) { Say(T("No equipment data", "Sin datos de equipamiento"), true); return; }
+        var parts = new List<string> { T("Equipment", "Equipamiento") };
         foreach (var (slot, label) in EquipmentSlots)
         {
             var items = Slots(server, slot).OrderBy(s => s.PosX).ToList();
@@ -627,11 +658,13 @@ public partial class PoE1AccessCore
                 for (int i = 0; i < 5; i++)
                 {
                     var f = items.FirstOrDefault(s => s.PosX == i);
-                    parts.Add(label + " " + (i + 1) + (f != null ? ": " + ItemTitle(f.Item) : ", empty"));
+                    string flaskName = SlotName(label + " " + (i + 1));
+                    parts.Add(f != null ? flaskName + ": " + ItemTitle(f.Item) : T($"{flaskName}, empty", $"{flaskName}, vacío"));
                 }
                 continue;
             }
-            parts.Add(label + (items.Count > 0 ? ": " + ItemTitle(items[0].Item) : ", empty"));
+            string slotName = SlotName(label);
+            parts.Add(items.Count > 0 ? slotName + ": " + ItemTitle(items[0].Item) : T($"{slotName}, empty", $"{slotName}, vacío"));
         }
         Say(JoinSpeech(parts), true);
     }
@@ -642,8 +675,8 @@ public partial class PoE1AccessCore
     {
         if (_tipLines.Count == 0) return false;
         int next = _tipIndex + step;
-        if (next >= _tipLines.Count) { Say("End of tooltip", true); return true; }
-        if (next < 0) { Say("Start of tooltip. " + _tipLines[0], true); _tipIndex = 0; return true; }
+        if (next >= _tipLines.Count) { Say(T("End of tooltip", "Fin de la descripción"), true); return true; }
+        if (next < 0) { Say(T($"Start of tooltip. {_tipLines[0]}", $"Inicio de la descripción. {_tipLines[0]}"), true); _tipIndex = 0; return true; }
         _tipIndex = next;
         Say(_tipLines[_tipIndex], true);
         return true;
@@ -661,18 +694,22 @@ public partial class PoE1AccessCore
     private void SayWholeInventory()
     {
         ServerData server = GetServerData();
-        if (server == null) { Say("No inventory data", true); return; }
+        if (server == null) { Say(T("No inventory data", "Sin datos del inventario"), true); return; }
         ServerInventory inv = Try(() => server.GetPlayerInventoryBySlot(InventorySlotE.MainInventory1), null);
         var items = Slots(server, InventorySlotE.MainInventory1).OrderBy(s => s.PosY).ThenBy(s => s.PosX).ToList();
 
         int cells = items.Sum(s => Math.Max(1, s.SizeX) * Math.Max(1, s.SizeY));
         int total = inv != null ? Try(() => inv.Columns * inv.Rows, 0) : 0;
-        var parts = new List<string>
+        int count = items.Count, free = total - cells;
+        string summary = count == 1 ? T("Inventory, 1 item", "Inventario, 1 objeto") : T($"Inventory, {count} items", $"Inventario, {count} objetos");
+        if (total > 0) summary += T($", {free} of {total} cells free", $", {free} de {total} casillas libres");
+        var parts = new List<string> { summary };
+        foreach (var s in items)
         {
-            "Inventory, " + items.Count + (items.Count == 1 ? " item" : " items") +
-            (total > 0 ? ", " + (total - cells) + " of " + total + " cells free" : ""),
-        };
-        foreach (var s in items) parts.Add(ItemTitle(s.Item) + ", column " + (s.PosX + 1) + ", row " + (s.PosY + 1));
+            string itemName = ItemTitle(s.Item);
+            int col = s.PosX + 1, row = s.PosY + 1;
+            parts.Add(T($"{itemName}, column {col}, row {row}", $"{itemName}, columna {col}, fila {row}"));
+        }
         Say(JoinSpeech(parts), true);
     }
 
@@ -709,7 +746,8 @@ public partial class PoE1AccessCore
         int have = Try(() => c.NumCharges, -1), per = Try(() => c.ChargesPerUse, 0), max = Try(() => c.ChargesMax, 0);
         if (have < 0 || per <= 0) return "";
         int uses = have / per;
-        return uses + (uses == 1 ? " use" : " uses") + (max > 0 ? ", " + have + " of " + max + " charges" : "");
+        string usesText = uses == 1 ? T("1 use", "1 uso") : T($"{uses} uses", $"{uses} usos");
+        return max > 0 ? usesText + T($", {have} of {max} charges", $", {have} de {max} cargas") : usesText;
     }
 
     private void PollInventoryMoves(long now)
@@ -758,7 +796,9 @@ public partial class PoE1AccessCore
                 if (equipped.ContainsKey(key)) { _gone.Remove(key); continue; }
                 if (now - _gone[key].SinceMs >= 500)
                 {
-                    Say("Unequipped: " + _gone[key].Title, false);
+                    // Worn gear can be sold from a vendor's window too.
+                    Say(SoldRecently(now) ? T($"Sold: {_gone[key].Title}", $"Vendido: {_gone[key].Title}")
+                        : T($"Unequipped: {_gone[key].Title}", $"Desequipado: {_gone[key].Title}"), false);
                     _gone.Remove(key);
                 }
             }
@@ -776,31 +816,43 @@ public partial class PoE1AccessCore
             if (_flaskUses.TryGetValue(kv.Key, out int before) && kv.Value.Uses >= 0 && before >= 0)
             {
                 if (kv.Value.Uses < before)
-                    Say(kv.Value.Title + ", " + kv.Value.Uses + (kv.Value.Uses == 1 ? " use left" : " uses left"), false);
+                {
+                    string flaskTitle = kv.Value.Title;
+                    int usesLeft = kv.Value.Uses;
+                    Say(usesLeft == 1 ? T($"{flaskTitle}, 1 use left", $"{flaskTitle}, 1 uso restante")
+                        : T($"{flaskTitle}, {usesLeft} uses left", $"{flaskTitle}, {usesLeft} usos restantes"), false);
+                }
                 else if (before == 0 && kv.Value.Uses > 0 && !readyAgain.Contains(kv.Value.Title))
                     readyAgain.Add(kv.Value.Title);
             }
             _flaskUses[kv.Key] = kv.Value.Uses;
         }
-        if (readyAgain.Count > 0) Say(string.Join(", ", readyAgain) + " ready again", false);
+        if (readyAgain.Count > 0)
+        {
+            string flasks = string.Join(", ", readyAgain);
+            Say(readyAgain.Count == 1 ? T($"{flasks} ready again", $"{flasks} listo otra vez")
+                : T($"{flasks} ready again", $"{flasks} listos otra vez"), false);
+        }
+
+        TrackBag(server, handAddr, _handItemAddr, _handItemTitle, _equipped, equipped, now);
 
         if (handAddr != _handItemAddr)
         {
             if (handAddr != 0)
             {
                 _handItemTitle = ItemTitle(hand.Item);
-                Say("In hand: " + _handItemTitle + ". Choose a cell or a matching equipment slot to place it", true);
+                Say(T($"In hand: {_handItemTitle}. Choose a cell or a matching equipment slot to place it", $"En la mano: {_handItemTitle}. Elige una casilla o una ranura de equipamiento adecuada para colocarlo"), true);
             }
             else if (_handItemAddr != 0)
             {
                 // Where did it go?
                 string where = "";
                 foreach (var kv in equipped)
-                    if (kv.Value.Item1 == _handItemAddr) where = "Equipped: " + _handItemTitle + ", " + kv.Key;
+                    if (kv.Value.Item1 == _handItemAddr) { string keyName = SlotName(kv.Key); where = T($"Equipped: {_handItemTitle}, {keyName}", $"Equipado: {_handItemTitle}, {keyName}"); }
                 if (where.Length == 0)
                     foreach (var s in Slots(server, InventorySlotE.MainInventory1))
-                        if (s.Item.Address == _handItemAddr) where = "Placed: " + _handItemTitle + ", column " + (s.PosX + 1) + ", row " + (s.PosY + 1);
-                Say(where.Length > 0 ? where : "You no longer hold an item", true);
+                        if (s.Item.Address == _handItemAddr) { int pc = s.PosX + 1, pr = s.PosY + 1; where = T($"Placed: {_handItemTitle}, column {pc}, row {pr}", $"Colocado: {_handItemTitle}, columna {pc}, fila {pr}"); }
+                Say(where.Length > 0 ? where : T("You no longer hold an item", "Ya no sostienes ningún objeto"), true);
             }
             _handItemAddr = handAddr;
         }

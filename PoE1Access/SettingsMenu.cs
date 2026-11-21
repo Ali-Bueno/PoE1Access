@@ -80,6 +80,7 @@ public partial class PoE1AccessCore
                 Sw("Enemy sounds", Settings.EnemySounds),
                 Sw("NPC and player sounds", Settings.NpcSounds),
                 Sw("Loot sounds", Settings.LootSounds),
+                Sw("Loot uses the game's own drop sounds", Settings.GameLootSounds),
                 new MenuItem
                 {
                     Label = "Which loot sounds", Range = Settings.LootFilter, Step = 1,

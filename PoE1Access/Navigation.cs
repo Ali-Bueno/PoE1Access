@@ -677,6 +677,10 @@ internal sealed partial class Navigator
     /// <summary>The cue for an item on the ground, or null for an item that should stay quiet.</summary>
     public Func<Entity, Synth.Loot?> LootKind;
     public Func<float> LootVolume;
+    // The game's own sounds (GameSounds) and the drop sound of an item on the ground.
+    public GameSounds GameAudio;
+    public Func<Entity, string> LootEvent;
+    private readonly Dictionary<long, string> _lootEvents = new Dictionary<long, string>();
 
     private const float LootCells = 90f;          // about a screen
     private const int LootVoices = 4;             // the nearest four sound at once
@@ -711,7 +715,7 @@ internal sealed partial class Navigator
         {
             _lootCleanMs = now;
             var live = new HashSet<long>(Entities().Select(x => Try(() => x.Address, 0L)));
-            foreach (long k in _lootKinds.Keys.Where(k => !live.Contains(k)).ToList()) { _lootKinds.Remove(k); _lootNextMs.Remove(k); }
+            foreach (long k in _lootKinds.Keys.Where(k => !live.Contains(k)).ToList()) { _lootKinds.Remove(k); _lootNextMs.Remove(k); _lootEvents.Remove(k); }
         }
 
         // One cue per tick: the nearest due item among the nearest few.
@@ -727,10 +731,22 @@ internal sealed partial class Navigator
                 pitch = sd.Y > 0.4f ? 1.12f : sd.Y < -0.4f ? 0.89f : 1f;   // up the screen higher, down lower
             }
             var kind = it.Kind;
-            // Louder than before (the cue is brought to full level, and far items keep 60% of it)
-            // and more often: every 0.4 s close by up to 1.4 s at a screen's distance.
-            _audio.Play("loot:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch),
-                        LootVolume() * 1.4f * (0.6f + 0.4f * closeness));
+            float vol = LootVolume() * 1.4f * (0.6f + 0.4f * closeness);
+            // The game's own drop sound for the item (from your installed game), with the game's
+            // unique drop over a unique and the mod's short rarity tone over a magic or rare one;
+            // the mod's own cue when the game's sounds cannot be played.
+            string drop = null;
+            if (GameAudio != null && GameAudio.Available && LootEvent != null && !_lootEvents.TryGetValue(it.Id, out drop))
+                _lootEvents[it.Id] = drop = Try(() => LootEvent(it.E), null);
+            float gameVol = vol * AudioEngine.Master;
+            if (drop != null && GameAudio.Play(drop, pan, pitch, gameVol))
+            {
+                if (kind == Synth.Loot.Unique) GameAudio.Play(GameSounds.UniqueLayer, pan, pitch, gameVol);
+                else if (kind == Synth.Loot.Rare || kind == Synth.Loot.Magic)
+                    _audio.Play("rarity:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch), vol * 0.55f);
+            }
+            else
+                _audio.Play("loot:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch), vol);
             _lootNextMs[it.Id] = now + 400 + (long)(1000 * (1 - closeness));   // more often as you get closer
             break;
         }

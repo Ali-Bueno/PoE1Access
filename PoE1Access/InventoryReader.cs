@@ -209,6 +209,18 @@ public partial class PoE1AccessCore
 
     // ---- Loot sounds: which cue an item on the ground gets ----
 
+    private GameSounds _gameSounds;
+
+    // The game's drop sound for an item on the ground (GameSounds.DropEvent).
+    private string LootEventOf(Entity ground)
+    {
+        Entity item = Try(() => ground.GetComponent<ExileCore.PoEMemory.Components.WorldItem>()?.ItemEntity, null);
+        if (item == null || item.Address == 0) return null;
+        string path = Try(() => item.Path, "") ?? "";
+        string cls = Try(() => GameController.Files.BaseItemTypes.Translate(path)?.ClassName, "") ?? "";
+        return GameSounds.DropEvent(cls, path);
+    }
+
     private Synth.Loot? LootKindOf(Entity ground)
     {
         Entity item = Try(() => ground.GetComponent<ExileCore.PoEMemory.Components.WorldItem>()?.ItemEntity, null);

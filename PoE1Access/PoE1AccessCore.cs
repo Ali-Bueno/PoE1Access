@@ -213,6 +213,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
             _audio = new AudioEngine();
             PluginLog.Write("Audio: " + (_audio.Available ? "XAudio2 ready" : "unavailable: " + _audio.Error));
+            _gameSounds = new GameSounds();
+            PluginLog.Write("Game sounds: " + (_gameSounds.Available ? "the game's FMOD banks are open" : "not used (" + _gameSounds.Error + ")"));
             _nav = new Navigator(GameController, _audio, t => Say(t, true), t => Say(t, false),
                 () => Settings.RadarVolume.Value / 100f, () => Settings.GuideVolume.Value / 100f);
 
@@ -316,6 +318,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         ReleaseInExileApiMutex();
         StopBackgroundLoop();
         try { _audio?.Dispose(); } catch { }
+        try { _gameSounds?.Dispose(); } catch { }
         base.OnClose();
     }
 
@@ -363,6 +366,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
             HandleHotkeys();
 
+            _gameSounds?.Update();
             bool inGame = GameController.InGame && !GameController.IsLoading;
             if (_lastInGame != inGame)
             {
@@ -411,6 +415,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.RoutePrompts = Settings.RoutePrompts.Value;
                 _nav.UnexploredMark = Settings.UnexploredMark.Value;
                 _nav.LootKind = Settings.LootSounds.Value ? LootKindOf : null;
+                _nav.GameAudio = Settings.GameLootSounds.Value ? _gameSounds : null;
+                _nav.LootEvent ??= LootEventOf;
                 _nav.LootVolume ??= () => Settings.LootVolume.Value / 100f;
                 _nav.EnemyVolume ??= () => Settings.EnemyVolume.Value / 100f;
                 _nav.EnemySounds = Settings.EnemySounds.Value;

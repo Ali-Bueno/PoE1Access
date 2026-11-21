@@ -26,7 +26,9 @@ memory. The mod only reads: it never changes the game and never presses anything
   characters, enemies, items, chests and unexplored ground, and a guide with turn-by-turn
   prompts.
 - **Sounds:** enemies (growl, buzz for magic and rare, ring for unique), NPCs and players,
-  items on the ground by kind and rarity, a targeting blip and a melee reach ping. All sounds
+  items on the ground by kind and rarity, a targeting blip and a melee reach ping, and a dodge
+  warning (a blade over a low gong dropping into a bass hit) from the side of a rare or unique
+  monster starting an attack aimed at you, or of any monster close by if you choose. All sounds
   are synthesized by the mod.
 - **Speech:** enemies coming into view with their direction, the targeted enemy, life, mana and
   energy shield as they fall past 75, 50 and 25 percent, your level and experience.

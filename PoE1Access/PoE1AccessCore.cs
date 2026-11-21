@@ -417,6 +417,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.ReachPing = Settings.ReachPing.Value;
                 _nav.ReachDistance = Settings.ReachDistance.Value;
                 _nav.AnnounceEnemies = Settings.AnnounceEnemies.Value;
+                _nav.DodgeWarnings = Settings.DodgeWarnings.Value;
+                _nav.DodgeWarningsAll = Settings.DodgeWarningsAll.Value;
                 _nav.DescribeAreas = Settings.DescribeAreas.Value;
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;

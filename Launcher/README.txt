@@ -16,8 +16,12 @@ Enemies within about a screen growl from the side they are on (the Poe2Access en
 rebuilt): a short low growl, repeated faster as they get closer, lower in pitch when they are
 below you; magic and rare enemies buzz on top, uniques ring like struck metal. The four that
 matter most sound (uniques first, then magic and rare, then the nearest); enemies behind walls
-stay quiet, except uniques. When an enemy comes within melee reach, two quick rising notes play
+stay quiet, uniques too. When an enemy comes within melee reach, two quick rising notes play
 from its side (ReachPing, ReachDistance); they play again once every enemy has stepped back.
+When a rare or unique monster starts an attack or spell aimed at you, a dodge warning plays from
+its side: a blade over a low gong dropping into a bass hit, louder the closer it is
+(DodgeWarnings). "Dodge warning for every enemy" in the F3 menu adds every monster within a few
+steps (DodgeWarningsAll).
 The two nearest NPCs make a light wooden tap from their side, and
 the nearest other player a quicker, higher double tap (NpcSounds). Life, mana and energy shield
 are spoken as they fall below 75, 50 and 25 percent (AnnounceResources). Double tap L3 for your

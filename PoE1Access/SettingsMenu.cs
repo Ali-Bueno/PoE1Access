@@ -57,6 +57,8 @@ public partial class PoE1AccessCore
                 },
                 Sw("Describe areas on arrival", Settings.DescribeAreas),
                 Sw("Passive tree finder on the D-pad", Settings.PassiveFinder),
+                Sw("Dodge warning when a monster attacks you", Settings.DodgeWarnings),
+                Sw("Dodge warning for every enemy, not only rares and bosses", Settings.DodgeWarningsAll),
                 Sw("Name enemies coming into view", Settings.AnnounceEnemies),
                 Sw("Say which way enemies are", Settings.EnemyDirections),
                 Sw("Name the targeted enemy", Settings.AnnounceTarget),

@@ -289,6 +289,44 @@ internal static class Synth
         }
     }
 
+    // Dodge warning (after Poe2Access's recipe): a blade drawn over a low gong, diving into a
+    // deep bass drop; metal and bass, so it is not taken for the radar or the enemy voices.
+    public static float[] DodgeWarning(float pan)
+    {
+        var b = Buffer(0.5);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        var rng = new Random(7);
+        double low = 0, phase = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR;
+            // The blade: bright noise swept upward for 0.18 s (a rough high-pass).
+            double blade = 0;
+            if (t < 0.18)
+            {
+                double white = rng.NextDouble() * 2 - 1;
+                double hp = white - low;
+                low += (white - low) * (0.15 + 0.6 * t / 0.18);
+                double env = Math.Min(1, t / 0.01) * Math.Max(0, 1 - t / 0.18);
+                blade = hp * env * 0.35;
+            }
+            // The drop: a sine falling from 180 to 45 Hz from 0.12 s, the moment to dodge.
+            double drop = 0;
+            if (t >= 0.12)
+            {
+                double u = (t - 0.12) / 0.36;
+                double f = 180 * Math.Pow(45.0 / 180, Math.Min(1, u));
+                phase += 2 * Math.PI * f / SR;
+                double env = Math.Min(1, (t - 0.12) / 0.008) * Math.Max(0, 1 - u);
+                drop = Math.Tanh(2.2 * Math.Sin(phase)) * env * 0.55;
+            }
+            Put(b, i, (float)(blade + drop), g);
+        }
+        // The gong under it.
+        return Mix(b, Bell(pan, 98, new[] { 1.0, 2.02, 2.76, 4.07 }, 0.12, 0.22, 0.0));
+    }
+
     // Crosshair (Poe2Access): two short blips when the game's target lands on a living enemy.
     public static float[] Blips()
     {

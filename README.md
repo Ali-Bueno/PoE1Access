@@ -36,18 +36,19 @@ memory. The mod only reads: it never changes the game and never presses anything
   bubbling), listed in the scanner with the Wickerman. A harsh repeating cue warns while you stand in harmful ground, and each
   ailment you put on an enemy (frozen, chilled, ignited, shocked, poisoned, bleeding, cursed) has
   a short sound of its own from its side. The settings menu's Sound glossary plays every sound
-  with what it means. All sounds are synthesized by the mod.
+  with what it means. The mod's own sounds are synthesized; loot, chests and the stash use the
+  sound pack in `sounds/`.
 - **Alerts:** your harmful states as they begin and end ("Frozen", "No longer frozen",
   "Cursed: Temporal Chains"), frenzy, power and endurance charges as they change, a boss's life
   as it falls past 75, 50, 25 and 10 percent and when it is defeated, and each level up.
 - **Speech:** enemies coming into view with their direction, the targeted enemy, life, mana and
   energy shield as they fall past 75, 50 and 25 percent, your level and experience.
 
-**Your own sound pack:** a `sounds` folder beside `PoE1Access.exe` gives loot, chests and the
-stash sounds of your own, used the way Path of Exile 2 Access uses its Diablo IV set: loops
+**Sound pack:** the `sounds` folder (shipped beside `PoE1Access.exe`) gives loot, chests and the
+stash their sounds, used the way Path of Exile 2 Access uses its set: loops
 from the nearest items (`gold`, `potion`, `normal/magic/rare/legendary equipment`, `quest item`)
 and repeating sounds (`gem`, `scroll`, `rune`, `chest`, `corpse`, `weapon rack`, `stash`), as
-.ogg or .wav files. No such sounds are included in this repository or the releases.
+.ogg or .wav files. Any of them can be replaced with your own file of the same name.
 
 The full player guide, with every control and setting, is [Launcher/README.txt](Launcher/README.txt)
 (it ships as README.txt in the download).
@@ -183,5 +184,5 @@ own licenses (MPL-2.0 and those in `third_party/prism/LICENSES`). Exile API is n
 - [Exile API](https://github.com/exApiTools/ExileApi-Compiled), which reads the game.
 - [Prism](https://github.com/ethindp/prism), screen reader and braille output.
 - [Path of Exile 2 Access](https://github.com/Ali-Bueno/poe2-access): the navigation design, the
-  controls and the sound designs follow it. Its sounds are rebuilt here from its documentation;
-  no code or recordings are copied.
+  controls and the sound designs follow it. Its synthesized sounds are rebuilt here from its
+  documentation, and no code is copied. The loot sound pack in `sounds/` is the set it also uses.

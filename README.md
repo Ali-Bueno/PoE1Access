@@ -43,6 +43,12 @@ memory. The mod only reads: it never changes the game and never presses anything
 - **Speech:** enemies coming into view with their direction, the targeted enemy, life, mana and
   energy shield as they fall past 75, 50 and 25 percent, your level and experience.
 
+**Your own sound pack:** a `sounds` folder beside `PoE1Access.exe` gives loot, chests and the
+stash sounds of your own, used the way Path of Exile 2 Access uses its Diablo IV set: loops
+from the nearest items (`gold`, `potion`, `normal/magic/rare/legendary equipment`, `quest item`)
+and repeating sounds (`gem`, `scroll`, `rune`, `chest`, `corpse`, `weapon rack`, `stash`), as
+.ogg or .wav files. No such sounds are included in this repository or the releases.
+
 The full player guide, with every control and setting, is [Launcher/README.txt](Launcher/README.txt)
 (it ships as README.txt in the download).
 

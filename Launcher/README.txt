@@ -93,6 +93,17 @@ Windows, prompts and class names are read in that language, and the mod speaks i
 in it too: English, Spanish, Brazilian Portuguese, French, German, Russian, Thai, Japanese,
 Korean or Traditional Chinese. A phrase not yet translated is said in English.
 
+YOUR OWN SOUND PACK
+You can give loot, chests and the stash sounds of your own, the way Path of Exile 2 Access does
+with its Diablo IV set. Make a folder named sounds beside PoE1Access.exe and put the sound files
+in it (.ogg or .wav; any folders inside it are fine). The mod looks for these names: gold
+(currency), potion (flasks), normal equipment, magic equipment, rare equipment, legendary
+equipment (uniques) and quest item, which loop from the nearest items and get louder as you get
+closer; and gem, scroll, rune (jewels), chest, corpse, weapon rack and stash, which repeat from
+their side. A name it does not find keeps the mod's or the game's sound. The mod does not come
+with these sounds. Turn it off with "Loot, chests and stash use your sound pack" in the settings
+menu; the Sound glossary plays each one it found. Updates leave the sounds folder alone.
+
 UPDATES
 Each time you start PoE1Access.exe it checks the mod's GitHub page
 (https://github.com/Random4358/PoE1Access/releases) and, when there is a newer version, says

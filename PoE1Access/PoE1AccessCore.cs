@@ -262,6 +262,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             PluginLog.Write("Audio: " + (_audio.Available ? "XAudio2 ready" : "unavailable: " + _audio.Error));
             _gameSounds = new GameSounds();
             PluginLog.Write("Game sounds: " + (_gameSounds.Available ? "the game's FMOD banks are open" : "not used (" + _gameSounds.Error + ")"));
+            _soundPack = new SoundPack();
+            PluginLog.Write("Sound pack: " + (_soundPack.Available ? _soundPack.Folder + " (" + string.Join(", ", _soundPack.Names) + ")" : "none (no sounds folder beside PoE1Access.exe)"));
             _nav = new Navigator(GameController, _audio, t => Say(t, true), t => Say(t, false),
                 () => Settings.RadarVolume.Value / 100f, () => Settings.GuideVolume.Value / 100f);
 
@@ -404,6 +406,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             }
 
             bool foreground = GameController.Window.IsForeground();
+            _nav?.LoopWatchdog(_clock.ElapsedMilliseconds);
             if (_lastForeground != foreground)
             {
                 _lastForeground = foreground;
@@ -464,6 +467,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.UnexploredMark = Settings.UnexploredMark.Value;
                 _nav.LootKind = Settings.LootSounds.Value ? LootKindOf : null;
                 _nav.GameAudio = Settings.GameLootSounds.Value ? _gameSounds : null;
+                _nav.Pack = Settings.SoundPackSounds.Value ? _soundPack : null;
+                _nav.PackAudio = _gameSounds;
                 _nav.LootEvent ??= LootEventOf;
                 _nav.LootVolume ??= () => Settings.LootVolume.Value / 100f;
                 _nav.EnemyVolume ??= () => Settings.EnemyVolume.Value / 100f;

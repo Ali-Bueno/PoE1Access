@@ -369,6 +369,7 @@ internal sealed partial class Navigator
 
         if (uiBusy)
         {
+            StopLootLoops();
             // Silent in menus and dialogue (the guide keeps its target); start again quietly
             // afterwards, without announcing a turn that went stale meanwhile.
             _radarPrimed = false;
@@ -697,6 +698,35 @@ internal sealed partial class Navigator
     public GameSounds GameAudio;
     public Func<Entity, string> LootEvent;
     private readonly Dictionary<long, string> _lootEvents = new Dictionary<long, string>();
+    // Your own sound files (SoundPack), played through FMOD (PackAudio): loops from the nearest
+    // items, kept moving with them, and short sounds repeating.
+    public SoundPack Pack;
+    public GameSounds PackAudio;
+    private readonly Dictionary<long, (IntPtr Channel, string File)> _lootLoops = new Dictionary<long, (IntPtr, string)>();
+    private long _lootLoopsTouchedMs;
+
+    private bool PackOn => Pack != null && Pack.Available && PackAudio != null && PackAudio.Available;
+
+    /// <summary>Stops the item loops (menus, loot sounds off, nothing updating them).</summary>
+    public void StopLootLoops()
+    {
+        foreach (var l in _lootLoops.Values) PackAudio?.Stop(l.Channel);
+        _lootLoops.Clear();
+    }
+
+    /// <summary>Called every frame: loops not kept up by the loot tick stop.</summary>
+    public void LoopWatchdog(long now)
+    {
+        if (_lootLoops.Count > 0 && now - _lootLoopsTouchedMs > 600) StopLootLoops();
+    }
+
+    // Where an item sounds from: pan left to right, pitch higher up the screen, lower down it.
+    private (float Pan, float Pitch) LootSide(Vector2 p, Vector2 g, float dist)
+    {
+        if (dist < 2.5f) return (0f, 1f);
+        Vector2 sd = ScreenDir(p, g);
+        return ((float)Math.Round(Math.Max(-1f, Math.Min(1f, sd.X)), 1), sd.Y > 0.4f ? 1.12f : sd.Y < -0.4f ? 0.89f : 1f);
+    }
 
     private const float LootCells = 90f;          // about a screen
     private const int LootVoices = 4;             // the nearest four sound at once
@@ -734,9 +764,36 @@ internal sealed partial class Navigator
             foreach (long k in _lootKinds.Keys.Where(k => !live.Contains(k)).ToList()) { _lootKinds.Remove(k); _lootNextMs.Remove(k); _lootEvents.Remove(k); }
         }
 
-        // One cue per tick: the nearest due item among the nearest few.
-        foreach (var it in near.OrderBy(x => x.Dist).Take(LootVoices))
+        // The sound pack's loops: one from each of the nearest few items that have one, louder as
+        // you get closer; the others stop.
+        var nearest = near.OrderBy(x => x.Dist).Take(LootVoices).ToList();
+        string PackFile(Synth.Loot k) => PackOn ? Pack.File(SoundPack.LootSound(k)) : null;
+        if (PackOn)
         {
+            _lootLoopsTouchedMs = now;
+            var keep = new HashSet<long>();
+            foreach (var it in nearest)
+            {
+                string name = SoundPack.LootSound(it.Kind);
+                string file = PackFile(it.Kind);
+                if (file == null || !SoundPack.IsLoop(name)) continue;
+                keep.Add(it.Id);
+                var (pan, pitch) = LootSide(p, it.G, it.Dist);
+                float closeness = 1f - it.Dist / LootCells;
+                float vol = LootVolume() * 1.4f * AudioEngine.Master * (0.25f + 0.75f * closeness * closeness);
+                if (_lootLoops.TryGetValue(it.Id, out var l) && l.File == file && PackAudio.IsPlaying(l.Channel))
+                    PackAudio.SetChannel(l.Channel, pan, pitch, vol);
+                else if (PackAudio.PlayFile(file, true, pan, pitch, vol, out IntPtr ch))
+                    _lootLoops[it.Id] = (ch, file);
+            }
+            foreach (long id in _lootLoops.Keys.Where(k => !keep.Contains(k)).ToList()) { PackAudio.Stop(_lootLoops[id].Channel); _lootLoops.Remove(id); }
+        }
+        else if (_lootLoops.Count > 0) StopLootLoops();
+
+        // One cue per tick: the nearest due item among the nearest few.
+        foreach (var it in nearest)
+        {
+            if (_lootLoops.ContainsKey(it.Id)) continue;   // sounding already
             if (_lootNextMs.TryGetValue(it.Id, out long due) && now < due) continue;
             float closeness = 1f - it.Dist / LootCells;
             float pan = 0f, pitch = 1f;
@@ -755,7 +812,9 @@ internal sealed partial class Navigator
             if (GameAudio != null && GameAudio.Available && LootEvent != null && !_lootEvents.TryGetValue(it.Id, out drop))
                 _lootEvents[it.Id] = drop = Try(() => LootEvent(it.E), null);
             float gameVol = vol * AudioEngine.Master;
-            if (drop != null && GameAudio.Play(drop, pan, pitch, gameVol))
+            string packFile = PackFile(kind);
+            if (packFile != null && PackAudio.PlayFile(packFile, false, pan, pitch, gameVol, out _)) { }
+            else if (drop != null && GameAudio.Play(drop, pan, pitch, gameVol))
             {
                 if (kind == Synth.Loot.Unique) GameAudio.Play(GameSounds.UniqueLayer, pan, pitch, gameVol);
                 else if (kind == Synth.Loot.Rare || kind == Synth.Loot.Magic)

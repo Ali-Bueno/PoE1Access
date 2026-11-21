@@ -47,6 +47,19 @@ internal sealed class GameSounds : IDisposable
     private CreateInstanceFn _createInstance; private Set3DFn _set3D; private SetFloatFn _setVolume, _setPitch;
     private InstanceFn _start, _release; private SystemFn _update, _releaseSystem;
 
+    // FMOD's core library, for sound files of your own (the sound pack, see SoundPack).
+    private delegate int GetCoreFn(IntPtr studio, out IntPtr core);
+    private delegate int CreateSoundFn(IntPtr core, byte[] nameUtf8, uint mode, IntPtr exinfo, out IntPtr sound);
+    private delegate int PlaySoundFn(IntPtr core, IntPtr sound, IntPtr group, int paused, out IntPtr channel);
+    private delegate int ChannelFloatFn(IntPtr channel, float value);
+    private delegate int ChannelIntFn(IntPtr channel, int value);
+    private delegate int ChannelFn(IntPtr channel);
+    private delegate int ChannelPlayingFn(IntPtr channel, out int playing);
+    private GetCoreFn _getCore; private CreateSoundFn _createSound; private PlaySoundFn _playSound;
+    private ChannelFloatFn _chVolume, _chPan, _chPitch; private ChannelIntFn _chPaused; private ChannelFn _chStop; private ChannelPlayingFn _chPlaying;
+    private IntPtr _core;
+    private readonly Dictionary<string, IntPtr> _files = new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
+
     public GameSounds()
     {
         try
@@ -55,7 +68,16 @@ internal sealed class GameSounds : IDisposable
             if (game == null) { Error = "game folder not found"; return; }
             string desktop = Path.Combine(game, "FMOD", "Desktop");
             if (!File.Exists(Path.Combine(game, "fmodstudio.dll")) || !Directory.Exists(desktop)) { Error = "no FMOD in " + game; return; }
-            NativeLibrary.Load(Path.Combine(game, "fmod.dll"));
+            IntPtr core = NativeLibrary.Load(Path.Combine(game, "fmod.dll"));
+            T C<T>(string name) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(core, name));
+            _createSound = C<CreateSoundFn>("FMOD_System_CreateSound");
+            _playSound = C<PlaySoundFn>("FMOD_System_PlaySound");
+            _chVolume = C<ChannelFloatFn>("FMOD_Channel_SetVolume");
+            _chPan = C<ChannelFloatFn>("FMOD_Channel_SetPan");
+            _chPitch = C<ChannelFloatFn>("FMOD_Channel_SetPitch");
+            _chPaused = C<ChannelIntFn>("FMOD_Channel_SetPaused");
+            _chStop = C<ChannelFn>("FMOD_Channel_Stop");
+            _chPlaying = C<ChannelPlayingFn>("FMOD_Channel_IsPlaying");
             IntPtr lib = NativeLibrary.Load(Path.Combine(game, "fmodstudio.dll"));
             T F<T>(string name) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(lib, name));
             _create = F<CreateFn>("FMOD_Studio_System_Create");
@@ -70,6 +92,7 @@ internal sealed class GameSounds : IDisposable
             _release = F<InstanceFn>("FMOD_Studio_EventInstance_Release");
             _update = F<SystemFn>("FMOD_Studio_System_Update");
             _releaseSystem = F<SystemFn>("FMOD_Studio_System_Release");
+            _getCore = F<GetCoreFn>("FMOD_Studio_System_GetCoreSystem");
 
             int r = _create(out _system, HeaderVersion);
             if (r != 0) { Error = "FMOD create " + r + " (another FMOD version?)"; return; }
@@ -81,6 +104,7 @@ internal sealed class GameSounds : IDisposable
                 if (r != 0) { Error = "bank " + bank + ": " + r; return; }
             }
             Available = true;
+            if (_getCore(_system, out _core) != 0) _core = IntPtr.Zero;
         }
         catch (Exception ex) { Error = ex.GetType().Name + ": " + ex.Message; }
     }
@@ -131,6 +155,55 @@ internal sealed class GameSounds : IDisposable
             return true;
         }
         catch { return false; }
+    }
+
+    /// <summary>Plays a sound file (.ogg, .wav) once or looping, from the side given by pan;
+    /// the channel is returned to move it, change its volume or stop it.</summary>
+    public bool PlayFile(string file, bool loop, float pan, float pitch, float volume, out IntPtr channel)
+    {
+        channel = IntPtr.Zero;
+        if (!Available || _core == IntPtr.Zero || string.IsNullOrEmpty(file)) return false;
+        try
+        {
+            string key = (loop ? "loop:" : "once:") + file;
+            if (!_files.TryGetValue(key, out IntPtr sound))
+            {
+                // FMOD_2D | FMOD_CREATESAMPLE | FMOD_LOOP_NORMAL or FMOD_LOOP_OFF
+                uint mode = 0x8 | 0x100 | (loop ? 0x2u : 0x1u);
+                if (_createSound(_core, Encoding.UTF8.GetBytes(file + "\0"), mode, IntPtr.Zero, out sound) != 0) sound = IntPtr.Zero;
+                _files[key] = sound;
+            }
+            if (sound == IntPtr.Zero) return false;
+            if (_playSound(_core, sound, IntPtr.Zero, 1, out channel) != 0) return false;
+            SetChannel(channel, pan, pitch, volume);
+            _chPaused(channel, 0);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public void SetChannel(IntPtr channel, float pan, float pitch, float volume)
+    {
+        if (channel == IntPtr.Zero) return;
+        try
+        {
+            _chPan(channel, Math.Max(-1f, Math.Min(1f, pan)));
+            _chPitch(channel, pitch);
+            _chVolume(channel, Math.Max(0f, volume));
+        }
+        catch { }
+    }
+
+    public bool IsPlaying(IntPtr channel)
+    {
+        if (channel == IntPtr.Zero) return false;
+        try { return _chPlaying(channel, out int playing) == 0 && playing != 0; } catch { return false; }
+    }
+
+    public void Stop(IntPtr channel)
+    {
+        if (channel == IntPtr.Zero) return;
+        try { _chStop(channel); } catch { }
     }
 
     /// <summary>FMOD's own work (mixing, freeing finished sounds); called from every tick.</summary>

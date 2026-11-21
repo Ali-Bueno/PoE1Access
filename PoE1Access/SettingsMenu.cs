@@ -83,6 +83,7 @@ public partial class PoE1AccessCore
                 Sw(T("Other player sounds", "Sonidos de otros jugadores"), Settings.PlayerSounds),
                 Sw(T("Loot sounds", "Sonidos de botín"), Settings.LootSounds),
                 Sw(T("Loot uses the game's own drop sounds", "El botín usa los sonidos de caída del propio juego"), Settings.GameLootSounds),
+                Sw(T("Loot, chests and stash use your sound pack (a sounds folder beside PoE1Access)", "El botín, los cofres y el alijo usan tu paquete de sonidos (una carpeta sounds junto a PoE1Access)"), Settings.SoundPackSounds),
                 new MenuItem
                 {
                     Label = T("Which loot sounds", "Qué sonidos de botín"), Range = Settings.LootFilter, Step = 1,
@@ -193,6 +194,37 @@ public partial class PoE1AccessCore
         foreach (var (ev, label) in gameDrops)
             items.Add(G(T($"Game loot: {label}", $"Botín del juego: {label}"), T($"{label} on the ground, the game's own drop sound", $"{label} en el suelo, el sonido de caída del propio juego"), "event:/Sound Effects/ItemSounds/" + ev + ".ogg"));
         items.Add(G(T("Game loot: unique", "Botín del juego: único"), T("played over a unique item's drop sound, the game's own", "suena sobre el sonido de caída de un objeto único, el del propio juego"), GameSounds.UniqueLayer));
+        // Your sound pack, when there is one.
+        if (_soundPack != null && _soundPack.Available)
+        {
+            var packSounds = new (string Name, string Meaning)[]
+            {
+                ("gold", T("currency on the ground, looping", "moneda en el suelo, en bucle")),
+                ("potion", T("a flask on the ground, looping", "un frasco en el suelo, en bucle")),
+                ("normal equipment", T("normal gear on the ground, looping", "equipo normal en el suelo, en bucle")),
+                ("magic equipment", T("magic gear on the ground, looping", "equipo mágico en el suelo, en bucle")),
+                ("rare equipment", T("rare gear on the ground, looping", "equipo raro en el suelo, en bucle")),
+                ("legendary equipment", T("a unique item on the ground, looping", "un objeto único en el suelo, en bucle")),
+                ("quest item", T("a quest item on the ground, looping", "un objeto de misión en el suelo, en bucle")),
+                ("gem", T("a skill gem on the ground", "una gema de habilidad en el suelo")),
+                ("scroll", T("a scroll on the ground", "un pergamino en el suelo")),
+                ("rune", T("a jewel on the ground", "una joya en el suelo")),
+                ("chest", T("a chest you have not opened", "un cofre que no has abierto")),
+                ("corpse", T("a corpse you can search", "un cadáver que puedes registrar")),
+                ("weapon rack", T("a weapon or armour rack", "un estante de armas o armaduras")),
+                ("stash", T("the nearest stash", "el alijo más cercano")),
+            };
+            foreach (var (name, meaning) in packSounds)
+            {
+                string file = _soundPack.File(name);
+                if (file == null) continue;
+                items.Add(new MenuItem { Label = T($"Sound pack: {name}", $"Paquete de sonidos: {name}"), Description = meaning, Play = () =>
+                {
+                    if (_gameSounds == null || !_gameSounds.PlayFile(file, false, 0f, 1f, V(Settings.LootVolume) * 1.4f * Settings.MasterVolume.Value / 100f, out _))
+                        Say(T("The sound pack cannot be played here", "El paquete de sonidos no se puede reproducir aquí"), true);
+                } });
+            }
+        }
         return items;
     }
 

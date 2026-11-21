@@ -76,6 +76,9 @@ public class PoE1AccessSettings : ISettings
     public ToggleNode ObjectSounds { get; set; } = new ToggleNode(true);
     // Loot plays the game's own drop sounds (from your installed game) instead of the mod's.
     public ToggleNode GameLootSounds { get; set; } = new ToggleNode(true);
+    // Your own sound files for loot, chests and the stash (a "sounds" folder beside PoE1Access.exe,
+    // see SoundPack), used when they are there.
+    public ToggleNode SoundPackSounds { get; set; } = new ToggleNode(true);
     // The quick double tap of another player near you (NPCs keep theirs with NpcSounds).
     public ToggleNode PlayerSounds { get; set; } = new ToggleNode(true);
     // A sound of its own for each ailment you put on an enemy (frozen, ignited, shocked...).

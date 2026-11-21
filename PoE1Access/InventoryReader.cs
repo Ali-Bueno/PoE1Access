@@ -216,6 +216,7 @@ public partial class PoE1AccessCore
     // ---- Loot sounds: which cue an item on the ground gets ----
 
     private GameSounds _gameSounds;
+    private SoundPack _soundPack;
 
     // The game's drop sound for an item on the ground (GameSounds.DropEvent).
     private string LootEventOf(Entity ground)

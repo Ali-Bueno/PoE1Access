@@ -28,7 +28,7 @@ internal sealed partial class Navigator
         _nextObjectTickMs = now + 80;
         if (now - _lastObjectCueMs < 120) return;
 
-        var found = new List<(long Id, Vector2 G, float Dist, Synth.WorldCue Kind)>();
+        var found = new List<(long Id, Vector2 G, float Dist, Synth.WorldCue Kind, string File)>();
         foreach (Entity e in Entities())
         {
             EntityType t = Try(() => e.Type, EntityType.Error);
@@ -56,7 +56,11 @@ internal sealed partial class Navigator
             if (dist > ObjectCells) continue;
             // Chests only in sight (many sit behind walls); the rest lead the way from anywhere near.
             if (kind == Synth.WorldCue.Chest && !InSight(p, g)) continue;
-            found.Add((id, g, dist, kind.Value));
+            // The sound pack's chest (or corpse, or weapon rack) and stash, when you have one.
+            string file = !PackOn ? null
+                : kind == Synth.WorldCue.Chest ? Pack.File(SoundPack.ChestSound(Try(() => e.RenderName, ""), Try(() => e.Path, "")))
+                : kind == Synth.WorldCue.Stash ? Pack.File("stash") : null;
+            found.Add((id, g, dist, kind.Value, file));
         }
         if (found.Count == 0) return;
 
@@ -81,7 +85,8 @@ internal sealed partial class Navigator
         float nearness = Math.Min(1f, it.Dist / ObjectCells);
         float vol = (LootVolume?.Invoke() ?? 0.7f) * (0.35f + 0.65f * (1 - nearness));
         var kindNow = it.Kind;
-        _audio.Play("obj:" + kindNow + ":" + pan + ":" + pitch, () => Synth.Object(kindNow, pan, pitch), vol);
+        if (it.File == null || !PackAudio.PlayFile(it.File, false, pan, pitch, vol * 1.4f * AudioEngine.Master, out _))
+            _audio.Play("obj:" + kindNow + ":" + pan + ":" + pitch, () => Synth.Object(kindNow, pan, pitch), vol);
         // From every 0.3 s beside it to every 1.6 s two screens off.
         _objectNextMs[it.Id] = now + 300 + (long)(1300 * nearness);
         _lastObjectCueMs = now;

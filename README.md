@@ -185,4 +185,5 @@ own licenses (MPL-2.0 and those in `third_party/prism/LICENSES`). Exile API is n
 - [Prism](https://github.com/ethindp/prism), screen reader and braille output.
 - [Path of Exile 2 Access](https://github.com/Ali-Bueno/poe2-access): the navigation design, the
   controls and the sound designs follow it. Its synthesized sounds are rebuilt here from its
-  documentation, and no code is copied. The loot sound pack in `sounds/` is the set it also uses.
+  documentation, and no code is copied. The loot sound pack in `sounds/` was made by
+  [Ali-Bueno](https://github.com/Ali-Bueno), the author of Path of Exile 2 Access.

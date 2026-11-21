@@ -160,7 +160,8 @@ CREDITS
 - Prism 0.18.3 (MPL-2.0 license), for screen reader and braille output:
   https://github.com/ethindp/prism. Its licenses are in licenses\prism.
 - The navigation design follows Path of Exile 2 Access (https://github.com/Ali-Bueno/poe2-access);
-  all sounds here are synthesized by this mod.
+  the mod's own sounds are synthesized. The sound pack for loot, chests and the stash (the
+  sounds folder) was made by Ali-Bueno, the author of Path of Exile 2 Access.
 
 IF SOMETHING FAILS
 Send these files to whoever gave you the mod:

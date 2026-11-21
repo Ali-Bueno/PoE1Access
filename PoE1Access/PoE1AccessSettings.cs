@@ -68,8 +68,33 @@ public class PoE1AccessSettings : ISettings
     public RangeNode<int> EnemyVolume { get; set; } = new RangeNode<int>(70, 0, 200);
     // Name enemies as they come into view, a pack in one line: "Zombie, 3, up right".
     public ToggleNode AnnounceEnemies { get; set; } = new ToggleNode(true);
+    // A blade-and-bass cue from the side of a monster starting an attack aimed at you.
+    public ToggleNode DodgeWarnings { get; set; } = new ToggleNode(true);
+    // Off: rare and unique monsters (bosses) only. On: every monster close to you.
+    public ToggleNode DodgeWarningsAll { get; set; } = new ToggleNode(false);
+    // Chests, shrines, the nearest waypoint, portal, exit and stash, each with a sound from its side.
+    public ToggleNode ObjectSounds { get; set; } = new ToggleNode(true);
+    // Loot plays the game's own drop sounds (from your installed game) instead of the mod's.
+    public ToggleNode GameLootSounds { get; set; } = new ToggleNode(true);
+    // The quick double tap of another player near you (NPCs keep theirs with NpcSounds).
+    public ToggleNode PlayerSounds { get; set; } = new ToggleNode(true);
+    // A sound of its own for each ailment you put on an enemy (frozen, ignited, shocked...).
+    public ToggleNode EnemyStateSounds { get; set; } = new ToggleNode(true);
+    // Your harmful states as they begin and end ("Frozen", "No longer frozen"), with a short buzz.
+    public ToggleNode StatusAlerts { get; set; } = new ToggleNode(true);
+    // A repeating harsh cue while you stand in harmful ground (burning, caustic...).
+    public ToggleNode HarmfulGroundSound { get; set; } = new ToggleNode(true);
+    // Frenzy, power and endurance charges: a pair of notes and the count as they change.
+    public ToggleNode ChargeAlerts { get; set; } = new ToggleNode(true);
+    // A boss's life as it falls past 75, 50, 25 and 10 percent, and "defeated".
+    public ToggleNode AnnounceBossLife { get; set; } = new ToggleNode(true);
+    // Level up: three rising notes and the new level.
+    public ToggleNode AnnounceLevelUp { get; set; } = new ToggleNode(true);
     // Describe each area on a first visit in the session (size, openness, waypoint, exits).
     public ToggleNode DescribeAreas { get; set; } = new ToggleNode(true);
+    // In the passive tree, the D-pad finds keystones, notables, jewel sockets and nodes to
+    // allocate, and guides to the one chosen.
+    public ToggleNode PassiveFinder { get; set; } = new ToggleNode(true);
     // Say which way those packs are (up, down left...).
     public ToggleNode EnemyDirections { get; set; } = new ToggleNode(true);
     // Two short blips when the game's target lands on a living enemy.

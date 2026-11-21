@@ -12,8 +12,11 @@ memory. The mod only reads: it never changes the game and never presses anything
 
 ## What it does
 
-- **Menus:** login screen, character selection and creation, the pause menu and the options
-  (rows, tabs, checkbox, slider and dropdown values), read as the controller selection moves.
+- **Menus:** login screen, character selection and creation (with the class each Exile is as
+  you move between them), the pause menu and the options (rows, tabs, checkbox, slider and
+  dropdown values), read as the controller selection moves.
+- **Any client language:** windows, prompts and names are found by the game's own words, so the
+  mod works with the game in any of its languages.
 - **Inventory and equipment:** each item with its mods, gem and currency descriptions; every
   equipment slot, including empty ones; what you pick up, place and equip.
 - **Character sheet and skills panel:** every stat, stepped through one by one.
@@ -23,8 +26,19 @@ memory. The mod only reads: it never changes the game and never presses anything
   characters, enemies, items, chests and unexplored ground, and a guide with turn-by-turn
   prompts.
 - **Sounds:** enemies (growl, buzz for magic and rare, ring for unique), NPCs and players,
-  items on the ground by kind and rarity, a targeting blip and a melee reach ping. All sounds
-  are synthesized by the mod.
+  items on the ground with the game's own drop sound for each kind of item (played from your
+  installed game; the game's unique drop over uniques, a rarity tone over magic and rare), a targeting blip and a melee reach ping, and a dodge
+  warning (a blade over a low gong dropping into a bass hit) from the side of a rare or unique
+  monster starting an attack aimed at you, or of any monster close by if you choose. Things
+  worth walking to sound from their side, faster as you get closer: chests (a wooden knock),
+  shrines (a shimmer), the nearest waypoint (a drone), portal (a swirl), exit (a rush of air)
+  and stash (a clunk). A harsh repeating cue warns while you stand in harmful ground, and each
+  ailment you put on an enemy (frozen, chilled, ignited, shocked, poisoned, bleeding, cursed) has
+  a short sound of its own from its side. The settings menu's Sound glossary plays every sound
+  with what it means. All sounds are synthesized by the mod.
+- **Alerts:** your harmful states as they begin and end ("Frozen", "No longer frozen",
+  "Cursed: Temporal Chains"), frenzy, power and endurance charges as they change, a boss's life
+  as it falls past 75, 50, 25 and 10 percent and when it is defeated, and each level up.
 - **Speech:** enemies coming into view with their direction, the targeted enemy, life, mana and
   energy shield as they fall past 75, 50 and 25 percent, your level and experience.
 
@@ -61,8 +75,8 @@ that menu.
   flask uses, the area and its level, how much you have explored, and the area's description.
 - **Triple tap L3** (Delete): the guide to the chosen thing, on or off.
 - **Hold L3 + right stick up or down** (Page Up, Page Down): the scanner's previous or next
-  category (exits, waypoints, characters, enemies, items, chests, unexplored ground, quest,
-  where you died).
+  category (exits, waypoints, characters, other players, enemies, items, chests, unexplored
+  ground, quest, where you died).
 - **Hold L3 + right stick left or right** (Home, End): the previous or next thing in that
   category, nearest first.
 - **Hold L3 for half a second**: the game's button prompts for what is around you (pick up,
@@ -88,6 +102,11 @@ that menu.
   description.
 - **Passive tree**: each node says its links; tap L3 for the next line, double tap for the
   previous, hold L3 for everything about the node.
+- **Passive tree finder (D-pad)**: up and down choose a list (Position, Keystones, Notables,
+  Jewel sockets, Next to your nodes); left and right go through it, fewest points first. The
+  node named becomes the target: every node you move to then says which way it is, and, while it
+  is not linked yet, the next node to allocate on the cheapest way there ("Allocate this one").
+  Position drops the target. The finder never allocates anything for you.
 
 ### Mod settings menu
 
@@ -95,6 +114,8 @@ that menu.
 - **Right stick left and right**: open a submenu, turn a switch on or off, or change a value in
   steps of 5. A volume plays its sound as it changes.
 - **Tap L3** (Backspace): back up one level. **Double tap L3**, or hold F3 again: close.
+- **Sound glossary** (last submenu): every sound the mod makes, with what it means; right stick
+  left or right plays it.
 
 ### Game controls (controller)
 
@@ -105,8 +126,8 @@ you open them. Hold L3 to hear them again.
 - **Left stick**: move, and move the selection in menus and windows.
 - **A, B, X, Y and the D-pad**: the skills on your skill bar, one per button.
 - **R3** (clicking the right stick): skill binding, to choose which skill each button uses.
-  - **Left stick**: move between the buttons; each one says the skill on it, or "empty".
-  - **A**: the skills you can put on that button. Move with the left stick to hear each one with
+  - **Right stick**: move between the buttons; each one says the skill on it, or "empty".
+  - **A**: the skills you can put on that button. Move with the right stick to hear each one with
     its details and its place in the list ("2 of 3"). A puts it on the button.
   - **B**: back, then close skill binding.
 - **Start**: the game menu (options, log out, exit).
@@ -126,7 +147,8 @@ you open them. Hold L3 to hear them again.
    again (versions 0.2.2 and later).
 
 You need Windows 10 or 11 (64-bit), the .NET 10 Desktop Runtime (x64), and Path of Exile 1 in
-windowed or windowed fullscreen mode. A controller is recommended.
+windowed or windowed fullscreen mode. A controller is recommended: Xbox (XInput) controllers
+and PlayStation controllers (DualSense, DualSense Edge, DualShock 4) are read.
 
 ## Building
 

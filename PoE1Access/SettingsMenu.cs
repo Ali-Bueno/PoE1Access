@@ -27,6 +27,8 @@ public partial class PoE1AccessCore
         public int Step = 5;
         public Func<int, string> Words;               // how a number is said ("100 percent")
         public Action<int> OnChange;                  // a sample of what it controls
+        public Action Play;                           // the sound glossary: plays the sound
+        public string Description;                    // ...and says what it means
     }
 
     private List<MenuItem> _menuRoot;
@@ -57,6 +59,15 @@ public partial class PoE1AccessCore
                     OnChange = v => ApplySpeechRate(true),
                 },
                 Sw(T("Describe areas on arrival", "Describir las áreas al llegar"), Settings.DescribeAreas),
+                Sw(T("Passive tree finder on the D-pad", "Buscador del árbol de pasivas en la cruceta"), Settings.PassiveFinder),
+                Sw(T("Dodge warning when a monster attacks you", "Aviso para esquivar cuando un monstruo te ataca"), Settings.DodgeWarnings),
+                Sw(T("Dodge warning for every enemy, not only rares and bosses", "Aviso para esquivar con todos los enemigos, no solo raros y jefes"), Settings.DodgeWarningsAll),
+                Sw(T("Sounds for chests, shrines, waypoints, portals, exits and the stash", "Sonidos de cofres, santuarios, transportadores, portales, salidas y el alijo"), Settings.ObjectSounds),
+                Sw(T("Say when you are frozen, poisoned, cursed and the like", "Decir cuando estás congelado, envenenado, maldito y similares"), Settings.StatusAlerts),
+                Sw(T("Sound while standing in harmful ground", "Sonido mientras pisas suelo dañino"), Settings.HarmfulGroundSound),
+                Sw(T("Charges gained and lost", "Cargas ganadas y perdidas"), Settings.ChargeAlerts),
+                Sw(T("A boss's life as it falls", "La vida de un jefe a medida que baja"), Settings.AnnounceBossLife),
+                Sw(T("Level up", "Subida de nivel"), Settings.AnnounceLevelUp),
                 Sw(T("Name enemies coming into view", "Nombrar a los enemigos que aparecen a la vista"), Settings.AnnounceEnemies),
                 Sw(T("Say which way enemies are", "Decir en qué dirección están los enemigos"), Settings.EnemyDirections),
                 Sw(T("Name the targeted enemy", "Nombrar al enemigo apuntado"), Settings.AnnounceTarget),
@@ -68,8 +79,10 @@ public partial class PoE1AccessCore
                 Sw(T("Wall radar", "Radar de paredes"), Settings.Radar),
                 Sw(T("Unexplored ground pips", "Pitidos del terreno sin explorar"), Settings.UnexploredMark),
                 Sw(T("Enemy sounds", "Sonidos de enemigos"), Settings.EnemySounds),
-                Sw(T("NPC and player sounds", "Sonidos de PNJ y jugadores"), Settings.NpcSounds),
+                Sw(T("NPC sounds", "Sonidos de PNJ"), Settings.NpcSounds),
+                Sw(T("Other player sounds", "Sonidos de otros jugadores"), Settings.PlayerSounds),
                 Sw(T("Loot sounds", "Sonidos de botín"), Settings.LootSounds),
+                Sw(T("Loot uses the game's own drop sounds", "El botín usa los sonidos de caída del propio juego"), Settings.GameLootSounds),
                 new MenuItem
                 {
                     Label = T("Which loot sounds", "Qué sonidos de botín"), Range = Settings.LootFilter, Step = 1,
@@ -77,12 +90,122 @@ public partial class PoE1AccessCore
                 },
                 Sw(T("Targeting blips", "Pitidos de apuntado"), Settings.CrosshairBeep),
                 Sw(T("Melee reach ping", "Aviso de alcance cuerpo a cuerpo"), Settings.ReachPing),
+                Sw(T("Sounds for ailments you put on enemies", "Sonidos de las alteraciones que causas a los enemigos"), Settings.EnemyStateSounds),
                 new MenuItem { Label = T("Melee reach distance", "Distancia de alcance cuerpo a cuerpo"), Range = Settings.ReachDistance, Words = v => v.ToString() }),
             Sub(T("Reading", "Lectura"),
                 Sw(T("Read the controller selection", "Leer la selección del mando"), Settings.ReadFocus),
                 Sw(T("Read what is under the cursor", "Leer lo que hay bajo el cursor"), Settings.ReadOnHover)),
+            Sub(T("Sound glossary", "Glosario de sonidos"), Glossary().ToArray()),
         };
     }
+
+    // Every sound the mod makes, what it means, and left or right to hear it (as in Poe2Access's
+    // sound glossary), at the volume of its kind.
+    private List<MenuItem> Glossary()
+    {
+        float V(RangeNode<int> node) => node.Value / 100f;
+        MenuItem S(string label, string meaning, Func<float[]> make, Func<float> volume) =>
+            new MenuItem { Label = label, Description = meaning, Play = () =>
+            {
+                AudioEngine.Master = Settings.MasterVolume.Value / 100f;
+                _audio?.Play("glossary:" + label, make, volume());
+            } };
+        Func<float> radar = () => V(Settings.RadarVolume), enemy = () => V(Settings.EnemyVolume),
+                    loot = () => V(Settings.LootVolume) * 1.4f, guide = () => V(Settings.GuideVolume);
+        var items = new List<MenuItem>
+        {
+            S(T("Wall", "Pared"), T("radar: a wall closes the way on that side", "radar: una pared cierra el paso por ese lado"), () => Synth.Tock(0f, 1f), radar),
+            S(T("Open way", "Paso abierto"), T("radar: the way opens again on that side", "radar: el paso se abre otra vez por ese lado"), () => Synth.Breath(0f, 0), radar),
+            S(T("Exit ahead", "Salida delante"), T("radar: an exit lies that way", "radar: hay una salida en esa dirección"), () => Synth.Tin(0f, 1f), radar),
+            S(T("Unexplored ground", "Terreno sin explorar"), T("pips over the radar: ground you have not seen lies that way", "pitidos sobre el radar: en esa dirección hay terreno que no has visto"), () => Synth.Pips(0f, 1f), radar),
+            S(T("Wall bump", "Choque con pared"), T("you pushed into a wall and stopped", "has chocado con una pared y te has detenido"), () => Synth.Thud(0f), radar),
+            S(T("Guide", "Guía"), T("the guide: the way to what you chose", "la guía: el camino hacia lo que elegiste"), () => Synth.Chime(0f, 1f), guide),
+            S(T("Enemy", "Enemigo"), T("a normal enemy, faster as it gets closer", "un enemigo normal, más rápido cuanto más cerca está"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.White, 0f, 1f), enemy),
+            S(T("Magic enemy", "Enemigo mágico"), T("a magic enemy", "un enemigo mágico"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Magic, 0f, 1f), enemy),
+            S(T("Rare enemy", "Enemigo raro"), T("a rare enemy", "un enemigo raro"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Rare, 0f, 1f), enemy),
+            S(T("Unique enemy", "Enemigo único"), T("a unique enemy, a boss", "un enemigo único, un jefe"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Unique, 0f, 1f), enemy),
+            S(T("Character", "Personaje"), T("an NPC near you", "un PNJ cerca de ti"), () => Synth.Tap(0f, 1f, false), enemy),
+            S(T("Player", "Jugador"), T("another player near you", "otro jugador cerca de ti"), () => Synth.Tap(0f, 1f, true), enemy),
+            S(T("Target", "Objetivo"), T("the game's target landed on an enemy", "el objetivo del juego se ha fijado en un enemigo"), Synth.Blips, enemy),
+            S(T("Melee reach", "Alcance cuerpo a cuerpo"), T("an enemy came within melee reach", "un enemigo ha entrado en tu alcance cuerpo a cuerpo"), () => Synth.ReachPing(0f), enemy),
+            S(T("Dodge warning", "Aviso para esquivar"), T("a monster starts an attack aimed at you: dodge", "un monstruo empieza un ataque dirigido a ti: esquiva"), () => Synth.DodgeWarning(0f), enemy),
+            S(T("Harmful ground", "Suelo dañino"), T("you stand in burning, caustic or other harmful ground: move", "estás sobre suelo ardiente, cáustico u otro suelo dañino: muévete"), Synth.HarmfulGround, enemy),
+            S(T("Your ailment", "Tu alteración"), T("you are frozen, poisoned, cursed or the like; its name follows", "estás congelado, envenenado, maldito o similar; después se dice su nombre"), Synth.Ailment, enemy),
+        };
+        foreach (Synth.EnemyState st in Enum.GetValues(typeof(Synth.EnemyState)))
+        {
+            var state = st;
+            string en = st.ToString().ToLowerInvariant(), es = EnemyStateSpanish(st);
+            items.Add(S(T($"Enemy {en}", $"Enemigo {es}"), T($"you made an enemy {en}", $"has dejado a un enemigo {es}"), () => Synth.EnemyStateCue(state, 0f), enemy));
+        }
+        items.Add(S(T("Charge gained", "Carga ganada"), T("a frenzy, power or endurance charge gained; its count follows", "ganas una carga de frenesí, de poder o de aguante; después se dice cuántas tienes"), () => Synth.Charge(0, true), enemy));
+        items.Add(S(T("Charge lost", "Carga perdida"), T("a charge lost", "pierdes una carga"), () => Synth.Charge(0, false), enemy));
+        items.Add(S(T("Level up", "Subida de nivel"), T("you gained a level", "has subido de nivel"), Synth.LevelUp, enemy));
+        var objects = new (Synth.WorldCue Kind, string Label, string Meaning)[]
+        {
+            (Synth.WorldCue.Chest, T("Chest", "Cofre"), T("a chest you have not opened", "un cofre que no has abierto")),
+            (Synth.WorldCue.Shrine, T("Shrine", "Santuario"), T("a shrine you can still take", "un santuario que todavía puedes tomar")),
+            (Synth.WorldCue.Waypoint, T("Waypoint", "Transportador"), T("the nearest waypoint", "el transportador más cercano")),
+            (Synth.WorldCue.Portal, T("Portal", "Portal"), T("the nearest portal", "el portal más cercano")),
+            (Synth.WorldCue.Exit, T("Exit", "Salida"), T("the nearest way to another area", "el paso más cercano a otra área")),
+            (Synth.WorldCue.Stash, T("Stash", "Alijo"), T("the nearest stash", "el alijo más cercano")),
+        };
+        foreach (var (kind, label, meaning) in objects)
+        {
+            var k = kind;
+            items.Add(S(label, T($"{meaning}, faster as you get closer", $"{meaning}, más rápido cuanto más te acercas"), () => Synth.Object(k, 0f, 1f), loot));
+        }
+        var drops = new (Synth.Loot Kind, string Label)[]
+        {
+            (Synth.Loot.Currency, T("currency", "moneda")), (Synth.Loot.Scroll, T("a scroll", "un pergamino")), (Synth.Loot.Gem, T("a gem", "una gema")), (Synth.Loot.Flask, T("a flask", "un frasco")),
+            (Synth.Loot.Map, T("a map", "un mapa")), (Synth.Loot.Card, T("a divination card", "una carta de adivinación")), (Synth.Loot.Jewel, T("a jewel", "una joya")), (Synth.Loot.Quest, T("a quest item", "un objeto de misión")),
+            (Synth.Loot.Normal, T("a normal item", "un objeto normal")), (Synth.Loot.Magic, T("a magic item", "un objeto mágico")), (Synth.Loot.Rare, T("a rare item", "un objeto raro")), (Synth.Loot.Unique, T("a unique item", "un objeto único")),
+        };
+        foreach (var (kind, label) in drops)
+        {
+            var k = kind;
+            items.Add(S(T($"Loot: {label}", $"Botín: {label}"), T($"{label} on the ground, the mod's own sound", $"{label} en el suelo, el sonido del propio mod"), () => Synth.LootCue(k, 0f, 1f), loot));
+        }
+
+        // The game's own drop sounds, which loot plays by default (GameSounds), from the game.
+        var gameDrops = new (string Event, string Label)[]
+        {
+            ("orb", T("currency", "moneda")), ("Scroll", T("a scroll", "un pergamino")), ("Gem", T("a gem", "una gema")), ("Flask", T("a flask", "un frasco")), ("Map", T("a map", "un mapa")),
+            ("DivinationCard", T("a divination card", "una carta de adivinación")), ("Jewel", T("a jewel", "una joya")), ("EssenceItem", T("an essence", "una esencia")), ("DelveFossil", T("a fossil", "un fósil")),
+            ("Ring", T("a ring", "un anillo")), ("Amulet", T("an amulet", "un amuleto")), ("Belt", T("a belt", "un cinturón")), ("quiver", T("a quiver", "un carcaj")),
+            ("Helm", T("a helmet", "un casco")), ("cap", T("a cap", "un gorro")), ("Metal_armour", T("metal body armour", "una armadura de metal")), ("Leather_armour", T("leather body armour", "una armadura de cuero")),
+            ("cloth_armour", T("cloth body armour", "una armadura de tela")), ("chain_armour", T("chain body armour", "una armadura de malla")),
+            ("chain_gloves", T("metal gloves", "guantes de metal")), ("Leather_glove", T("leather gloves", "guantes de cuero")),
+            ("Metal_boots", T("metal boots", "botas de metal")), ("Boots", T("leather boots", "botas de cuero")), ("chain_boots", T("chain boots", "botas de malla")),
+            ("Metal_shield", T("a metal shield", "un escudo de metal")), ("wooden_shield", T("a wooden shield", "un escudo de madera")), ("Metal_and_wooden_shield", T("a mixed shield", "un escudo mixto")),
+            ("Sword", T("a sword", "una espada")), ("Large_sword", T("a two handed sword", "una espada a dos manos")), ("1HandAxe", T("an axe", "un hacha")), ("1HandMace", T("a mace", "una maza")),
+            ("Maul", T("a two handed mace", "una maza a dos manos")), ("Scepter", T("a sceptre", "un cetro")), ("1HandDagger", T("a dagger", "una daga")), ("1HandClaw", T("a claw", "una garra")),
+            ("wand", T("a wand", "una varita")), ("Staff", T("a staff", "un báculo")), ("Bow", T("a bow", "un arco")), ("item_drop_large", T("any other item", "cualquier otro objeto")),
+        };
+        MenuItem G(string label, string meaning, string eventPath) =>
+            new MenuItem { Label = label, Description = meaning, Play = () =>
+            {
+                if (_gameSounds == null || !_gameSounds.Available) { Say(T("The game's sounds cannot be played here", "Los sonidos del juego no se pueden reproducir aquí"), true); return; }
+                _gameSounds.Play(eventPath, 0f, 1f, V(Settings.LootVolume) * 1.4f * Settings.MasterVolume.Value / 100f);
+            } };
+        foreach (var (ev, label) in gameDrops)
+            items.Add(G(T($"Game loot: {label}", $"Botín del juego: {label}"), T($"{label} on the ground, the game's own drop sound", $"{label} en el suelo, el sonido de caída del propio juego"), "event:/Sound Effects/ItemSounds/" + ev + ".ogg"));
+        items.Add(G(T("Game loot: unique", "Botín del juego: único"), T("played over a unique item's drop sound, the game's own", "suena sobre el sonido de caída de un objeto único, el del propio juego"), GameSounds.UniqueLayer));
+        return items;
+    }
+
+    // The Spanish word for an ailment left on an enemy ("congelado"), for the glossary.
+    private static string EnemyStateSpanish(Synth.EnemyState state) => state switch
+    {
+        Synth.EnemyState.Frozen => "congelado",
+        Synth.EnemyState.Chilled => "helado",
+        Synth.EnemyState.Ignited => "en llamas",
+        Synth.EnemyState.Shocked => "electrocutado",
+        Synth.EnemyState.Poisoned => "envenenado",
+        Synth.EnemyState.Bleeding => "sangrando",
+        Synth.EnemyState.Cursed => "maldito",
+        _ => state.ToString().ToLowerInvariant(),
+    };
 
     private void OpenMenu()
     {
@@ -108,6 +231,7 @@ public partial class PoE1AccessCore
     {
         var (items, index) = _menuStack[^1];
         MenuItem it = items[index];
+        if (it.Play != null) return T($"{it.Label}, {it.Description}, {index + 1} of {items.Count}", $"{it.Label}, {it.Description}, {index + 1} de {items.Count}");
         string value = it.Children != null ? T("submenu", "submenú")
             : it.Toggle != null ? (it.Toggle.Value ? T("on", "activado") : T("off", "desactivado"))
             : it.Range != null ? (it.Words ?? (v => v.ToString()))(it.Range.Value)
@@ -129,6 +253,7 @@ public partial class PoE1AccessCore
         }
 
         MenuItem it = items[index];
+        if (it.Play != null) { it.Play(); return; }
         if (it.Children != null)
         {
             if (dx < 0) { Say(DescribeMenuItem(), true); return; }

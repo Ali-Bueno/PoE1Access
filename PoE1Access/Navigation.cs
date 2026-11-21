@@ -396,6 +396,7 @@ internal sealed partial class Navigator
         if (LootKind != null) TickLoot(now, p);
         TickEnemies(now, p);
         TickNpcs(now, p);
+        TickObjects(now, p);
         if (now >= _nextIconLogMs) { _nextIconLogMs = now + 3000; LogMinimapIcons(); }
     }
 
@@ -415,6 +416,8 @@ internal sealed partial class Navigator
     private readonly Dictionary<long, long> _enemyNextMs = new Dictionary<long, long>();
     private readonly HashSet<long> _enemySeen = new HashSet<long>();
     private long _enemyArea = -1, _nextEnemyTickMs, _nextIntoViewMs, _targetId = -1;
+    private string _lastTargetName = "";
+    private long _lastTargetNameMs;
 
     private void TickEnemies(long now, Vector2 p)
     {
@@ -448,8 +451,16 @@ internal sealed partial class Navigator
                 if (CrosshairBeep) _audio.Play("crosshair", Synth.Blips, EnemyVolume?.Invoke() ?? 0.7f);
                 if (AnnounceTarget)
                 {
-                    int life = (int)Math.Round(Try(() => targeted.GetComponent<Life>().HPPercentage, 1f) * 100);
-                    _say(Describe(targeted, null) + (life < 100 ? T($", {life} percent", $", {life} por ciento") : ""));
+                    // The same name again within 2 seconds (the target moving between monsters of
+                    // one kind) is left to the blips.
+                    string named = Describe(targeted, null);
+                    if (named != _lastTargetName || now - _lastTargetNameMs > 2000)
+                    {
+                        int life = (int)Math.Round(Try(() => targeted.GetComponent<Life>().HPPercentage, 1f) * 100);
+                        _say(named + (life < 100 ? T($", {life} percent", $", {life} por ciento") : ""));
+                    }
+                    _lastTargetName = named;
+                    _lastTargetNameMs = now;
                 }
             }
         }
@@ -483,6 +494,9 @@ internal sealed partial class Navigator
         }
 
         TickReach(near.Select(x => (x.E, x.G)).ToList(), p);
+        TickDodge(near.Select(x => (x.E, x.Id, x.G, x.Dist, x.Rarity)).ToList(), p, now);
+        TickEnemyStates(near.Select(x => (x.E, x.Id, x.G, x.Dist, x.Rarity)).ToList(), p, now);
+
 
         if (!EnemySounds) return;
 
@@ -530,13 +544,13 @@ internal sealed partial class Navigator
     // pitch and tempo rules as the enemies (600 ms at the screen's edge, 150 ms beside you).
     // ===================================================================
 
-    public bool NpcSounds = true;
+    public bool NpcSounds = true, PlayerSounds = true;
     private readonly Dictionary<long, long> _npcNextMs = new Dictionary<long, long>();
     private long _lastNpcCueMs, _nextNpcTickMs;
 
     private void TickNpcs(long now, Vector2 p)
     {
-        if (!NpcSounds || now < _nextNpcTickMs) return;
+        if (!NpcSounds && !PlayerSounds || now < _nextNpcTickMs) return;
         _nextNpcTickMs = now + 60;
         if (now - _lastNpcCueMs < 100) return;
 
@@ -547,6 +561,7 @@ internal sealed partial class Navigator
             EntityType t = Try(() => e.Type, EntityType.Error);
             bool player = t == EntityType.Player;
             if (t != EntityType.Npc && !player) continue;
+            if (player ? !PlayerSounds : !NpcSounds) continue;
             if (player && Try(() => e.Address, 0L) == me) continue;
             long id; Vector2 g;
             try { id = e.Id; g = e.GridPosNum; } catch { continue; }
@@ -674,6 +689,10 @@ internal sealed partial class Navigator
     /// <summary>The cue for an item on the ground, or null for an item that should stay quiet.</summary>
     public Func<Entity, Synth.Loot?> LootKind;
     public Func<float> LootVolume;
+    // The game's own sounds (GameSounds) and the drop sound of an item on the ground.
+    public GameSounds GameAudio;
+    public Func<Entity, string> LootEvent;
+    private readonly Dictionary<long, string> _lootEvents = new Dictionary<long, string>();
 
     private const float LootCells = 90f;          // about a screen
     private const int LootVoices = 4;             // the nearest four sound at once
@@ -708,7 +727,7 @@ internal sealed partial class Navigator
         {
             _lootCleanMs = now;
             var live = new HashSet<long>(Entities().Select(x => Try(() => x.Address, 0L)));
-            foreach (long k in _lootKinds.Keys.Where(k => !live.Contains(k)).ToList()) { _lootKinds.Remove(k); _lootNextMs.Remove(k); }
+            foreach (long k in _lootKinds.Keys.Where(k => !live.Contains(k)).ToList()) { _lootKinds.Remove(k); _lootNextMs.Remove(k); _lootEvents.Remove(k); }
         }
 
         // One cue per tick: the nearest due item among the nearest few.
@@ -724,10 +743,22 @@ internal sealed partial class Navigator
                 pitch = sd.Y > 0.4f ? 1.12f : sd.Y < -0.4f ? 0.89f : 1f;   // up the screen higher, down lower
             }
             var kind = it.Kind;
-            // Louder than before (the cue is brought to full level, and far items keep 60% of it)
-            // and more often: every 0.4 s close by up to 1.4 s at a screen's distance.
-            _audio.Play("loot:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch),
-                        LootVolume() * 1.4f * (0.6f + 0.4f * closeness));
+            float vol = LootVolume() * 1.4f * (0.6f + 0.4f * closeness);
+            // The game's own drop sound for the item (from your installed game), with the game's
+            // unique drop over a unique and the mod's short rarity tone over a magic or rare one;
+            // the mod's own cue when the game's sounds cannot be played.
+            string drop = null;
+            if (GameAudio != null && GameAudio.Available && LootEvent != null && !_lootEvents.TryGetValue(it.Id, out drop))
+                _lootEvents[it.Id] = drop = Try(() => LootEvent(it.E), null);
+            float gameVol = vol * AudioEngine.Master;
+            if (drop != null && GameAudio.Play(drop, pan, pitch, gameVol))
+            {
+                if (kind == Synth.Loot.Unique) GameAudio.Play(GameSounds.UniqueLayer, pan, pitch, gameVol);
+                else if (kind == Synth.Loot.Rare || kind == Synth.Loot.Magic)
+                    _audio.Play("rarity:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch), vol * 0.55f);
+            }
+            else
+                _audio.Play("loot:" + kind + ":" + pan + ":" + pitch, () => Synth.LootCue(kind, pan, pitch), vol);
             _lootNextMs[it.Id] = now + 400 + (long)(1000 * (1 - closeness));   // more often as you get closer
             break;
         }
@@ -766,7 +797,7 @@ internal sealed partial class Navigator
         foreach (Entity e in Entities())
         {
             Cat cat = Category(e);
-            if (cat == Cat.None || cat == Cat.Enemies) continue;
+            if (cat == Cat.None || cat == Cat.Enemies || cat == Cat.Players && IsMe(e)) continue;
 
             long id;
             Vector2 g;
@@ -1103,9 +1134,9 @@ internal sealed partial class Navigator
     // Scanner
     // ===================================================================
 
-    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Enemies, Items, Chests, Objects, None }
+    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Players, Enemies, Items, Chests, Objects, None }
 
-    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
+    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Players, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
 
     private static string CatName(Cat c) => c switch
     {
@@ -1115,6 +1146,7 @@ internal sealed partial class Navigator
         Cat.Unexplored => T("Unexplored", "Sin explorar"),
         Cat.Waypoints => T("Waypoints", "Transportadores"),
         Cat.Characters => T("Characters", "Personajes"),
+        Cat.Players => T("Other players", "Otros jugadores"),
         Cat.Enemies => T("Enemies", "Enemigos"),
         Cat.Items => T("Items", "Objetos"),
         Cat.Chests => T("Chests", "Cofres"),
@@ -1152,6 +1184,8 @@ internal sealed partial class Navigator
     private int _scanIndex = -1;
     private long _lastScanMs;
     private ScanItem _scanChoice;
+
+    private bool IsMe(Entity e) => Try(() => e.Address == _gc.Player.Address, false);
 
     private IEnumerable<Entity> Entities()
     {
@@ -1248,6 +1282,8 @@ internal sealed partial class Navigator
                 return Cat.Waypoints;
             case EntityType.Npc:
                 return Cat.Characters;
+            case EntityType.Player:
+                return Cat.Players;   // yourself is left out where the lists are made (IsMe)
             case EntityType.Monster:
                 try { return e.IsHostile && e.IsAlive && e.IsTargetable ? Cat.Enemies : Cat.None; } catch { return Cat.None; }
             case EntityType.WorldItem:
@@ -1281,7 +1317,7 @@ internal sealed partial class Navigator
     {
         if (cat == Cat.Unexplored) return UnexploredList(p);
         if (cat == Cat.Death) return DeathList();
-        var list = Entities().Where(e => Category(e) == cat);
+        var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
         return list.OrderBy(e => (e.GridPosNum - p).LengthSquared()).Take(40).Select(Of).ToList();
     }
@@ -1432,6 +1468,14 @@ internal sealed partial class Navigator
         string name = NameOf(e, itemName);
         try
         {
+            if (e.Type == EntityType.Player)
+            {
+                var pc = e.GetComponent<Player>();
+                int level = pc?.Level ?? 0;
+                string who = pc?.PlayerName;
+                if (string.IsNullOrWhiteSpace(who)) who = name;
+                return who + (level > 0 ? T($", level {level}", $", nivel {level}") : "");
+            }
             if (e.Type == EntityType.Monster)
             {
                 string rar = e.Rarity switch

@@ -55,6 +55,7 @@ public partial class PoE1AccessCore
         new("Log Out", "ConsoleLogOut"), new("Switch League", "ConsoleSwitchLeague"), new("Select League", "ConsoleSelectLeague"),
         new("Switch Class", "ConsoleSwitchClass"), new("Select Class", "ConsoleSelectClass"),
     };
+    private static readonly GameWord DeleteCharacterWord = new("Delete Character", "ConsoleDeleteCharacter");
     private static readonly GameWord NavigateSkillsWord = new("Navigate Skills", "ConsoleNavigateSkills");
     private static readonly GameWord SelectSkillWord = new("Select Skill", "ConsoleSelectSkill");
 

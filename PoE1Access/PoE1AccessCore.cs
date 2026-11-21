@@ -43,6 +43,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private const int MaxSpeechChars = 2500;
 
     private static readonly Regex TagRegex = new Regex("<[^<>]{1,60}>", RegexOptions.Compiled);
+    private static readonly Regex KeywordRegex = new Regex(@"\[([^\[\]|]{1,60})(?:\|([^\[\]]{1,80}))?\]", RegexOptions.Compiled);
     // Grammar marks of the translated texts: "<<set:M>><<set:S>><<set:MS>>Introduce el nombre de tu Templario".
     private static readonly Regex GrammarRegex = new Regex("<<set:[^<>]{0,20}>>", RegexOptions.Compiled);
     private static readonly Regex ControllerRegex = new Regex("<<\\s*([A-Za-z0-9_]{1,40})\\s*>>", RegexOptions.Compiled);
@@ -207,6 +208,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private string _pendingText = "";
     private long _pendingSinceMs;
     private string _lastHoverSpoken = "";
+    private bool _hoverQuiet;   // the hovered passive node is the one the finder was used on
     private string _lastSpoken = "";
 
     // Panel announcements.
@@ -258,6 +260,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
             _audio = new AudioEngine();
             PluginLog.Write("Audio: " + (_audio.Available ? "XAudio2 ready" : "unavailable: " + _audio.Error));
+            _gameSounds = new GameSounds();
+            PluginLog.Write("Game sounds: " + (_gameSounds.Available ? "the game's FMOD banks are open" : "not used (" + _gameSounds.Error + ")"));
             _nav = new Navigator(GameController, _audio, t => Say(t, true), t => Say(t, false),
                 () => Settings.RadarVolume.Value / 100f, () => Settings.GuideVolume.Value / 100f);
 
@@ -361,6 +365,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         ReleaseInExileApiMutex();
         StopBackgroundLoop();
         try { _audio?.Dispose(); } catch { }
+        try { _gameSounds?.Dispose(); } catch { }
         base.OnClose();
     }
 
@@ -408,6 +413,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
             HandleHotkeys();
 
+            _gameSounds?.Update();
             bool inGame = GameController.InGame && !GameController.IsLoading;
             if (_lastInGame != inGame)
             {
@@ -445,6 +451,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("equipment selection", () => PollEquipmentSelection(now));
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
+            Guard("player alerts", () => PollPlayerAlerts(now));
             Guard("dialogue", () => PollDialogue(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
@@ -455,13 +462,20 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.RoutePrompts = Settings.RoutePrompts.Value;
                 _nav.UnexploredMark = Settings.UnexploredMark.Value;
                 _nav.LootKind = Settings.LootSounds.Value ? LootKindOf : null;
+                _nav.GameAudio = Settings.GameLootSounds.Value ? _gameSounds : null;
+                _nav.LootEvent ??= LootEventOf;
                 _nav.LootVolume ??= () => Settings.LootVolume.Value / 100f;
                 _nav.EnemyVolume ??= () => Settings.EnemyVolume.Value / 100f;
                 _nav.EnemySounds = Settings.EnemySounds.Value;
                 _nav.NpcSounds = Settings.NpcSounds.Value;
+                _nav.PlayerSounds = Settings.PlayerSounds.Value;
                 _nav.ReachPing = Settings.ReachPing.Value;
                 _nav.ReachDistance = Settings.ReachDistance.Value;
                 _nav.AnnounceEnemies = Settings.AnnounceEnemies.Value;
+                _nav.DodgeWarnings = Settings.DodgeWarnings.Value;
+                _nav.DodgeWarningsAll = Settings.DodgeWarningsAll.Value;
+                _nav.ObjectSounds = Settings.ObjectSounds.Value;
+                _nav.EnemyStateSounds = Settings.EnemyStateSounds.Value;
                 _nav.DescribeAreas = Settings.DescribeAreas.Value;
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;
@@ -509,6 +523,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("where", Settings.WhereHotkey, Keys.Insert)) cmd = ControllerInput.Command.Tap;
         if (Pressed("guide", Settings.GuideHotkey, Keys.Delete)) cmd = ControllerInput.Command.Guide;
         if (Pressed("status", Settings.StatusHotkey, Keys.F1)) cmd = ControllerInput.Command.DoubleTap;
+
+        // The passive tree finder on the D-pad (Path of Exile 2 Access's): only with the tree open.
+        int dpad = Settings.ControllerCommands.Value ? _pad.DPadPressed : 0;
+        if (dpad != 0 && !MenuOpen && Settings.PassiveFinder.Value && _openPanels != null && _openPanels.Any(t => IsGameWord(t, PassivesTitle)))
+            Guard("passive finder", () => FinderStep(dpad));
 
         // The mod's settings menu: while open it takes the mod's gestures and the arrow keys.
         if (MenuOpen)
@@ -668,12 +687,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         parts.AddRange(new[]
         {
             T($"Life {lifePct} percent", $"Vida {lifePct} por ciento"),
-            T($"mana {manaPct} percent", $"maná {manaPct} por ciento"),
+            T($"Mana {manaPct} percent", $"Maná {manaPct} por ciento"),
         });
         if (life.MaxES > 0)
         {
             int esPct = Pct(life.CurES, life.MaxES);
-            parts.Add(T($"energy shield {esPct} percent", $"escudo de energía {esPct} por ciento"));
+            parts.Add(T($"Energy shield {esPct} percent", $"Escudo de energía {esPct} por ciento"));
         }
 
         // The flasks' uses left, in slot order: "Small Life Flask, 3 uses".
@@ -689,7 +708,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 }
             }
 
-        string area = Try(() => GameController.Area.CurrentArea.DisplayName, "");
+        string area = Try(() => GameController.Area.CurrentArea.Name, "") ?? "";
+        if (area.Length == 0) area = Try(() => GameController.Area.CurrentArea.DisplayName, "") ?? "";
         int areaLevel = Try(() => GameController.Area.CurrentArea.RealLevel, 0);
         if (area.Length > 0) parts.Add(areaLevel > 0 ? T($"{area}, area level {areaLevel}", $"{area}, nivel de área {areaLevel}") : area);
 
@@ -910,7 +930,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // probe marks the offsets that contain it.
     private void RunTextProbe()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         Element hover = state.UIHover;
@@ -1025,7 +1045,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Element pre = PreGameRoot();
             if (pre != null) return pre;
         }
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return null;
         Element root = Try<Element>(() => state.UIRoot, null);
         if (root == null || root.Address == 0) root = Try<Element>(() => state.IngameUi, null);
@@ -1126,6 +1146,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // Pre-game screens (login, character selection, character creation)
     // ===================================================================
 
+    // The game states that are screens before the game (StateNames' spoken ones).
+    private static readonly HashSet<string> PreGameScreens = new HashSet<string>
+    {
+        "LoginState", "SelectCharacterState", "CreateCharacterState", "DeleteCharacterState", "ChangePasswordState", "CreditsState",
+    };
+
     private static readonly Dictionary<string, string> StateNames = new Dictionary<string, string>
     {
         { "LoginState", "Login screen" },
@@ -1181,16 +1207,46 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                                   Try<IList<GameState>>(() => game.ActiveGameStates, null);
         if (active == null) return ("", 0);
 
-        // The last state with a screen of its own is the one showing.
+        // The last state with a screen of its own is the one showing. The game leaves character
+        // creation in the list when you go back from it, even after logging out ("PreGameState,
+        // LoginState, CreateCharacterState" on the login screen, found 20 Nov 2026), so a screen
+        // whose UI root is hidden or gone (the left-behind creation state has none) is passed over
+        // while another screen lies below it. The login screen keeps its root elsewhere and is
+        // never left behind.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var st = active[i];
             if (st == null || st.Address == 0) continue;
             string type = byAddr.TryGetValue(st.Address, out string t) ? t : "Unknown";
             if (StateNames.TryGetValue(type, out string spoken) && spoken.Length == 0) continue;
+            if (PreGameScreens.Contains(type) && type != "LoginState" && !StateUiShown(st.Address) &&
+                active.Take(i).Any(b => b != null && byAddr.TryGetValue(b.Address, out string bt) && PreGameScreens.Contains(bt)))
+                continue;
             return (type, st.Address);
         }
         return ("", 0);
+    }
+
+    // Whether a screen's UI is shown: character selection and creation keep their UI root at
+    // state +0x218, and it is visible. A screen left behind has no root there, while its other
+    // pointers may lead to stray elements of other screens (seen 20 Nov 2026), so only +0x218
+    // counts. Checked at most twice a second per state.
+    private const int ScreenRootOffset = 0x218;
+    private readonly Dictionary<long, (long AtMs, bool Shown)> _stateUiShown = new Dictionary<long, (long, bool)>();
+
+    private bool StateUiShown(long stateAddr)
+    {
+        long now = _clock.ElapsedMilliseconds;
+        if (_stateUiShown.TryGetValue(stateAddr, out var c) && now - c.AtMs < 500) return c.Shown;
+        bool shown = false;
+        long p = Try(() => Mem.Read<long>(stateAddr + ScreenRootOffset), 0L);
+        if (p >= 0x10000 && p <= 0x7FFF_FFFF_FFFF)
+        {
+            Element e = Try<Element>(() => Game.GetObject<Element>(p), null);
+            if (e != null && LooksLikeElement(e, out _)) shown = Try(() => UiText.VisibleLocal(Mem, e), false);
+        }
+        _stateUiShown[stateAddr] = (now, shown);
+        return shown;
     }
 
     // A state's UI root: the pointer in the state's first bytes that leads to an element named
@@ -1349,6 +1405,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         Guard("screen title", () => PollScreenTitle(now));
         Guard("class outline", () => PollClassOutline(now));
 
+
         // The class screen's outlined Exile is read from the scene (ClassScreen.cs). Also known:
         // CreateCharacterState +0x240 is non-zero while a class is picked, and [state +0x2E0]
         // +0x40 is the picked class number.
@@ -1356,6 +1413,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Settings.ReadFocus.Value) PollFocus(now);
         // The screen's button prompts (character creation, selection, login): said as they change.
         Guard("button legend", () => PollButtonLegend(now, true));
+        Guard("screen messages", () => PollScreenMessages(now));
     }
 
     // Pre-game screens carry their instructions in an element named "title_frame" ("Creation.
@@ -1765,8 +1823,16 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         PluginLog.Write(kind + ": [" + path + "] name=" + UiText.Name(Mem, e) + " -> \"" + text + "\"" +
                         (controlKind.Length > 0 ? " control=" + controlKind : ""));
-        if (text.Length > 0) Say(text, true);
+        // The same line again at once (the screen's first focus, then its highlight settling on
+        // the same character a quarter of a second later) is not said twice.
+        long nowMs = _clock.ElapsedMilliseconds;
+        if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
+        _lastFocusText = text;
+        _lastFocusTextMs = nowMs;
     }
+
+    private string _lastFocusText = "";
+    private long _lastFocusTextMs;
 
     // The login screen's news banners are pictures with no text, downloaded into the game's
     // MOTDCache: their file name says what they are ("public_news_2026-11-07_ExileCon_Packs_Half_
@@ -2029,7 +2095,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (stableFor >= Settings.HoverDelayMs.Value && text != _lastHoverSpoken)
         {
             // A dialogue's options are read one at a time by PollDialogue, not as one list.
-            if (IsWholeOptionList(text) || IsWorldMapText(text)) { _lastHoverSpoken = text; return; }
+            if (IsWholeOptionList(text) || IsWorldMapText(text) || _hoverQuiet) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
         }
@@ -2037,7 +2103,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
     private string ReadHoverText(long now)
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) return "";
 
         Element hover = state.UIHover;
@@ -2083,6 +2149,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         var tipParts = new List<string>();
         if (tipOk) CollectText(tip, 10, tipParts);
 
+        _hoverQuiet = false;   // set again by DescribePassive for the finder's node
         if (type == ElementType.PassivePoint)
         {
             string passive = Guard("passive", () => DescribePassive(hover, tipParts));
@@ -2189,6 +2256,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         string notLinkedText = T("not linked", "sin enlazar");
         string status = allocated ? T("allocated", "asignada")
             : node.CanAllocate ? T("can be allocated", "se puede asignar")
+            : Try(() => _passiveLinks != null && _passiveLinks.TryGetValue(skill.Address, out var near) && ids != null &&
+                        near.Any(o => _passiveIdOfRow.TryGetValue(o, out ushort op) && ids.Contains(op)), false) ? T("linked", "enlazada")
             : notLinkedText;
 
         // Class starts are stored as "MARAUDER", "SIX" (Shadow) and "Seven" (Scion).
@@ -2210,6 +2279,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         catch (Exception ex) { Report("passive links", ex); }
         var parts = new List<string> { name + ", " + kind + (status.Length > 0 ? ", " + status : "") +
                                         (!allocated && !string.IsNullOrEmpty(distance) && status == notLinkedText ? ", " + distance : "") };
+        // The finder's guide (D-pad), right after the node's name, so it is heard first.
+        _passiveHover = hover;
+        _passiveHoverRow = skill.Address;
+        // The node the finder was used on is not read again over the finder's words; another
+        // node is, and ends that.
+        _hoverQuiet = _finderQuietRow != 0 && _finderQuietRow == skill.Address;
+        if (!_hoverQuiet) _finderQuietRow = 0;
+        string guide = Try(() => FinderGuide(skill.Address), "");
+        if (guide.Length > 0) parts.Add(guide);
 
         // What the node does: the game's own tooltip text when it can be found on screen,
         // otherwise the node's stats in plain words.
@@ -2221,6 +2299,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (parts.Count == before)
             foreach (var (stat, value) in Try(() => skill.Stats.ToList(), new List<(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord, int)>()))
             {
+                // The game's own words when known (keystones' rules too), else the stat in words.
+                var game = Try(() => PassiveStatText(stat, value), new List<string>());
+                if (game.Count > 0) { parts.AddRange(game); continue; }
                 string s = StatWords(stat?.Key, value);
                 if (s.Length > 0) parts.Add(s);
             }
@@ -2689,7 +2770,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // F11: the element under the cursor, its tooltip, and what the plugin made of it.
     private void DumpHovered()
     {
-        IngameState state = GameController.IngameState;
+        IngameState state = GameController?.IngameState;
         if (state == null) { Say("No game state available", true); return; }
 
         var sb = new StringBuilder();
@@ -2841,6 +2922,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             s = ControllerRegex.Replace(s, m => ", " + PromptName(m.Groups[1].Value) + " ");
         if (s.IndexOf('<') >= 0) s = TagRegex.Replace(s, " ");
         s = s.Replace("{", "").Replace("}", "");
+        // Keyword links in mod texts: "[PlayerItemRarity|Item Rarity]" -> "Item Rarity",
+        // "[Spell]" -> "Spell".
+        if (s.IndexOf('[') >= 0) s = KeywordRegex.Replace(s, m => m.Groups[2].Success ? m.Groups[2].Value : m.Groups[1].Value);
 
         var sb = new StringBuilder(s.Length);
         bool space = false;
@@ -2856,7 +2940,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 sb.Append(c);
             }
         }
-        return sb.ToString().Replace(" ,", ",").TrimStart(',', ' ');
+        // "> Connecting to login server..." (the login screen's log lines): the mark goes.
+        return sb.ToString().Replace(" ,", ",").TrimStart(',', ' ', '>').TrimStart();
     }
 
     // Joins parts into one phrase, with a pause between them.

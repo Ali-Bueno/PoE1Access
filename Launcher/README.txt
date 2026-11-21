@@ -5,19 +5,42 @@ items, panels and what is around you through your screen reader, and adds sounds
 way: a wall radar, unexplored-ground pips, and a guide to whatever you choose.
 
 Items on the ground keep making a sound while they are within about a screen of you, from the
-side they are on, higher when up the screen, and more often as you get closer. Each kind has its
-own sound: currency clinks, scrolls rustle, gems ring like glass, flasks bubble, and equipment
-thumps, with one rising note for magic, three for rare and a full chord for unique. Quest items,
-maps, divination cards and jewels each have their own sound too. In Exile API's settings (F12)
-you can turn them off (LootSounds), sound only magic-or-better or only valuable items
-(LootFilter 1 or 2), or change their volume (LootVolume). The mod makes these sounds itself.
+side they are on, higher when up the screen, and more often as you get closer. Each item plays
+the game's own drop sound for its kind (an orb, a scroll, a gem, a flask, a ring, a helm, metal
+or leather armour, a sword...), played from your installed game with the game's own sound
+library; nothing of the game's is copied. A unique adds the game's unique drop sound, a rare or
+magic item the mod's rarity tone (three notes for rare, one for magic). "Loot uses the game's own
+drop sounds" in the F3 menu (GameLootSounds) switches back to the mod's own sounds, which are
+also used if the game's cannot be played. You can turn loot sounds off (LootSounds), sound only
+magic-or-better or only valuable items (LootFilter 1 or 2), or change their volume (LootVolume).
+Other players near you make a quick double tap (PlayerSounds, "Other player sounds" in the F3
+menu), and the scanner lists them under Other players.
 
 Enemies within about a screen growl from the side they are on (the Poe2Access enemy sounds,
 rebuilt): a short low growl, repeated faster as they get closer, lower in pitch when they are
 below you; magic and rare enemies buzz on top, uniques ring like struck metal. The four that
 matter most sound (uniques first, then magic and rare, then the nearest); enemies behind walls
-stay quiet, except uniques. When an enemy comes within melee reach, two quick rising notes play
+stay quiet, uniques too. When an enemy comes within melee reach, two quick rising notes play
 from its side (ReachPing, ReachDistance); they play again once every enemy has stepped back.
+When a rare or unique monster starts an attack or spell aimed at you, a dodge warning plays from
+its side: a blade over a low gong dropping into a bass hit, louder the closer it is
+(DodgeWarnings). "Dodge warning for every enemy" in the F3 menu adds every monster within a few
+steps (DodgeWarningsAll).
+Things worth walking to sound from their side, faster and louder as you get closer, within about
+two screens (ObjectSounds): the three nearest unopened chests in sight (a low wooden knock), the
+nearest shrine you can still take (a shimmer), and the nearest waypoint (a droning hum), portal
+(a rising swirl), exit (a soft rush of air) and stash (a lid's clunk).
+While you stand in harmful ground (burning, chilled, shocked, tarred, desecrated or caustic
+ground, a vortex, spores, a monster's degeneration aura) two harsh low stabs repeat, and its name
+is said the first time (HarmfulGroundSound). Your harmful states are said as they begin and end
+with a short buzz: "Frozen", "No longer frozen", ignited, chilled, shocked, poisoned, bleeding,
+maimed, blinded, hindered, "Cursed: Temporal Chains" (StatusAlerts). Frenzy, power and endurance
+charges play a rising or falling pair of notes and say the count (ChargeAlerts). A boss's life is
+said as it falls past 75, 50, 25 and 10 percent, and "defeated" (AnnounceBossLife); a level up
+plays three rising notes and says the level (AnnounceLevelUp). Each ailment you put on an enemy in
+sight has a short sound of its own from its side (EnemyStateSounds): frozen an icy ring, chilled a
+glassy note, ignited a crackle, shocked a falling zap, poisoned a bubbling pair, bleeding a wet
+drip, cursed a low swell.
 The two nearest NPCs make a light wooden tap from their side, and
 the nearest other player a quicker, higher double tap (NpcSounds). Life, mana and energy shield
 are spoken as they fall below 75, 50 and 25 percent (AnnounceResources). Double tap L3 for your
@@ -72,11 +95,13 @@ Each time you start PoE1Access.exe it checks the mod's GitHub page
 (https://github.com/Random4358/PoE1Access/releases) and, when there is a newer version, says
 "Updating Path of Exile access", installs it in this folder and starts again. Exile API is kept
 up to date the same way. Your Exile API settings are kept. Without an internet connection it
-simply starts the version you have.
+simply starts the version you have. After an update it reads what changed (the release notes of
+every version since the last one you had), and keeps them in app\whats-new.txt.
 
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
-- Hold L3 + right stick up or down / Page Up, Page Down: scanner category (Quest lists only what
+- Hold L3 + right stick up or down / Page Up, Page Down: scanner category (among them Other
+  players, each with their name and level) (Quest lists only what
   the game itself marks with a quest icon on the minimap; it is skipped when there is none;
   "Where you died" holds the spot of your last death in the area you are in, to guide you back)
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
@@ -88,6 +113,11 @@ In game (controller, L3 = left stick click / keyboard):
   each section
 - In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
   up and down for its details (description, speed, cost, cooldown, damage, linked supports)
+- Passive tree finder, D-pad (as in Poe2Access): up and down choose a list (Position, Keystones,
+  Notables, Jewel sockets, Next to your nodes), left and right go through it, fewest points
+  first. The node named becomes the target: each node you move to says which way it lies and,
+  while it is not linked, the next node to allocate on the cheapest way ("Allocate this one").
+  Position drops the target. Nothing is allocated for you.
 - World map (from a waypoint): opening it says the act and your current quest; moving the
   selection says the place and its kind ("Lioneye's Watch, Town"); tap L3 for its flavour text
 - Triple tap L3 / Delete: guide to the chosen thing on or off (R3 is left to the game, which
@@ -102,7 +132,8 @@ MOD SETTINGS MENU (spoken, as in Poe2Access)
   turn a switch on or off, or change a value in steps of 5; a volume plays its sound.
 - Tap L3 (or Backspace): back up one level. Double tap L3, or hold F3 again: close.
 - Submenus: Sound volumes (master, enemies and combat, loot, radar, guide), Speech (speech speed
-  and what is announced), Sounds on or off, Reading.
+  and what is announced), Sounds on or off, Reading, and Sound glossary: every sound the mod makes
+  with what it means; right stick left or right plays it (as in Poe2Access).
 - Speech speed applies to the Windows voice; NVDA and JAWS keep the speed set in the screen
   reader.
 

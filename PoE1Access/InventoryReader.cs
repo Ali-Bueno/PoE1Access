@@ -149,6 +149,8 @@ public partial class PoE1AccessCore
         if (itemLevel > 0 && gem == null) lines.Add(T($"Item level {itemLevel}", $"Nivel de objeto {itemLevel}"));
         int q = quality != null ? Try(() => quality.ItemQuality, 0) : 0;
         if (q > 0) lines.Add(T($"Quality {q} percent", $"Calidad {q} por ciento"));
+        // Damage, speed and defences, and what the item requires, as the tooltip has them.
+        if (gem == null) lines.AddRange(Try(() => ItemProperties(item), new List<string>()));
 
         int socketCount = sockets != null ? Try(() => sockets.NumberOfSockets, 0) : 0;
         if (socketCount > 0)
@@ -211,6 +213,18 @@ public partial class PoE1AccessCore
     }
 
     // ---- Loot sounds: which cue an item on the ground gets ----
+
+    private GameSounds _gameSounds;
+
+    // The game's drop sound for an item on the ground (GameSounds.DropEvent).
+    private string LootEventOf(Entity ground)
+    {
+        Entity item = Try(() => ground.GetComponent<ExileCore.PoEMemory.Components.WorldItem>()?.ItemEntity, null);
+        if (item == null || item.Address == 0) return null;
+        string path = Try(() => item.Path, "") ?? "";
+        string cls = Try(() => GameController.Files.BaseItemTypes.Translate(path)?.ClassName, "") ?? "";
+        return GameSounds.DropEvent(cls, path);
+    }
 
     private Synth.Loot? LootKindOf(Entity ground)
     {
@@ -445,7 +459,8 @@ public partial class PoE1AccessCore
                 head = title;
                 break;
         }
-        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = T($"over {head}", $"sobre {head}");
+        // Holding an item over another: placing it would swap them.
+        if (_handItemAddr != 0 && _handItemAddr != item.Address) head = T($"Over {head}", $"Sobre {head}");
 
         var lines = new List<string> { head };
         string missing = MissingRequirement(item);
@@ -781,7 +796,9 @@ public partial class PoE1AccessCore
             if (!equipped.ContainsKey(kv.Key) && _equipped != null && _equipped.TryGetValue(kv.Key, out var was))
                 equipped[kv.Key] = was;
 
-        // Flasks: the uses left, said as one is drunk (or refills from empty).
+        // Flasks: the uses left, said as one is drunk (or refills from empty). Two flasks of the
+        // same kind refilling together are said once ("Small Life Flask ready again", not twice).
+        var readyAgain = new List<string>();
         foreach (var kv in flaskUses)
         {
             if (_flaskUses.TryGetValue(kv.Key, out int before) && kv.Value.Uses >= 0 && before >= 0)
@@ -793,13 +810,16 @@ public partial class PoE1AccessCore
                     Say(usesLeft == 1 ? T($"{flaskTitle}, 1 use left", $"{flaskTitle}, 1 uso restante")
                         : T($"{flaskTitle}, {usesLeft} uses left", $"{flaskTitle}, {usesLeft} usos restantes"), false);
                 }
-                else if (before == 0 && kv.Value.Uses > 0)
-                {
-                    string flaskTitle = kv.Value.Title;
-                    Say(T($"{flaskTitle} ready again", $"{flaskTitle} listo otra vez"), false);
-                }
+                else if (before == 0 && kv.Value.Uses > 0 && !readyAgain.Contains(kv.Value.Title))
+                    readyAgain.Add(kv.Value.Title);
             }
             _flaskUses[kv.Key] = kv.Value.Uses;
+        }
+        if (readyAgain.Count > 0)
+        {
+            string flasks = string.Join(", ", readyAgain);
+            Say(readyAgain.Count == 1 ? T($"{flasks} ready again", $"{flasks} listo otra vez")
+                : T($"{flasks} ready again", $"{flasks} listos otra vez"), false);
         }
 
         if (handAddr != _handItemAddr)

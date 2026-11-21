@@ -150,6 +150,7 @@ public partial class PoE1AccessCore
             (Synth.WorldCue.Portal, T("Portal", "Portal"), T("the nearest portal", "el portal más cercano")),
             (Synth.WorldCue.Exit, T("Exit", "Salida"), T("the nearest way to another area", "el paso más cercano a otra área")),
             (Synth.WorldCue.Stash, T("Stash", "Alijo"), T("the nearest stash", "el alijo más cercano")),
+            (Synth.WorldCue.Cauldron, T("Cauldron", "Caldero"), T("a Coven's Cauldron whose Fate you have not chosen, or the boss cauldron", "un caldero del aquelarre cuyo Destino no has elegido, o el caldero del jefe")),
         };
         foreach (var (kind, label, meaning) in objects)
         {

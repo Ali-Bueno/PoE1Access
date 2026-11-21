@@ -32,7 +32,8 @@ memory. The mod only reads: it never changes the game and never presses anything
   monster starting an attack aimed at you, or of any monster close by if you choose. Things
   worth walking to sound from their side, faster as you get closer: chests (a wooden knock),
   shrines (a shimmer), the nearest waypoint (a drone), portal (a swirl), exit (a rush of air)
-  and stash (a clunk). A harsh repeating cue warns while you stand in harmful ground, and each
+  and stash (a clunk); in the Covens league, the Coven's Cauldrons and the boss cauldron (a
+  bubbling), listed in the scanner with the Wickerman. A harsh repeating cue warns while you stand in harmful ground, and each
   ailment you put on an enemy (frozen, chilled, ignited, shocked, poisoned, bleeding, cursed) has
   a short sound of its own from its side. The settings menu's Sound glossary plays every sound
   with what it means. All sounds are synthesized by the mod.

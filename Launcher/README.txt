@@ -29,7 +29,10 @@ steps (DodgeWarningsAll).
 Things worth walking to sound from their side, faster and louder as you get closer, within about
 two screens (ObjectSounds): the three nearest unopened chests in sight (a low wooden knock), the
 nearest shrine you can still take (a shimmer), and the nearest waypoint (a droning hum), portal
-(a rising swirl), exit (a soft rush of air) and stash (a lid's clunk).
+(a rising swirl), exit (a soft rush of air) and stash (a lid's clunk). In the Covens league, a
+Coven's Cauldron whose Fate you have not chosen and the boss cauldron bubble. The scanner's
+Objects list has the cauldrons ("Coven's Cauldron, guarded by the coven" until you beat the
+coven, then "choose a Fate", then "Fate chosen"), the boss cauldron and the Wickerman in town.
 While you stand in harmful ground (burning, chilled, shocked, tarred, desecrated or caustic
 ground, a vortex, spores, a monster's degeneration aura) two harsh low stabs repeat, and its name
 is said the first time (HarmfulGroundSound). Your harmful states are said as they begin and end

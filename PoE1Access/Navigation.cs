@@ -1301,6 +1301,11 @@ internal sealed partial class Navigator
             case EntityType.DoorSwitch:
             case EntityType.CraftUnlock:
                 return Cat.Objects;
+            case EntityType.IngameIcon:
+                // League objects the game marks on the minimap: the Covens league's cauldrons and
+                // the Wickerman (internally "Augury"), and other leagues' encounters.
+                return CovenObject(e) != CovenKind.None || Try(() => { var mi = e.GetComponent<MinimapIcon>(); return mi != null && mi.Address != 0 && mi.IsVisible && !mi.IsHide; }, false)
+                    ? Cat.Objects : Cat.None;
             default:
                 return Cat.None;
         }
@@ -1449,10 +1454,48 @@ internal sealed partial class Navigator
         return dx * dx + dy * dy;
     }
 
+    // ---- Covens of Umbra (3.30; "Augury" in the game's files, checked 21 Nov 2026) ----
+    //   Coven's Cauldron  Metadata/Terrain/Leagues/Augury/Objects/AuguryCardObject: guarded by
+    //                     the coven (not targetable) until it is beaten; then a Fate card is
+    //                     chosen at it (state card_chosen).
+    //   Boss cauldron     .../AuguryBossObject: invokes the Fates on the area's boss.
+    //   Wickerman         .../EffigyObject, in town: holds the Viscera.
+    public enum CovenKind { None, Cauldron, BossCauldron, Wickerman }
+
+    public static CovenKind CovenObject(Entity e)
+    {
+        string path = Try(() => e.Path, "") ?? "";
+        if (path.IndexOf("/Leagues/Augury/Objects/", StringComparison.OrdinalIgnoreCase) < 0) return CovenKind.None;
+        if (path.EndsWith("AuguryCardObject", StringComparison.OrdinalIgnoreCase)) return CovenKind.Cauldron;
+        if (path.EndsWith("AuguryBossObject", StringComparison.OrdinalIgnoreCase)) return CovenKind.BossCauldron;
+        if (path.EndsWith("EffigyObject", StringComparison.OrdinalIgnoreCase)) return CovenKind.Wickerman;
+        return CovenKind.None;
+    }
+
+    private static int StateValue(Entity e, string name) =>
+        Try(() => (int)(e.GetComponent<StateMachine>()?.States?.FirstOrDefault(s => s.Name == name)?.Value ?? -1), -1);
+
+    // "Coven's Cauldron, guarded by the coven", "Coven's Cauldron, Fate chosen".
+    private static string CovenState(Entity e, CovenKind kind)
+    {
+        if (kind != CovenKind.Cauldron) return "";
+        if (StateValue(e, "card_chosen") > 0) return T(", Fate chosen", ", Destino elegido");
+        if (!Try(() => e.GetComponent<Targetable>()?.isTargetable ?? true, true)) return T(", guarded by the coven", ", custodiado por el aquelarre");
+        return T(", choose a Fate", ", elige un Destino");
+    }
+
     public static string NameOf(Entity e, Func<Entity, string> itemName)
     {
         try
         {
+            switch (CovenObject(e))
+            {
+                case CovenKind.Cauldron:
+                    string cn = e.RenderName;
+                    return string.IsNullOrWhiteSpace(cn) ? T("Coven's Cauldron", "Caldero del aquelarre") : cn;
+                case CovenKind.BossCauldron: return T("Boss cauldron, invokes the Fates", "Caldero del jefe, invoca los Destinos");
+                case CovenKind.Wickerman: return T("Wickerman", "Hombre de mimbre");
+            }
             if (e.Type == EntityType.WorldItem)
             {
                 string n = itemName(e);
@@ -1460,6 +1503,12 @@ internal sealed partial class Navigator
             }
             string r = e.RenderName;
             if (!string.IsNullOrWhiteSpace(r)) return r;
+            if (e.Type == EntityType.IngameIcon)
+            {
+                // "AuguryEncounter" -> "Augury Encounter"
+                string icon = Try(() => e.GetComponent<MinimapIcon>()?.Name, "") ?? "";
+                if (icon.Length > 0) return System.Text.RegularExpressions.Regex.Replace(icon, "(?<=[a-z])(?=[A-Z])", " ");
+            }
             string path = e.Path ?? "";
             int i = path.LastIndexOf('/');
             return i >= 0 ? path.Substring(i + 1) : path;
@@ -1472,6 +1521,8 @@ internal sealed partial class Navigator
         string name = NameOf(e, itemName);
         try
         {
+            var coven = CovenObject(e);
+            if (coven != CovenKind.None) return name + CovenState(e, coven);
             if (e.Type == EntityType.Player)
             {
                 var pc = e.GetComponent<Player>();

@@ -329,7 +329,7 @@ internal static class Synth
 
     // ---- Things worth walking to, harmful ground and your own states (after Poe2Access's list) ----
 
-    public enum WorldCue { Chest, Shrine, Waypoint, Portal, Exit, Stash }
+    public enum WorldCue { Chest, Shrine, Waypoint, Portal, Exit, Stash, Cauldron }
 
     /// <summary>A short cue for a kind of object, from its side; pitch lowers it when below.</summary>
     public static float[] Object(WorldCue kind, float pan, float pitch)
@@ -348,6 +348,11 @@ internal static class Synth
                 return Drone(pan, 220 * pitch, 0.3, 0.32, 1);
             case WorldCue.Exit:
                 return Air(pan, 0.28, 0.45);
+            case WorldCue.Cauldron:
+                // A cauldron bubbling: three low rising blobs over a hollow hum.
+                return Mix(Drone(pan, 73 * pitch, 0.42, 0.22, 0),
+                    Seq(Seq(Sweep(pan, 150 * pitch, 260 * pitch, 0.06, 0.32, false), 0.05, Sweep(pan, 130 * pitch, 230 * pitch, 0.06, 0.3, false)),
+                        0.07, Sweep(pan, 170 * pitch, 300 * pitch, 0.05, 0.28, false)));
             default:
                 // Stash: a low clunk, a lid closing.
                 return Mix(WoodKnock(pan, 150 * pitch, 0.09), Tone(pan, 600 * pitch, 0.02, 0.12));

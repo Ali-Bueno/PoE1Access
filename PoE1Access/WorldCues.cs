@@ -40,6 +40,13 @@ internal sealed partial class Navigator
                 EntityType.Portal or EntityType.TownPortal => Synth.WorldCue.Portal,
                 EntityType.AreaTransition => Synth.WorldCue.Exit,
                 EntityType.Stash => Synth.WorldCue.Stash,
+                // A Coven's Cauldron until its Fate is chosen, and the boss cauldron.
+                EntityType.IngameIcon => CovenObject(e) switch
+                {
+                    CovenKind.Cauldron => StateValue(e, "card_chosen") > 0 ? (Synth.WorldCue?)null : Synth.WorldCue.Cauldron,
+                    CovenKind.BossCauldron => Synth.WorldCue.Cauldron,
+                    _ => null,
+                },
                 _ => null,
             };
             if (kind == null) continue;

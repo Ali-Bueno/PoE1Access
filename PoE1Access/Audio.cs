@@ -578,6 +578,29 @@ internal static class Synth
         return b;
     }
 
+    // An NPC with a quest for you: a small bell (Poe2Access's ring: 520 Hz with three
+    // inharmonic partials, 0.14 s) instead of the wooden tap.
+    private static readonly double[] RingRatios = { 1, 2.756, 5.404, 8.933 };
+    private static readonly double[] RingAmplitudes = { 1, 0.5, 0.25, 0.12 };
+    private static readonly double[] RingDecays = { 0.09, 0.05, 0.03, 0.02 };
+
+    public static float[] QuestRing(float pan, float pitch)
+    {
+        const double seconds = 0.14;
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR, v = 0;
+            for (int k = 0; k < RingRatios.Length; k++)
+                v += RingAmplitudes[k] * Math.Exp(-t / RingDecays[k]) * Math.Sin(2 * Math.PI * 520 * pitch * RingRatios[k] * t);
+            double env = Math.Min(1, t / 0.002) * Math.Min(1, (seconds - t) / 0.01);
+            Put(b, i, (float)(v * env * 0.35), g);
+        }
+        return b;
+    }
+
     // Wood: a short sine knock with an inharmonic overtone and a tiny noise click, decaying fast.
     private static float[] Knock(float pan, double f, double seconds)
     {

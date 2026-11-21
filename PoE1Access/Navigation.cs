@@ -555,7 +555,7 @@ internal sealed partial class Navigator
         if (now - _lastNpcCueMs < 100) return;
 
         long me = Try(() => _gc.Player.Address, 0L);
-        var npcs = new List<(long Id, Vector2 G, float Dist, bool Player)>();
+        var npcs = new List<(long Id, Vector2 G, float Dist, bool Player, bool Quest)>();
         foreach (Entity e in Entities())
         {
             EntityType t = Try(() => e.Type, EntityType.Error);
@@ -567,9 +567,12 @@ internal sealed partial class Navigator
             try { id = e.Id; g = e.GridPosNum; } catch { continue; }
             float dist = (g - p).Length();
             if (dist > EnemyCells || !InSight(p, g)) continue;
-            npcs.Add((id, g, dist, player));
+            // The quest mark over an NPC's head: it has something for you.
+            bool quest = !player && Try(() => e.GetComponent<NPC>()?.HasIconOverhead ?? false, false);
+            npcs.Add((id, g, dist, player, quest));
         }
-        var streams = npcs.Where(x => !x.Player).OrderBy(x => x.Dist).Take(2)
+        // NPCs with a quest come first, so they are heard even when others stand nearer.
+        var streams = npcs.Where(x => !x.Player).OrderByDescending(x => x.Quest).ThenBy(x => x.Dist).Take(2)
             .Concat(npcs.Where(x => x.Player).OrderBy(x => x.Dist).Take(1)).ToList();
         var due = streams
             .Select(x => (It: x, Due: _npcNextMs.TryGetValue(x.Id, out long d) ? d : long.MinValue / 2))
@@ -587,7 +590,8 @@ internal sealed partial class Navigator
             pitch = (float)(Math.Round((1f - 0.2f * below) * 20) / 20);
         }
         bool pl = it.Player;
-        _audio.Play("npc:" + pl + ":" + pan + ":" + pitch, () => Synth.Tap(pan, pitch, pl), EnemyVolume?.Invoke() ?? 0.7f);
+        if (it.Quest) _audio.Play("npcquest:" + pan + ":" + pitch, () => Synth.QuestRing(pan, pitch), EnemyVolume?.Invoke() ?? 0.7f);
+        else _audio.Play("npc:" + pl + ":" + pan + ":" + pitch, () => Synth.Tap(pan, pitch, pl), EnemyVolume?.Invoke() ?? 0.7f);
         float nearness = Math.Min(1f, it.Dist / EnemyCells);
         _npcNextMs[it.Id] = now + (pl ? 120 : 150) + (long)((pl ? 380 : 450) * nearness);
         _lastNpcCueMs = now;
@@ -1487,6 +1491,8 @@ internal sealed partial class Navigator
                 };
                 return rar;
             }
+            if (e.Type == EntityType.Npc && (e.GetComponent<NPC>()?.HasIconOverhead ?? false))
+                return T($"{name}, has a quest", $"{name}, con misión");
         }
         catch { }
         return name;

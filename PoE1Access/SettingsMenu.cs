@@ -135,8 +135,8 @@ public partial class PoE1AccessCore
         foreach (Synth.EnemyState st in Enum.GetValues(typeof(Synth.EnemyState)))
         {
             var state = st;
-            string en = st.ToString().ToLowerInvariant(), es = EnemyStateSpanish(st);
-            items.Add(S(T($"Enemy {en}", $"Enemigo {es}"), T($"you made an enemy {en}", $"has dejado a un enemigo {es}"), () => Synth.EnemyStateCue(state, 0f), enemy));
+            string word = EnemyStateWord(st);
+            items.Add(S(T($"Enemy {word}", $"Enemigo {word}"), T($"you made an enemy {word}", $"has dejado a un enemigo {word}"), () => Synth.EnemyStateCue(state, 0f), enemy));
         }
         items.Add(S(T("Charge gained", "Carga ganada"), T("a frenzy, power or endurance charge gained; its count follows", "ganas una carga de frenesí, de poder o de aguante; después se dice cuántas tienes"), () => Synth.Charge(0, true), enemy));
         items.Add(S(T("Charge lost", "Carga perdida"), T("a charge lost", "pierdes una carga"), () => Synth.Charge(0, false), enemy));
@@ -194,16 +194,16 @@ public partial class PoE1AccessCore
         return items;
     }
 
-    // The Spanish word for an ailment left on an enemy ("congelado"), for the glossary.
-    private static string EnemyStateSpanish(Synth.EnemyState state) => state switch
+    // How an ailment left on an enemy is said ("frozen"), for the glossary.
+    private static string EnemyStateWord(Synth.EnemyState state) => state switch
     {
-        Synth.EnemyState.Frozen => "congelado",
-        Synth.EnemyState.Chilled => "helado",
-        Synth.EnemyState.Ignited => "en llamas",
-        Synth.EnemyState.Shocked => "electrocutado",
-        Synth.EnemyState.Poisoned => "envenenado",
-        Synth.EnemyState.Bleeding => "sangrando",
-        Synth.EnemyState.Cursed => "maldito",
+        Synth.EnemyState.Frozen => T("frozen", "congelado"),
+        Synth.EnemyState.Chilled => T("chilled", "helado"),
+        Synth.EnemyState.Ignited => T("ignited", "en llamas"),
+        Synth.EnemyState.Shocked => T("shocked", "electrocutado"),
+        Synth.EnemyState.Poisoned => T("poisoned", "envenenado"),
+        Synth.EnemyState.Bleeding => T("bleeding", "sangrando"),
+        Synth.EnemyState.Cursed => T("cursed", "maldito"),
         _ => state.ToString().ToLowerInvariant(),
     };
 

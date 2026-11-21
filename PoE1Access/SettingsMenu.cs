@@ -125,6 +125,7 @@ public partial class PoE1AccessCore
             S(T("Rare enemy", "Enemigo raro"), T("a rare enemy", "un enemigo raro"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Rare, 0f, 1f), enemy),
             S(T("Unique enemy", "Enemigo único"), T("a unique enemy, a boss", "un enemigo único, un jefe"), () => Synth.Growl(ExileCore.Shared.Enums.MonsterRarity.Unique, 0f, 1f), enemy),
             S(T("Character", "Personaje"), T("an NPC near you", "un PNJ cerca de ti"), () => Synth.Tap(0f, 1f, false), enemy),
+            S(T("Character with a quest", "Personaje con misión"), T("an NPC with a quest for you", "un PNJ con una misión para ti"), () => Synth.QuestRing(0f, 1f), enemy),
             S(T("Player", "Jugador"), T("another player near you", "otro jugador cerca de ti"), () => Synth.Tap(0f, 1f, true), enemy),
             S(T("Target", "Objetivo"), T("the game's target landed on an enemy", "el objetivo del juego se ha fijado en un enemigo"), Synth.Blips, enemy),
             S(T("Melee reach", "Alcance cuerpo a cuerpo"), T("an enemy came within melee reach", "un enemigo ha entrado en tu alcance cuerpo a cuerpo"), () => Synth.ReachPing(0f), enemy),

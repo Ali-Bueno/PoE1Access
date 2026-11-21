@@ -71,7 +71,12 @@ internal sealed class ControllerInput
 
     public Vector2 LeftStick { get; private set; }
     public Vector2 RightStick { get; private set; }
-    public bool Connected => _pad >= 0 || _ps.Connected;
+    public bool Connected => _pad >= 0 || _ps.Connected || (Game?.Found ?? false);
+
+    /// <summary>The game's own copy of the controller state, from its memory. In the Xbox full
+    /// screen experience Windows gives the pad only to the game, so XInput reads nothing here;
+    /// this is merged with what XInput gives.</summary>
+    public GameXInput Game;
 
     // A PlayStation controller, used when no XInput controller is connected.
     private readonly PlayStationPad _ps = new PlayStationPad();
@@ -99,7 +104,9 @@ internal sealed class ControllerInput
 
     public Command Poll(long now)
     {
-        if (_pad < 0 && !_ps.Connected)
+        ushort gb = 0; short glx = 0, gly = 0, grx = 0, gry = 0;
+        bool fromGame = Game != null && Game.TryRead(now, out gb, out glx, out gly, out grx, out gry);
+        if (_pad < 0 && !_ps.Connected && !fromGame)
         {
             if (now < _nextPadSearchMs) return Command.None;
             _nextPadSearchMs = now + 2000;
@@ -130,14 +137,30 @@ internal sealed class ControllerInput
             dpad = g.Buttons & 0x0F;   // XInput: up 1, down 2, left 4, right 8
             bButton = (g.Buttons & 0xE000) != 0;   // B, X or Y (A picks items up all the time)
         }
+        else if (!_ps.Connected)
+        {
+            if (!fromGame) return Command.None;
+            LeftStick = RightStick = Vector2.Zero;
+            l3 = bButton = false;
+            dpad = 0;
+        }
         else
         {
-            if (!_ps.Connected) return Command.None;
             LeftStick = _ps.LeftStick;
             RightStick = _ps.RightStick;
             l3 = _ps.L3;
             dpad = _ps.DPad;
             bButton = _ps.FaceButton;
+        }
+        if (fromGame)
+        {
+            // Whichever source sees more: XInput is neutral to background apps in full screen mode.
+            Vector2 gl = Stick(glx, gly), gr = Stick(grx, gry);
+            if (gl.Length() > LeftStick.Length()) LeftStick = gl;
+            if (gr.Length() > RightStick.Length()) RightStick = gr;
+            l3 |= (gb & L3) != 0;
+            dpad |= gb & 0x0F;
+            bButton |= (gb & 0xE000) != 0;
         }
         // D-pad directions pressed since the last poll (DPadUp, DPadDown, DPadLeft, DPadRight).
         DPadPressed = dpad & ~_dpadDown;

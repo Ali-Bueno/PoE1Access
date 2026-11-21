@@ -511,6 +511,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         ControllerInput.Command cmd = ControllerInput.Command.None;
         if (Settings.ControllerCommands.Value)
         {
+            _pad.Game ??= new GameXInput(() => Mem);
             cmd = _pad.Poll(now);
             _nav.LeftStick = _pad.LeftStick;
         }

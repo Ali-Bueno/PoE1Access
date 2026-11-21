@@ -1457,6 +1457,8 @@ internal sealed partial class Navigator
     //    "Small unexplored ground"  under 2 discs: a room or a short branch that soon ends
     //    "Unexplored nook"          all of it within one look (60 cells) of its edge: a dead end
     //  Large first, then ground, small, nooks; nearest first within each.
+    //  An entry whose unseen ground holds an exit you have not seen yet (one the game has sent,
+    //  standing on ground you have not seen) adds "leads to a new exit", without saying where.
 
     private const float RevealDisc = (float)(Math.PI * RevealCells * RevealCells);   // ~11,300 cells
     private int[] _uxStamp;
@@ -1499,9 +1501,20 @@ internal sealed partial class Navigator
             }
         }
 
+        // Exits standing on ground you have not seen yet.
+        var newExits = new List<int>();
+        foreach (var (pos, _) in AreaExits().Values)
+        {
+            var c = NearestPassable((int)pos.X, (int)pos.Y, 8);
+            if (c == null) continue;
+            int ci = c.Value.Item2 * _gridW + c.Value.Item1;
+            if (ci >= 0 && ci < n && !_seen[ci]) newExits.Add(ci);
+        }
+
         // 2. Each unseen region behind those edges: its size, and how far it reaches from its edge.
         var regionOf = new Dictionary<int, int>();          // unseen cell -> region id
         var regions = new List<(int Size, float Reach, bool Capped)>();
+        var regionHasExit = new List<bool>();
         foreach (var (_, unseen) in edges)
         {
             if (regionOf.ContainsKey(unseen) || _uxStamp[unseen] > seenGen) continue;
@@ -1531,6 +1544,7 @@ internal sealed partial class Navigator
                 }
             }
             regions.Add((size, reach, false));
+            regionHasExit.Add(newExits.Any(c => _uxStamp[c] == gen));
             // Every edge cell of this region belongs to it.
             foreach (var (_, u) in edges)
                 if (_uxStamp[u] == gen) regionOf[u] = id;
@@ -1553,6 +1567,7 @@ internal sealed partial class Navigator
             else if (!capped && size < 2 * RevealDisc) { rank = 2; label = T("Small unexplored ground", "Terreno pequeño sin explorar"); }
             else if (capped || size >= 10 * RevealDisc) { rank = 0; label = T("Large unexplored ground", "Terreno grande sin explorar"); }
             else { rank = 1; label = T("Unexplored ground", "Terreno sin explorar"); }
+            if (regionHasExit[id]) label += T(", leads to a new exit", ", lleva a una salida nueva");
 
             entries.Add((rank, (at - p).Length(), new ScanItem { Pos = at, Label = label, Cat = Cat.Unexplored }));
             if (entries.Count >= 30) break;

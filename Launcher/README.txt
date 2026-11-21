@@ -120,7 +120,9 @@ In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category (among them Other
   players, each with their name and level) (Quest lists only what
   the game itself marks with a quest icon on the minimap; it is skipped when there is none;
-  "Where you died" holds the spot of your last death in the area you are in, to guide you back)
+  "Where you died" holds the spot of your last death in the area you are in, to guide you back;
+  exits stay listed while you are in their area, however far you go; unexplored ground that
+  holds an exit you have not seen yet says "leads to a new exit")
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
 - Tap L3 / Insert: where the chosen thing is now
 - Double tap L3 / F1: level and how far you are to the next, life, mana, energy shield, area,

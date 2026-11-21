@@ -2145,6 +2145,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
 
         string status = allocated ? "allocated"
             : node.CanAllocate ? "can be allocated"
+            : Try(() => _passiveLinks != null && _passiveLinks.TryGetValue(skill.Address, out var near) && ids != null &&
+                        near.Any(o => _passiveIdOfRow.TryGetValue(o, out ushort op) && ids.Contains(op)), false) ? "linked"
             : "not linked";
 
         // Class starts are stored as "MARAUDER", "SIX" (Shadow) and "Seven" (Scion).

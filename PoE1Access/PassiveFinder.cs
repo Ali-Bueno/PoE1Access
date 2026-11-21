@@ -8,7 +8,7 @@ using ExileCore.PoEMemory.Elements;
 namespace PoE1Access;
 
 // The passive tree finder, after Path of Exile 2 Access's: with the tree open, D-pad up and down
-// choose a list (Position, Keystones, Notables, Jewel sockets, Can be allocated now) and left
+// choose a list (Position, Keystones, Notables, Jewel sockets, Next to your nodes) and left
 // and right walk it, the nodes costing fewest points first. The node named becomes the target:
 //   "Keystones, 12. Resolute Technique, 8 points away, up left. Allocate first: Life, down"
 // and every node the cursor reaches then ends with the way on, "Toward Resolute Technique: up
@@ -20,7 +20,7 @@ namespace PoE1Access;
 // along nodes you do not have, as for "N points away".
 public partial class PoE1AccessCore
 {
-    private static readonly string[] FinderLists = { "Position", "Keystones", "Notables", "Jewel sockets", "Can be allocated now" };
+    private static readonly string[] FinderLists = { "Position", "Keystones", "Notables", "Jewel sockets", "Next to your nodes" };
     private int _finderList, _finderIndex = -1;
     private long _finderTarget;
     private Element _passiveHover;
@@ -70,7 +70,7 @@ public partial class PoE1AccessCore
 
         var parts = new List<string>();
         if (announceList) parts.Add(list + ", " + nodes.Count);
-        string cost = node.Cost == 0 ? "allocated" : node.Cost == 1 ? "can be allocated" : node.Cost + " points away";
+        string cost = node.Cost == 0 ? "allocated" : node.Cost == 1 ? (CanAllocate(node.Row) ? "can be allocated" : "1 point away") : node.Cost + " points away";
         parts.Add(node.Name + ", " + cost + ", " + (_finderIndex + 1) + " of " + nodes.Count);
         string way = WayTo(node.Row);
         if (way.Length > 0) parts.Add(way);
@@ -182,8 +182,11 @@ public partial class PoE1AccessCore
         return path;
     }
 
-    // Points to each node: 0 for those you have, 1 for those you can allocate now, then one more
-    // per node along the links through nodes you do not have. Parents give the line taken.
+    // Points to each node: 0 for those you have, 1 for those linked to them (or that the game
+    // says can be allocated, such as your class's start before any point is spent), then one
+    // more per node along the links through nodes you do not have. Counted from your nodes, not
+    // from the game's "can be allocated", which is false everywhere while you have no point to
+    // spend (seen 21 Nov 2026). Parents give the line taken (0: next to your nodes).
     private Dictionary<long, int> PassiveCosts(Dictionary<long, Element> elements, Dictionary<long, List<long>> links, out Dictionary<long, long> parents)
     {
         var allocated = AllocatedPassives();
@@ -191,10 +194,10 @@ public partial class PoE1AccessCore
         parents = new Dictionary<long, long>();
         var queue = new Queue<long>();
         foreach (var kv in elements)
-        {
-            if (_passiveIdOfRow.TryGetValue(kv.Key, out ushort pid) && allocated.Contains(pid)) { cost[kv.Key] = 0; continue; }
-            if (Try(() => kv.Value.AsObject<TreePassiveElement>().CanAllocate, false)) { cost[kv.Key] = 1; parents[kv.Key] = 0; queue.Enqueue(kv.Key); }
-        }
+            if (_passiveIdOfRow.TryGetValue(kv.Key, out ushort pid) && allocated.Contains(pid)) { cost[kv.Key] = 0; queue.Enqueue(kv.Key); }
+        foreach (var kv in elements)
+            if (!cost.ContainsKey(kv.Key) && Try(() => kv.Value.AsObject<TreePassiveElement>().CanAllocate, false))
+            { cost[kv.Key] = 1; parents[kv.Key] = 0; queue.Enqueue(kv.Key); }
         while (queue.Count > 0)
         {
             long cur = queue.Dequeue();
@@ -203,7 +206,7 @@ public partial class PoE1AccessCore
             {
                 if (cost.ContainsKey(nx) || !elements.ContainsKey(nx)) continue;
                 cost[nx] = cost[cur] + 1;
-                parents[nx] = cur;
+                parents[nx] = cost[cur] == 0 ? 0 : cur;
                 queue.Enqueue(nx);
             }
         }

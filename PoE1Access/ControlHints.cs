@@ -27,7 +27,7 @@ public partial class PoE1AccessCore
     {
         ["Inventory"] = "Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item. Hold L3 longer: the whole bag, or every equipment slot",
         ["Stash"] = "Tap L3: next line of the selected item. Double tap: previous line. Hold L3: the whole item",
-        ["Passives"] = "Each node says its links. Tap L3: next line. Double tap: previous line. Hold L3: everything about the node. D-pad up and down: keystones, notables, jewel sockets and nodes to allocate; left and right: the next in the list, which the guide then leads to",
+        ["Passives"] = "Each node says its links. Tap L3: next line. Double tap: previous line. Hold L3: everything about the node. D-pad up and down: keystones, notables, jewel sockets and nodes next to yours; left and right: the next in the list, which the guide then leads to",
         ["Character"] = "Hold L3 and move the right stick: up and down for each stat, left and right for each section",
         ["Skills"] = "Hold L3 and move the right stick: left and right for each skill, up and down for its details",
         ["World"] = "Move to hear each place. Tap L3 for its description",

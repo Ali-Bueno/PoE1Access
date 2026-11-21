@@ -82,7 +82,7 @@ In game (controller, L3 = left stick click / keyboard):
 - In the skills panel, hold L3 + right stick: left and right for each skill on your skill bar,
   up and down for its details (description, speed, cost, cooldown, damage, linked supports)
 - Passive tree finder, D-pad (as in Poe2Access): up and down choose a list (Position, Keystones,
-  Notables, Jewel sockets, Can be allocated now), left and right go through it, fewest points
+  Notables, Jewel sockets, Next to your nodes), left and right go through it, fewest points
   first. The node named becomes the target: each node you move to says which way it lies and,
   while it is not linked, the next node to allocate on the cheapest way ("Allocate this one").
   Position drops the target. Nothing is allocated for you.

@@ -77,7 +77,7 @@ that menu.
 - **Passive tree**: each node says its links; tap L3 for the next line, double tap for the
   previous, hold L3 for everything about the node.
 - **Passive tree finder (D-pad)**: up and down choose a list (Position, Keystones, Notables,
-  Jewel sockets, Can be allocated now); left and right go through it, fewest points first. The
+  Jewel sockets, Next to your nodes); left and right go through it, fewest points first. The
   node named becomes the target: every node you move to then says which way it is, and, while it
   is not linked yet, the next node to allocate on the cheapest way there ("Allocate this one").
   Position drops the target. The finder never allocates anything for you.

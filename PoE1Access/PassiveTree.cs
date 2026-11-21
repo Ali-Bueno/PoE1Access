@@ -143,6 +143,11 @@ public partial class PoE1AccessCore
         if (_passiveIdOfRow.TryGetValue(row, out ushort pid) && allocated.Contains(pid)) return "allocated";
         if (elements.TryGetValue(row, out Element el) && Try(() => el.AsObject<TreePassiveElement>().CanAllocate, false))
             return "can be allocated";
+        // Next to a node you have, with no point to spend now: the game says it cannot be
+        // allocated, but it is linked.
+        if (_passiveLinks != null && _passiveLinks.TryGetValue(row, out var near) &&
+            near.Any(o => _passiveIdOfRow.TryGetValue(o, out ushort op) && allocated.Contains(op)))
+            return "linked";
         return "not linked";
     }
 
@@ -197,29 +202,11 @@ public partial class PoE1AccessCore
         }
         string linkText = parts.Count == 0 ? "" : "Links: " + string.Join("; ", parts.OrderBy(p => p.Dir).Select(p => p.Text));
 
-        // Points away: from the nodes that can be allocated now (1 point each) along unallocated nodes.
+        // Points away, counted from your nodes along the links (PassiveCosts).
         string distance = "";
         string state = PassiveState(row, allocated, elements);
-        if (state == "not linked")
-        {
-            var dist = new Dictionary<long, int>();
-            var queue = new Queue<long>();
-            foreach (var kv in elements)
-                if (PassiveState(kv.Key, allocated, elements) == "can be allocated") { dist[kv.Key] = 1; queue.Enqueue(kv.Key); }
-            while (queue.Count > 0 && !dist.ContainsKey(row))
-            {
-                long cur = queue.Dequeue();
-                if (!links.TryGetValue(cur, out var next)) continue;
-                foreach (long nx in next)
-                {
-                    if (dist.ContainsKey(nx) || !elements.ContainsKey(nx)) continue;
-                    if (_passiveIdOfRow.TryGetValue(nx, out ushort pid) && allocated.Contains(pid)) continue;
-                    dist[nx] = dist[cur] + 1;
-                    queue.Enqueue(nx);
-                }
-            }
-            if (dist.TryGetValue(row, out int d)) distance = d + (d == 1 ? " point away" : " points away");
-        }
+        if (state == "not linked" && PassiveCosts(elements, links, out _).TryGetValue(row, out int d) && d > 0)
+            distance = d + (d == 1 ? " point away" : " points away");
         return (distance, linkText);
     }
 }

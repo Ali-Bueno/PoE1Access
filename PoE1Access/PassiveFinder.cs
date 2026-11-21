@@ -123,6 +123,8 @@ public partial class PoE1AccessCore
         if (skill == null) return lines;
         foreach (var (stat, value) in Try(() => skill.Stats.ToList(), new List<(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord, int)>()))
         {
+            var game = Try(() => PassiveStatText(stat, value), new List<string>());
+            if (game.Count > 0) { lines.AddRange(game); continue; }
             string text = StatWords(stat?.Key, value);
             if (text.Length > 0) lines.Add(text);
         }

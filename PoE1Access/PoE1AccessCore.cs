@@ -2186,6 +2186,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (parts.Count == before)
             foreach (var (stat, value) in Try(() => skill.Stats.ToList(), new List<(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord, int)>()))
             {
+                // The game's own words when known (keystones' rules too), else the stat in words.
+                var game = Try(() => PassiveStatText(stat, value), new List<string>());
+                if (game.Count > 0) { parts.AddRange(game); continue; }
                 string s = StatWords(stat?.Key, value);
                 if (s.Length > 0) parts.Add(s);
             }

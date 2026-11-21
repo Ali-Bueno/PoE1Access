@@ -210,3 +210,67 @@ public partial class PoE1AccessCore
         return (distance, linkText);
     }
 }
+
+// The game's own words for a passive stat, from its passive stat descriptions
+// (Metadata/StatDescriptions/passive_skill_stat_descriptions.csd, which ExileApi cannot read on
+// the 18 Nov 2026 patch). Found 21 Nov 2026: the file record's +0x28 object holds at +0x88/+0x90
+// a list of entries by stat number (the Stats.dat row), each with its first text's length at
+// +0xC8 and the text (UTF-16) at +0xD0, inline when shorter than 8. "Your hits can't be
+// Evaded\nNever deal Critical Strikes" for resolute_technique; "{0:+d} to maximum Life" for
+// base_maximum_life. Only the first wording is known, which is the one for positive values.
+public partial class PoE1AccessCore
+{
+    private long _passiveTextList, _passiveTextCount;
+    private long _passiveTextTriedMs = -60000;
+
+    private List<string> PassiveStatText(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord stat, int value)
+    {
+        var lines = new List<string>();
+        if (stat == null || value <= 0) return lines;
+        var mem = Mem;
+        if (_passiveTextList == 0)
+        {
+            long now = Environment.TickCount64;
+            if (now - _passiveTextTriedMs < 30000) return lines;
+            _passiveTextTriedMs = now;
+            try
+            {
+                var all = GameController.Files.AllFiles;
+                string key = all.Keys.FirstOrDefault(k => k.EndsWith("StatDescriptions/passive_skill_stat_descriptions.csd", StringComparison.OrdinalIgnoreCase));
+                if (key == null) return lines;
+                long holder = mem.Read<long>(all[key].Ptr + 0x28);
+                long begin = mem.Read<long>(holder + 0x88), end = mem.Read<long>(holder + 0x90);
+                if (begin < 0x10000 || end <= begin || (end - begin) % 8 != 0 || end - begin > 8_000_000) return lines;
+                _passiveTextList = begin;
+                _passiveTextCount = (end - begin) / 8;
+                PluginLog.Write("Passive stat texts: " + _passiveTextCount);
+            }
+            catch { return lines; }
+        }
+        int id = Try(() => stat.ID, -1);
+        if (id < 0 || id >= _passiveTextCount) return lines;
+        string text = "";
+        try
+        {
+            long entry = mem.Read<long>(_passiveTextList + id * 8L);
+            if (entry < 0x10000 || entry > 0x7FFF_FFFF_FFFF) return lines;
+            long len = mem.Read<long>(entry + 0xC8);
+            if (len <= 0 || len > 1000) return lines;
+            long at = len < 8 ? entry + 0xD0 : mem.Read<long>(entry + 0xD0);
+            text = mem.ReadStringU(at, (int)len * 2 + 2) ?? "";
+            if (text.Length > len) text = text.Substring(0, (int)len);
+        }
+        catch { return lines; }
+        if (text.Length == 0 || text.Any(c => c < 0x20 && c != '\n')) return lines;
+        // Only texts with no number to fill in (keystones' rules and the like): the game may change
+        // a value before showing it (per minute to per second, hundredths...) by rules not known
+        // here, so numbers are left to StatWords, which says the stored value.
+        if (text.Contains("{")) return lines;
+        foreach (string line in text.Split('\n'))
+        {
+            string c = CleanText(line);
+            if (c.Length > 0) lines.Add(c);
+        }
+        return lines;
+    }
+}

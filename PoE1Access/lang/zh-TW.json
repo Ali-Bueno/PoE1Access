@@ -576,5 +576,20 @@
  "shocked": "感電",
  "poisoned": "中毒",
  "bleeding": "流血",
- "cursed": "詛咒"
+ "cursed": "詛咒",
+ "From the stash: {0}, column {1}, row {2}": "從倉庫取出: {0}，第 {1} 欄，第 {2} 列",
+ "Received: {0}, column {1}, row {2}": "獲得: {0}，第 {1} 欄，第 {2} 列",
+ "Picked up: {0}, column {1}, row {2}": "撿起: {0}，第 {1} 欄，第 {2} 列",
+ "To the stash: {0}": "存入倉庫: {0}",
+ "Sold: {0}": "已賣出: {0}",
+ "Handed over: {0}": "已交出: {0}",
+ "From the stash: {0}, now {1}": "從倉庫取出: {0}，現在 {1}",
+ "Received: {0}, now {1}": "獲得: {0}，現在 {1}",
+ "Picked up: {0}, now {1}": "撿起: {0}，現在 {1}",
+ "To the stash: {0}, {1} left": "存入倉庫: {0}，剩下 {1}",
+ "Handed over: {0}, {1} left": "已交出: {0}，剩下 {1}",
+ "Moved: {0}, column {1}, row {2}": "已移動: {0}，第 {1} 欄，第 {2} 列",
+ "More actions: {0}": "更多動作: {0}",
+ "Socket {0} of {1}": "插槽 {0}/{1}",
+ ", linked": "，已連結"
 }

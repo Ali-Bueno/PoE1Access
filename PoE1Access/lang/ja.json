@@ -576,5 +576,20 @@
  "shocked": "感電",
  "poisoned": "毒",
  "bleeding": "出血",
- "cursed": "呪い"
+ "cursed": "呪い",
+ "From the stash: {0}, column {1}, row {2}": "倉庫から: {0}、{1}列、{2}行",
+ "Received: {0}, column {1}, row {2}": "受け取った: {0}、{1}列、{2}行",
+ "Picked up: {0}, column {1}, row {2}": "拾った: {0}、{1}列、{2}行",
+ "To the stash: {0}": "倉庫へ: {0}",
+ "Sold: {0}": "売却: {0}",
+ "Handed over: {0}": "渡した: {0}",
+ "From the stash: {0}, now {1}": "倉庫から: {0}、現在{1}",
+ "Received: {0}, now {1}": "受け取った: {0}、現在{1}",
+ "Picked up: {0}, now {1}": "拾った: {0}、現在{1}",
+ "To the stash: {0}, {1} left": "倉庫へ: {0}、残り{1}",
+ "Handed over: {0}, {1} left": "渡した: {0}、残り{1}",
+ "Moved: {0}, column {1}, row {2}": "移動: {0}、{1}列、{2}行",
+ "More actions: {0}": "その他のアクション: {0}",
+ "Socket {0} of {1}": "ソケット{0}/{1}",
+ ", linked": "、リンク"
 }

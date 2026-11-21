@@ -36,7 +36,7 @@ internal sealed class PlayStationPad : IDisposable
     private int _reportLength;
 
     // The latest state, written by the reader thread.
-    private volatile int _buttons2;
+    private volatile int _buttons1, _buttons2;
     private volatile int _lx = 128, _ly = 128, _rx = 128, _ry = 128;
     private long _lastReportMs;
 
@@ -45,6 +45,9 @@ internal sealed class PlayStationPad : IDisposable
                              Environment.TickCount64 - Interlocked.Read(ref _lastReportMs) < 3000;
 
     public bool L3 => (_buttons2 & 0x40) != 0;
+    /// <summary>Circle (B on an Xbox pad): the high bits of the hat byte are square 0x10, cross 0x20, circle 0x40, triangle 0x80.</summary>
+    public bool Circle => (_buttons1 & 0x40) != 0;
+    public bool FaceButton => (_buttons1 & 0xD0) != 0;   // circle, square, triangle (cross is A)
     private volatile int _hat = 8;
     /// <summary>The D-pad as XInput's bits: up 1, down 2, left 4, right 8 (diagonals set two).</summary>
     public int DPad => _hat switch
@@ -119,6 +122,7 @@ internal sealed class PlayStationPad : IDisposable
         else return false;
         _lx = b[stick]; _ly = b[stick + 1]; _rx = b[stick + 2]; _ry = b[stick + 3];
         _buttons2 = b[buttons + 1];
+        _buttons1 = b[buttons];
         _hat = b[buttons] & 0x0F;   // 0 up, then clockwise in eighths to 7 up left; 8 none
         return true;
     }

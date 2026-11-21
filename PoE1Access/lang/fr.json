@@ -576,5 +576,20 @@
  "shocked": "électrocuté",
  "poisoned": "empoisonné",
  "bleeding": "saignement",
- "cursed": "maudit"
+ "cursed": "maudit",
+ "From the stash: {0}, column {1}, row {2}": "Du coffre : {0}, colonne {1}, ligne {2}",
+ "Received: {0}, column {1}, row {2}": "Reçu : {0}, colonne {1}, ligne {2}",
+ "Picked up: {0}, column {1}, row {2}": "Ramassé : {0}, colonne {1}, ligne {2}",
+ "To the stash: {0}": "Au coffre : {0}",
+ "Sold: {0}": "Vendu : {0}",
+ "Handed over: {0}": "Remis : {0}",
+ "From the stash: {0}, now {1}": "Du coffre : {0}, maintenant {1}",
+ "Received: {0}, now {1}": "Reçu : {0}, maintenant {1}",
+ "Picked up: {0}, now {1}": "Ramassé : {0}, maintenant {1}",
+ "To the stash: {0}, {1} left": "Au coffre : {0}, il en reste {1}",
+ "Handed over: {0}, {1} left": "Remis : {0}, il en reste {1}",
+ "Moved: {0}, column {1}, row {2}": "Déplacé : {0}, colonne {1}, ligne {2}",
+ "More actions: {0}": "Plus d'actions : {0}",
+ "Socket {0} of {1}": "Châsse {0} sur {1}",
+ ", linked": ", liée"
 }

@@ -435,6 +435,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (Settings.AnnouncePanels.Value) PollPanels(now);
             if (Settings.ReadFocus.Value) PollFocus(now);
             if (Settings.ReadOnHover.Value) PollHover(now);
+            Guard("socket selection", () => PollSocketSelection(now));
 
             // Navigation: silent while a panel, window or menu is open.
             bool uiBusy = _escWasOpen ||
@@ -1646,6 +1647,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             var opened = titles.Where(t => !_openPanels.Contains(t)).ToList();
             var closed = _openPanels.Where(t => !titles.Contains(t)).ToList();
             var parts = new List<string>();
+            if (opened.Count > 0 || closed.Count > 0) _panelsChangedMs = _clock.ElapsedMilliseconds;
             foreach (string t in closed) parts.Add(T($"{t} closed", $"Se cierra {t}"));
             foreach (string t in opened) parts.Add(T($"{t} open", $"Se abre {t}"));
             if (parts.Count > 0)
@@ -1668,6 +1670,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private long _lastFocusAddr;
     private Element _lastFocusElement;
     private const int FocusScanMaxElements = 6000;
+    private long _focusCapLoggedMs, _panelsChangedMs;
+    private readonly Dictionary<string, long> _gameMessageSaid = new Dictionary<string, long>();
     private const int TabSelectedValue = 0x100;
 
     private void PollFocus(long now)
@@ -1740,6 +1744,54 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         var prev = _focusState;
         _focusState = state;
         if (prev == null) return;
+        if (state.Count >= FocusScanMaxElements && now - _focusCapLoggedMs > 60000)
+        {
+            _focusCapLoggedMs = now;
+            PluginLog.Write("Focus scan stopped at " + FocusScanMaxElements + " elements");
+        }
+
+        // A pop-up (an item's action menu): controls that were not there before, one of them
+        // focused. Not right after a panel opened or closed, whose new elements are its own.
+        var fresh = state.Keys.Where(k => !prev.ContainsKey(k)).ToList();
+        if (fresh.Count > 0 && fresh.Count <= 400 && now - _panelsChangedMs > 600)
+        {
+            var texts = fresh.Select(k => (Key: k, Text: CleanText(UiText.Text(mem, elements[k].E)))).Where(x => x.Text.Length > 0).ToList();
+            var freshFocus = fresh.Where(k => state[k].Flag && elements[k].Path.Count(c => c == '/') > 1).ToList();
+            // A message of the game (not enough currency, an item in hand): a sentence that
+            // appears as its own element four levels down ("root/1/65/5/0", found 21 Nov 2026),
+            // not deep inside a panel, the chat or a tooltip.
+            foreach (var x in texts)
+            {
+                string p = elements[x.Key].Path;
+                if (!p.StartsWith("root/") || p.Count(c => c == '/') != 4 || x.Text.Split(' ').Length < 3) continue;
+                if (!(x.Text.EndsWith(".") || x.Text.EndsWith("!") || x.Text.EndsWith("?"))) continue;   // a sentence, not a label
+                if (_gameMessageSaid.TryGetValue(x.Text, out long at) && now - at < 3000) continue;
+                _gameMessageSaid[x.Text] = now;
+                PluginLog.Write("Game message: [" + p + "] " + x.Text);
+                Say(x.Text, true);
+            }
+            if (freshFocus.Count >= 1 && freshFocus.Count <= 2)
+            {
+                long addr = freshFocus[freshFocus.Count - 1];
+                if (addr != _lastFocusAddr && DescribeFocused(elements[addr].E).Length > 0)
+                {
+                    // A dialog: its title and message ("Warning. You are holding an item...")
+                    // before the button, all new with it (root/1/65/0/0: title_label,
+                    // message_label, then the buttons in /3 or /2; found 21 Nov 2026).
+                    string fp = elements[addr].Path;
+                    int cut = fp.LastIndexOf('/');
+                    cut = cut > 0 ? fp.LastIndexOf('/', cut - 1) : -1;
+                    string dialog = cut > 0 ? fp.Substring(0, cut) : "";
+                    string buttons = cut > 0 ? fp.Substring(0, fp.LastIndexOf('/')) : "";
+                    var lines = dialog.Length == 0 ? new List<string>() : texts
+                        .Where(x => elements[x.Key].Path.StartsWith(dialog + "/") && !elements[x.Key].Path.StartsWith(buttons + "/") && elements[x.Key].Path != buttons)
+                        .OrderBy(x => elements[x.Key].Path, StringComparer.Ordinal).Select(x => x.Text).Distinct().ToList();
+                    AnnounceFocus(addr, elements[addr].E, elements[addr].Path, "Pop-up focus",
+                                  lines.Count > 0 && lines.Count <= 4 ? JoinSpeech(lines) : "");
+                    return;
+                }
+            }
+        }
 
         // Only elements that were visible last time count, so a panel opening (many elements
         // appearing at once) does not trigger a flood of speech.
@@ -1810,7 +1862,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         }
     }
 
-    private void AnnounceFocus(long addr, Element e, string path, string kind)
+    private void AnnounceFocus(long addr, Element e, string path, string kind, string lead = "")
     {
         _lastFocusEventMs = _clock.ElapsedMilliseconds;
         _lastFocusAddr = addr;
@@ -1826,7 +1878,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The same line again at once (the screen's first focus, then its highlight settling on
         // the same character a quarter of a second later) is not said twice.
         long nowMs = _clock.ElapsedMilliseconds;
-        if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
+        if (lead.Length > 0) Say(text.Length > 0 ? JoinSpeech(new List<string> { lead, text }) : lead, true);
+        else if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
         _lastFocusText = text;
         _lastFocusTextMs = nowMs;
     }

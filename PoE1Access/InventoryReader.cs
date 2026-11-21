@@ -61,8 +61,9 @@ public partial class PoE1AccessCore
 
     // ---- What an item is ----
 
-    // "Rusted Sword", "Rare Grim Bane, Iron Hat", "Orb of Transmutation, 6".
-    private string ItemTitle(Entity item)
+    // "Rusted Sword", "Rare Grim Bane, Iron Hat", "Orb of Transmutation, 6" (without the
+    // stack's size when withStack is false).
+    private string ItemTitle(Entity item, bool withStack = true)
     {
         BaseComp baseC = GetComp<BaseComp>(item);
         ModsComp mods = GetComp<ModsComp>(item);
@@ -87,7 +88,7 @@ public partial class PoE1AccessCore
         if (rarityWord.Length > 0) title += ", " + rarityWord;
 
         int size = stack != null ? Try(() => stack.Size, 0) : 0;
-        if (size > 1) title += ", " + size;
+        if (withStack && size > 1) title += ", " + size;
         return title;
     }
 
@@ -259,9 +260,14 @@ public partial class PoE1AccessCore
     // ---- Sockets: each linked group, each socket's colour and the gem in it ----
 
     // "Linked: red, Double Strike level 3; green, empty", one line per group of linked sockets.
+    // Each socket of the item last read, in order: its colour, its gem or "empty", and whether
+    // it is linked to another (SocketSelection says them in the game's socket mode).
+    private readonly List<(string Colour, string Gem, bool Linked)> _socketTexts = new List<(string, string, bool)>();
+
     private List<string> SocketLines(SocketsComp sockets)
     {
         var lines = new List<string>();
+        _socketTexts.Clear();
         var groups = Try(() => sockets.SocketGroup, null);
         if (groups == null || groups.Count == 0) return lines;
 
@@ -293,6 +299,7 @@ public partial class PoE1AccessCore
             foreach (char c in group)
             {
                 parts.Add(Colour(c) + ", " + (gemAt.TryGetValue(index, out string g) ? g : T("empty", "vacío")));
+                _socketTexts.Add((Colour(c), gemAt.TryGetValue(index, out string g2) ? g2 : T("empty", "vacío"), group.Length > 1));
                 index++;
             }
             string joined = string.Join("; ", parts);
@@ -438,6 +445,7 @@ public partial class PoE1AccessCore
     private List<string> _tipLines = new List<string>();
     private int _tipIndex;
     private long _tipItemAddr;
+    private Entity _tipItem;
 
     /// <summary>What is said when the selection lands on an inventory item (or equipment slot).</summary>
     private string DescribeInventoryFocus(Element hover)
@@ -445,6 +453,7 @@ public partial class PoE1AccessCore
         NormalInventoryItem slot = hover.AsObject<NormalInventoryItem>();
         Entity item = slot?.Item;
         if (item == null || item.Address == 0 || !item.IsValid) return null;
+        _tipElement = hover;
 
         var (place, label, col, row) = Locate(item);
         _lastFocusWasEquipment = place == ItemPlace.Equipped;
@@ -470,6 +479,7 @@ public partial class PoE1AccessCore
         _tipLines = lines;
         _tipIndex = 0;
         _tipItemAddr = item.Address;
+        _tipItem = item;
         return JoinSpeech(lines);
     }
 
@@ -786,7 +796,9 @@ public partial class PoE1AccessCore
                 if (equipped.ContainsKey(key)) { _gone.Remove(key); continue; }
                 if (now - _gone[key].SinceMs >= 500)
                 {
-                    Say(T($"Unequipped: {_gone[key].Title}", $"Desequipado: {_gone[key].Title}"), false);
+                    // Worn gear can be sold from a vendor's window too.
+                    Say(SoldRecently(now) ? T($"Sold: {_gone[key].Title}", $"Vendido: {_gone[key].Title}")
+                        : T($"Unequipped: {_gone[key].Title}", $"Desequipado: {_gone[key].Title}"), false);
                     _gone.Remove(key);
                 }
             }
@@ -821,6 +833,8 @@ public partial class PoE1AccessCore
             Say(readyAgain.Count == 1 ? T($"{flasks} ready again", $"{flasks} listo otra vez")
                 : T($"{flasks} ready again", $"{flasks} listos otra vez"), false);
         }
+
+        TrackBag(server, handAddr, _handItemAddr, _handItemTitle, _equipped, equipped, now);
 
         if (handAddr != _handItemAddr)
         {

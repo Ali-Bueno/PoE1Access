@@ -64,6 +64,9 @@ internal sealed class ControllerInput
     public const int DPadUp = 1, DPadDown = 2, DPadLeft = 4, DPadRight = 8;
     /// <summary>D-pad directions newly pressed on the last poll (DPadUp | DPadDown...).</summary>
     public int DPadPressed { get; private set; }
+    /// <summary>When B, X or Y was last pressed: it opens an item's action menu or picks one of its actions.</summary>
+    public long FacePressedMs { get; private set; } = -100000;
+    private bool _bDown;
     private int _dpadDown;
 
     public Vector2 LeftStick { get; private set; }
@@ -115,7 +118,7 @@ internal sealed class ControllerInput
             }
         }
 
-        bool l3;
+        bool l3, bButton;
         int dpad;
         if (_pad >= 0)
         {
@@ -125,6 +128,7 @@ internal sealed class ControllerInput
             RightStick = Stick(g.RX, g.RY);
             l3 = (g.Buttons & L3) != 0;
             dpad = g.Buttons & 0x0F;   // XInput: up 1, down 2, left 4, right 8
+            bButton = (g.Buttons & 0xE000) != 0;   // B, X or Y (A picks items up all the time)
         }
         else
         {
@@ -133,9 +137,12 @@ internal sealed class ControllerInput
             RightStick = _ps.RightStick;
             l3 = _ps.L3;
             dpad = _ps.DPad;
+            bButton = _ps.FaceButton;
         }
         // D-pad directions pressed since the last poll (DPadUp, DPadDown, DPadLeft, DPadRight).
         DPadPressed = dpad & ~_dpadDown;
+        if (bButton && !_bDown) FacePressedMs = now;
+        _bDown = bButton;
         _dpadDown = dpad;
 
         Command cmd = Command.None;

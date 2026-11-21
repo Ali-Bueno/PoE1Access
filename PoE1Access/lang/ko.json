@@ -576,5 +576,20 @@
  "shocked": "감전",
  "poisoned": "중독",
  "bleeding": "출혈",
- "cursed": "저주"
+ "cursed": "저주",
+ "From the stash: {0}, column {1}, row {2}": "보관함에서: {0}, {1}열, {2}행",
+ "Received: {0}, column {1}, row {2}": "받음: {0}, {1}열, {2}행",
+ "Picked up: {0}, column {1}, row {2}": "주움: {0}, {1}열, {2}행",
+ "To the stash: {0}": "보관함으로: {0}",
+ "Sold: {0}": "판매함: {0}",
+ "Handed over: {0}": "넘겨줌: {0}",
+ "From the stash: {0}, now {1}": "보관함에서: {0}, 현재 {1}",
+ "Received: {0}, now {1}": "받음: {0}, 현재 {1}",
+ "Picked up: {0}, now {1}": "주움: {0}, 현재 {1}",
+ "To the stash: {0}, {1} left": "보관함으로: {0}, {1}개 남음",
+ "Handed over: {0}, {1} left": "넘겨줌: {0}, {1}개 남음",
+ "Moved: {0}, column {1}, row {2}": "이동함: {0}, {1}열, {2}행",
+ "More actions: {0}": "추가 행동: {0}",
+ "Socket {0} of {1}": "홈 {0}/{1}",
+ ", linked": ", 연결됨"
 }

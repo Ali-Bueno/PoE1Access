@@ -162,6 +162,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     private string _pendingText = "";
     private long _pendingSinceMs;
     private string _lastHoverSpoken = "";
+    private bool _hoverQuiet;   // the hovered passive node is the one the finder was used on
     private string _lastSpoken = "";
 
     // Panel announcements.
@@ -1986,7 +1987,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (stableFor >= Settings.HoverDelayMs.Value && text != _lastHoverSpoken)
         {
             // A dialogue's options are read one at a time by PollDialogue, not as one list.
-            if (IsWholeOptionList(text) || IsWorldMapText(text)) { _lastHoverSpoken = text; return; }
+            if (IsWholeOptionList(text) || IsWorldMapText(text) || _hoverQuiet) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
         }
@@ -2040,6 +2041,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         var tipParts = new List<string>();
         if (tipOk) CollectText(tip, 10, tipParts);
 
+        _hoverQuiet = false;   // set again by DescribePassive for the finder's node
         if (type == ElementType.PassivePoint)
         {
             string passive = Guard("passive", () => DescribePassive(hover, tipParts));
@@ -2167,6 +2169,10 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // The finder's guide (D-pad), right after the node's name, so it is heard first.
         _passiveHover = hover;
         _passiveHoverRow = skill.Address;
+        // The node the finder was used on is not read again over the finder's words; another
+        // node is, and ends that.
+        _hoverQuiet = _finderQuietRow != 0 && _finderQuietRow == skill.Address;
+        if (!_hoverQuiet) _finderQuietRow = 0;
         string guide = Try(() => FinderGuide(skill.Address), "");
         if (guide.Length > 0) parts.Add(guide);
 

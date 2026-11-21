@@ -76,6 +76,11 @@ public partial class PoE1AccessCore
         if (way.Length > 0) parts.Add(way);
         if (node.Path != null && node.Path.Count > 0)
             parts.Add("Allocate first: " + NodeName(node.Path[0]) + WayDirection(node.Path[0]));
+        // What the node does, last, so the way is heard first.
+        parts.AddRange(PassiveStatLines(node.Row));
+        // The node under the cursor, whose reading now ends with the new target's way, is not
+        // said again over this until the cursor moves.
+        _finderQuietRow = _passiveHoverRow;
         Say(JoinSpeech(parts), true);
     }
 
@@ -105,6 +110,23 @@ public partial class PoE1AccessCore
             return target + ", " + (steps.Count + 1) + " points to go. Next to allocate: " + NodeName(steps[0]) + WayDirection(steps[0]);
         }
         return "Toward " + target + WayDirection(_finderTarget);
+    }
+
+    private long _finderQuietRow;
+
+    // A node's stats in words ("20% increased mana regeneration rate"), from its PassiveSkills
+    // row, as a node is read when the game's tooltip cannot be found.
+    private List<string> PassiveStatLines(long row)
+    {
+        var lines = new List<string>();
+        var skill = Try(() => GameController.Files.PassiveSkills.EntriesList.FirstOrDefault(p => p.Address == row), null);
+        if (skill == null) return lines;
+        foreach (var (stat, value) in Try(() => skill.Stats.ToList(), new List<(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord, int)>()))
+        {
+            string text = StatWords(stat?.Key, value);
+            if (text.Length > 0) lines.Add(text);
+        }
+        return lines;
     }
 
     private string NodeName(long row) => _passiveNameOfRow.TryGetValue(row, out string n) && n.Length > 0 ? n : "unnamed node";

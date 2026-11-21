@@ -400,6 +400,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("equipment selection", () => PollEquipmentSelection(now));
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
+            Guard("player alerts", () => PollPlayerAlerts(now));
             Guard("dialogue", () => PollDialogue(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
@@ -419,6 +420,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.AnnounceEnemies = Settings.AnnounceEnemies.Value;
                 _nav.DodgeWarnings = Settings.DodgeWarnings.Value;
                 _nav.DodgeWarningsAll = Settings.DodgeWarningsAll.Value;
+                _nav.ObjectSounds = Settings.ObjectSounds.Value;
                 _nav.DescribeAreas = Settings.DescribeAreas.Value;
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;

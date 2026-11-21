@@ -22,6 +22,18 @@ When a rare or unique monster starts an attack or spell aimed at you, a dodge wa
 its side: a blade over a low gong dropping into a bass hit, louder the closer it is
 (DodgeWarnings). "Dodge warning for every enemy" in the F3 menu adds every monster within a few
 steps (DodgeWarningsAll).
+Things worth walking to sound from their side, faster and louder as you get closer, within about
+two screens (ObjectSounds): the three nearest unopened chests in sight (a low wooden knock), the
+nearest shrine you can still take (a shimmer), and the nearest waypoint (a droning hum), portal
+(a rising swirl), exit (a soft rush of air) and stash (a lid's clunk).
+While you stand in harmful ground (burning, chilled, shocked, tarred, desecrated or caustic
+ground, a vortex, spores, a monster's degeneration aura) two harsh low stabs repeat, and its name
+is said the first time (HarmfulGroundSound). Your harmful states are said as they begin and end
+with a short buzz: "Frozen", "No longer frozen", ignited, chilled, shocked, poisoned, bleeding,
+maimed, blinded, hindered, "Cursed: Temporal Chains" (StatusAlerts). Frenzy, power and endurance
+charges play a rising or falling pair of notes and say the count (ChargeAlerts). A boss's life is
+said as it falls past 75, 50, 25 and 10 percent, and "defeated" (AnnounceBossLife); a level up
+plays three rising notes and says the level (AnnounceLevelUp).
 The two nearest NPCs make a light wooden tap from their side, and
 the nearest other player a quicker, higher double tap (NpcSounds). Life, mana and energy shield
 are spoken as they fall below 75, 50 and 25 percent (AnnounceResources). Double tap L3 for your

@@ -327,6 +327,148 @@ internal static class Synth
         return Mix(b, Bell(pan, 98, new[] { 1.0, 2.02, 2.76, 4.07 }, 0.12, 0.22, 0.0));
     }
 
+    // ---- Things worth walking to, harmful ground and your own states (after Poe2Access's list) ----
+
+    public enum WorldCue { Chest, Shrine, Waypoint, Portal, Exit, Stash }
+
+    /// <summary>A short cue for a kind of object, from its side; pitch lowers it when below.</summary>
+    public static float[] Object(WorldCue kind, float pan, float pitch)
+    {
+        switch (kind)
+        {
+            case WorldCue.Chest:
+                // A low wooden double knock, falling.
+                return Seq(WoodKnock(pan, 260 * pitch, 0.05), 0.03, WoodKnock(pan, 200 * pitch, 0.06));
+            case WorldCue.Shrine:
+                // A bright shimmer.
+                return Bell(pan, 1046 * pitch, new[] { 1.0, 2.5, 3.9 }, 0.07, 0.22, 0.0);
+            case WorldCue.Waypoint:
+                return Drone(pan, 110 * pitch, 0.32, 0.4, 0);
+            case WorldCue.Portal:
+                return Drone(pan, 220 * pitch, 0.3, 0.32, 1);
+            case WorldCue.Exit:
+                return Air(pan, 0.28, 0.45);
+            default:
+                // Stash: a low clunk, a lid closing.
+                return Mix(WoodKnock(pan, 150 * pitch, 0.09), Tone(pan, 600 * pitch, 0.02, 0.12));
+        }
+    }
+
+    // Harmful ground (Poe2Access): two harsh stabs of low notes a semitone apart, grinding.
+    public static float[] HarmfulGround()
+    {
+        float[] a = Harsh(0f, 98, 0.09), b = Harsh(0f, 104, 0.12);
+        return Seq(a, 0.04, b);
+    }
+
+    // One of your own harmful states beginning: a short low falling buzz.
+    public static float[] Ailment()
+    {
+        var b = Buffer(0.16);
+        int n = b.Length / 2;
+        var g = Gains(0f);
+        double phase = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double x = (double)i / n, t = (double)i / SR;
+            phase += 2 * Math.PI * (330 - 140 * x) / SR;
+            double env = Math.Min(1, t / 0.005) * (1 - x);
+            Put(b, i, (float)(Math.Tanh(2 * Math.Sin(phase)) * env * 0.35), g);
+        }
+        return b;
+    }
+
+    // A charge gained (rising) or lost (falling); a note per kind.
+    public static float[] Charge(int kind, bool gained)
+    {
+        double f = kind == 0 ? 523 : kind == 1 ? 659 : 784;   // frenzy, power, endurance
+        return gained ? Seq(Tone(0f, f, 0.05, 0.3), 0.01, Tone(0f, f * 1.26, 0.06, 0.3))
+                      : Seq(Tone(0f, f * 1.26, 0.05, 0.25), 0.01, Tone(0f, f, 0.06, 0.25));
+    }
+
+    // Level up: three rising notes.
+    public static float[] LevelUp() =>
+        Seq(Seq(Tone(0f, 523, 0.09, 0.35), 0.02, Tone(0f, 659, 0.09, 0.35)), 0.02, Tone(0f, 784, 0.18, 0.35));
+
+    private static float[] Seq(float[] a, double gapSeconds, float[] c)
+    {
+        int gap = (int)(gapSeconds * SR) * 2;
+        var b = new float[a.Length + gap + c.Length];
+        Array.Copy(a, b, a.Length);
+        Array.Copy(c, 0, b, a.Length + gap, c.Length);
+        return b;
+    }
+
+    private static float[] WoodKnock(float pan, double f, double seconds)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        var rng = new Random(11);
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR, x = (double)i / n;
+            double env = Math.Exp(-t * 55) * Math.Min(1, t / 0.002);
+            double v = Math.Sin(2 * Math.PI * f * t) * 0.6 + Math.Sin(2 * Math.PI * f * 2.3 * t) * 0.25 + (rng.NextDouble() * 2 - 1) * 0.15 * Math.Exp(-t * 300);
+            Put(b, i, (float)(v * env * 0.6), g);
+        }
+        return b;
+    }
+
+    private static float[] Drone(float pan, double f, double seconds, double amp, int mode)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        double phase = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR, x = (double)i / n;
+            double freq = mode == 1 ? f * (1 + 0.5 * x) * (1 + 0.02 * Math.Sin(2 * Math.PI * 9 * t)) : f;
+            phase += 2 * Math.PI * freq / SR;
+            double v = Math.Sin(phase) + 0.4 * Math.Sin(2 * phase) + 0.2 * Math.Sin(3 * phase);
+            double trem = mode == 0 ? 0.75 + 0.25 * Math.Sin(2 * Math.PI * 6 * t) : 1;
+            double env = Math.Min(1, t / 0.03) * Math.Min(1, (1 - x) / 0.3);
+            Put(b, i, (float)(v * trem * env * amp * 0.6), g);
+        }
+        return b;
+    }
+
+    private static float[] Air(float pan, double seconds, double amp)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        var rng = new Random(5);
+        double low = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double x = (double)i / n;
+            double white = rng.NextDouble() * 2 - 1;
+            low += (white - low) * 0.08;   // soft, low noise
+            double env = Math.Sin(Math.PI * x);
+            Put(b, i, (float)(low * env * amp * 2.2), g);
+        }
+        return b;
+    }
+
+    private static float[] Harsh(float pan, double f, double seconds)
+    {
+        var b = Buffer(seconds);
+        var g = Gains(pan);
+        int n = b.Length / 2;
+        double phase = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double t = (double)i / SR, x = (double)i / n;
+            phase += 2 * Math.PI * f / SR;
+            double saw = 2 * (phase / (2 * Math.PI) - Math.Floor(phase / (2 * Math.PI) + 0.5));
+            double env = Math.Min(1, t / 0.004) * (1 - x);
+            Put(b, i, (float)(Math.Tanh(2.5 * saw) * env * 0.45), g);
+        }
+        return b;
+    }
+
     // Crosshair (Poe2Access): two short blips when the game's target lands on a living enemy.
     public static float[] Blips()
     {

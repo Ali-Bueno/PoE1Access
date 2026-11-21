@@ -385,6 +385,7 @@ internal sealed partial class Navigator
         if (LootKind != null) TickLoot(now, p);
         TickEnemies(now, p);
         TickNpcs(now, p);
+        TickObjects(now, p);
         if (now >= _nextIconLogMs) { _nextIconLogMs = now + 3000; LogMinimapIcons(); }
     }
 

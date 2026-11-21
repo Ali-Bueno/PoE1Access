@@ -33,6 +33,10 @@ nearest shrine you can still take (a shimmer), and the nearest waypoint (a droni
 Coven's Cauldron whose Fate you have not chosen and the boss cauldron bubble. The scanner's
 Objects list has the cauldrons ("Coven's Cauldron, guarded by the coven" until you beat the
 coven, then "choose a Fate", then "Fate chosen"), the boss cauldron and the Wickerman in town.
+The Fate window at a cauldron is read: its title and count, then each card as you move to it,
+with its tier, what it does to the boss and its reward ("Wildfire, tier 1. Creates walls of
+blackfire. Reward: Empowered Monster will drop additional Rare Melee Weapons, 1 of 3"). Hold L3
+to hear the selected card again.
 While you stand in harmful ground (burning, chilled, shocked, tarred, desecrated or caustic
 ground, a vortex, spores, a monster's degeneration aura) two harsh low stabs repeat, and its name
 is said the first time (HarmfulGroundSound). Your harmful states are said as they begin and end

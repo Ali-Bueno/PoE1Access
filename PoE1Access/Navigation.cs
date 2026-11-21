@@ -1521,6 +1521,21 @@ internal sealed partial class Navigator
     //   Wickerman         .../EffigyObject, in town: holds the Viscera.
     public enum CovenKind { None, Cauldron, BossCauldron, Wickerman }
 
+    /// <summary>True when a Coven's Cauldron or the boss cauldron is within the given cells.</summary>
+    public bool NearCovenCauldron(float cells)
+    {
+        Vector2 p = PlayerGrid();
+        if (p.X < 0) return false;
+        foreach (Entity e in Entities())
+        {
+            if (Try(() => e.Type, EntityType.Error) != EntityType.IngameIcon) continue;
+            var k = CovenObject(e);
+            if (k != CovenKind.Cauldron && k != CovenKind.BossCauldron) continue;
+            if ((Try(() => e.GridPosNum, new Vector2(-9999, -9999)) - p).Length() <= cells) return true;
+        }
+        return false;
+    }
+
     public static CovenKind CovenObject(Entity e)
     {
         string path = Try(() => e.Path, "") ?? "";

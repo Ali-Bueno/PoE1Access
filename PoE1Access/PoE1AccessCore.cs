@@ -457,6 +457,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("resources", () => PollResources(now));
             Guard("player alerts", () => PollPlayerAlerts(now));
             Guard("dialogue", () => PollDialogue(now));
+            Guard("fates", () => PollFates(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
             Guard("button legend", () => PollButtonLegend(now, uiBusy));
@@ -595,6 +596,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 if (!uiBusy || !TooltipNext(-1)) Guard("status", SayStatus);
                 break;
             case ControllerInput.Command.Hold:
+                // The Fate window (Covens league): the selected card again.
+                if (FateWindowText() is string fate) { Say(fate, true); break; }
                 // In menus: the whole tooltip.
                 // Nothing to read there: the window's controls.
                 if (uiBusy && !TooltipAll() && !SayControlsAgain() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);

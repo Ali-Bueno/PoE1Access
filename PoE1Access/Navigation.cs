@@ -404,6 +404,8 @@ internal sealed partial class Navigator
     private readonly Dictionary<long, long> _enemyNextMs = new Dictionary<long, long>();
     private readonly HashSet<long> _enemySeen = new HashSet<long>();
     private long _enemyArea = -1, _nextEnemyTickMs, _nextIntoViewMs, _targetId = -1;
+    private string _lastTargetName = "";
+    private long _lastTargetNameMs;
 
     private void TickEnemies(long now, Vector2 p)
     {
@@ -437,8 +439,16 @@ internal sealed partial class Navigator
                 if (CrosshairBeep) _audio.Play("crosshair", Synth.Blips, EnemyVolume?.Invoke() ?? 0.7f);
                 if (AnnounceTarget)
                 {
-                    int life = (int)Math.Round(Try(() => targeted.GetComponent<Life>().HPPercentage, 1f) * 100);
-                    _say(Describe(targeted, null) + (life < 100 ? ", " + life + " percent" : ""));
+                    // The same name again within 2 seconds (the target moving between monsters of
+                    // one kind) is left to the blips.
+                    string named = Describe(targeted, null);
+                    if (named != _lastTargetName || now - _lastTargetNameMs > 2000)
+                    {
+                        int life = (int)Math.Round(Try(() => targeted.GetComponent<Life>().HPPercentage, 1f) * 100);
+                        _say(named + (life < 100 ? ", " + life + " percent" : ""));
+                    }
+                    _lastTargetName = named;
+                    _lastTargetNameMs = now;
                 }
             }
         }

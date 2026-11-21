@@ -755,18 +755,21 @@ public partial class PoE1AccessCore
             if (!equipped.ContainsKey(kv.Key) && _equipped != null && _equipped.TryGetValue(kv.Key, out var was))
                 equipped[kv.Key] = was;
 
-        // Flasks: the uses left, said as one is drunk (or refills from empty).
+        // Flasks: the uses left, said as one is drunk (or refills from empty). Two flasks of the
+        // same kind refilling together are said once ("Small Life Flask ready again", not twice).
+        var readyAgain = new List<string>();
         foreach (var kv in flaskUses)
         {
             if (_flaskUses.TryGetValue(kv.Key, out int before) && kv.Value.Uses >= 0 && before >= 0)
             {
                 if (kv.Value.Uses < before)
                     Say(kv.Value.Title + ", " + kv.Value.Uses + (kv.Value.Uses == 1 ? " use left" : " uses left"), false);
-                else if (before == 0 && kv.Value.Uses > 0)
-                    Say(kv.Value.Title + " ready again", false);
+                else if (before == 0 && kv.Value.Uses > 0 && !readyAgain.Contains(kv.Value.Title))
+                    readyAgain.Add(kv.Value.Title);
             }
             _flaskUses[kv.Key] = kv.Value.Uses;
         }
+        if (readyAgain.Count > 0) Say(string.Join(", ", readyAgain) + " ready again", false);
 
         if (handAddr != _handItemAddr)
         {

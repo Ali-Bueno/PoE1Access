@@ -643,7 +643,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                     parts.Add(CleanText(Try(() => GetComp<BaseComp>(f.Item)?.Name, "") ?? "flask") + ", " + uses + (uses == 1 ? " use" : " uses"));
             }
 
-        string area = Try(() => GameController.Area.CurrentArea.DisplayName, "");
+        string area = Try(() => GameController.Area.CurrentArea.Name, "") ?? "";
+        if (area.Length == 0) area = Try(() => GameController.Area.CurrentArea.DisplayName, "") ?? "";
         int areaLevel = Try(() => GameController.Area.CurrentArea.RealLevel, 0);
         if (area.Length > 0) parts.Add(area + (areaLevel > 0 ? ", area level " + areaLevel : ""));
 

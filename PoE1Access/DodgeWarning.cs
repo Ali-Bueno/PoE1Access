@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
@@ -17,7 +18,12 @@ namespace PoE1Access;
 internal sealed partial class Navigator
 {
     public bool DodgeWarnings = true, DodgeWarningsAll;
-    private readonly Dictionary<long, (ushort Action, long At)> _enemyAction = new Dictionary<long, (ushort, long)>();
+    private readonly Dictionary<long, (ushort Action, float Progress)> _enemyAction = new Dictionary<long, (ushort, float)>();
+    // Skills that only move the monster (seen 21 Nov 2026: a boss's flame_dash warned every
+    // 3 seconds), by whole words of the skill's name, so "discharge" or a leap slam that lands
+    // on you still warn.
+    private static readonly HashSet<string> TravelWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "dash", "blink", "teleport", "walk", "move", "burrow", "emerge", "roll", "evade", "retreat" };
     private long _lastDodgeMs;
     private const float DodgeAllCells = 30f;   // "every enemy": only those this close (a few steps)
 
@@ -33,15 +39,21 @@ internal sealed partial class Navigator
             if (actor == null) continue;
             bool usingAbility = Try(() => (actor.Action & ActionFlags.UsingAbility) != 0, false);
             ushort actionId = usingAbility ? Try(() => (ushort)actor.ActionId, (ushort)0) : (ushort)0;
-            _enemyAction.TryGetValue(id, out var last);
-            if (!usingAbility) { _enemyAction[id] = (0, last.At); continue; }
-            if (actionId == last.Action && now - last.At < 3000) continue;   // the same action, already warned
-            _enemyAction[id] = (actionId, now);
+            // A new attack: a new action, or the same one's animation starting over (a monster that
+            // keeps swinging), not merely time passing in one long action.
+            float progress = usingAbility ? Try(() => actor.AnimationController?.AnimationProgress ?? 0f, 0f) : 0f;
+            bool had = _enemyAction.TryGetValue(id, out var last);
+            _enemyAction[id] = (actionId, progress);
+            if (!usingAbility) continue;
+            bool newSwing = !had || actionId != last.Action || progress + 0.25f < last.Progress;
+            if (!newSwing) continue;
 
             var action = Try(() => actor.CurrentAction, null);
             var skill = Try(() => action?.Skill, null);
             bool attack = Try(() => skill != null && (skill.IsAttack || skill.IsSpell), false) || Try(() => actor.isAttacking, false);
             if (!attack) continue;
+            string internalName = Try(() => skill?.InternalName, "") ?? "";
+            if (internalName.Split('_', ' ').Any(TravelWords.Contains)) continue;
             // Aimed at you, or with no target (a slam or a cone where it stands).
             long target = Try(() => action?.Target?.Address ?? 0L, 0L);
             if (target != 0 && target != me) continue;
@@ -61,8 +73,7 @@ internal sealed partial class Navigator
             float gain = (rarity == MonsterRarity.Unique ? 0.75f : 0.45f) + 0.55f * near01;
             float vol = (EnemyVolume?.Invoke() ?? 0.7f) * Math.Min(1f, gain);
             _audio.Play("dodge:" + pan, () => Synth.DodgeWarning(pan), vol);
-            string skillName = Try(() => skill?.InternalName, "") ?? "";
-            PluginLog.Write("Dodge warning: " + rarity + " " + skillName + " at " + dist.ToString("0") + " cells");
+            PluginLog.Write("Dodge warning: " + rarity + " " + internalName + " at " + dist.ToString("0") + " cells");
         }
         if (_enemyAction.Count > 400) _enemyAction.Clear();
     }

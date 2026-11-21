@@ -365,6 +365,7 @@ internal sealed partial class Navigator
         TrackSpeed(now, p);
         Reveal(p);
         TrackDeath(p);
+        RememberExits(now);
         if (!uiBusy) TickAreaDescription(now, p);
 
         if (uiBusy)
@@ -1226,7 +1227,40 @@ internal sealed partial class Navigator
         public Cat Cat;
     }
 
-    private static ScanItem Of(Entity e) => new ScanItem { E = e, Cat = Category(e) };
+    private static ScanItem Of(Entity e)
+    {
+        var s = new ScanItem { E = e, Cat = Category(e) };
+        if (s.Cat == Cat.Exits) { s.Pos = Try(() => e.GridPosNum, Vector2.Zero); s.Label = NameOf(e, _ => null); }
+        return s;
+    }
+
+    // Exits found in each area, kept for as long as you are in it: the game drops an exit from its
+    // list once you are far from it, but it is still there.
+    private readonly Dictionary<long, Dictionary<long, (Vector2 Pos, string Name)>> _knownExits = new Dictionary<long, Dictionary<long, (Vector2, string)>>();
+    private long _nextExitMemoryMs;
+
+    private Dictionary<long, (Vector2 Pos, string Name)> AreaExits()
+    {
+        long area = Try(() => (long)_gc.Area.CurrentArea.Hash, 0L);
+        if (!_knownExits.TryGetValue(area, out var d)) { if (_knownExits.Count > 30) _knownExits.Clear(); _knownExits[area] = d = new Dictionary<long, (Vector2, string)>(); }
+        return d;
+    }
+
+    private void RememberExits(long now)
+    {
+        if (now < _nextExitMemoryMs) return;
+        _nextExitMemoryMs = now + 500;
+        var d = AreaExits();
+        foreach (Entity e in Entities())
+        {
+            if (Try(() => e.Type, EntityType.Error) != EntityType.AreaTransition) continue;
+            long id = Try(() => (long)e.Id, 0L);
+            if (id == 0) continue;
+            Vector2 g = Try(() => e.GridPosNum, Vector2.Zero);
+            if (g == Vector2.Zero) continue;
+            d[id] = (g, NameOf(e, _ => null));
+        }
+    }
 
     private static Vector2 PosOf(ScanItem s)
     {
@@ -1237,7 +1271,11 @@ internal sealed partial class Navigator
     private static bool StillThere(ScanItem s)
     {
         if (s.E == null) return true;
-        try { return s.E.IsValid; } catch { return false; }
+        bool valid;
+        try { valid = s.E.IsValid; } catch { valid = false; }
+        // An exit out of the game's range is still there: keep going by where it was.
+        if (!valid && s.Cat == Cat.Exits && s.Pos != Vector2.Zero) { s.E = null; return true; }
+        return valid;
     }
 
     private static string NameOf(ScanItem s, Func<Entity, string> itemName) => s.E == null ? s.Label : NameOf(s.E, itemName);
@@ -1295,6 +1333,15 @@ internal sealed partial class Navigator
         return new List<ScanItem> { new ScanItem { Pos = d.At, Label = label, Cat = Cat.Death } };
     }
 
+    /// <summary>A quest thing that has been used: a nest or chest opened, or something the game no
+    /// longer lets you use (a glyph wall once the glyphs are in).</summary>
+    private static bool Used(Entity e)
+    {
+        if (Try(() => e.Type == EntityType.Chest && e.IsOpened, false)) return true;
+        var t = Try(() => e.GetComponent<Targetable>(), null);
+        return t != null && t.Address != 0 && !Try(() => t.isTargetable, true);
+    }
+
     /// <summary>The game shows a quest icon for it on the minimap (shown, not hidden).</summary>
     private static bool QuestMarked(Entity e)
     {
@@ -1334,7 +1381,7 @@ internal sealed partial class Navigator
         // Only what the game itself marks for a quest on the minimap (a visible quest icon): no
         // marker of the mod's own, which a sighted player would not have. Monsters keep their
         // enemy sounds.
-        if (t != EntityType.Monster && QuestMarked(e)) return Cat.Quest;
+        if (t != EntityType.Monster && QuestMarked(e)) return Used(e) ? Cat.None : Cat.Quest;
         switch (t)
         {
             case EntityType.AreaTransition:
@@ -1355,6 +1402,8 @@ internal sealed partial class Navigator
                 try { return e.IsOpened ? Cat.None : Cat.Chests; } catch { return Cat.Chests; }
             case EntityType.Stash:
             case EntityType.Shrine:
+            case EntityType.QuestObject when Used(e):
+                return Cat.None;
             case EntityType.QuestObject:
             case EntityType.Door:
             case EntityType.DoorSwitch:
@@ -1387,7 +1436,15 @@ internal sealed partial class Navigator
         if (cat == Cat.Death) return DeathList();
         var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
-        return list.OrderBy(e => (e.GridPosNum - p).LengthSquared()).Take(40).Select(Of).ToList();
+        var items = list.Select(Of).ToList();
+        if (cat == Cat.Exits)
+        {
+            // Exits found earlier in this area and now out of the game's range.
+            var live = new HashSet<long>(items.Where(s => s.E != null).Select(s => Try(() => (long)s.E.Id, 0L)));
+            foreach (var kv in AreaExits())
+                if (!live.Contains(kv.Key)) items.Add(new ScanItem { Pos = kv.Value.Pos, Label = kv.Value.Name, Cat = Cat.Exits });
+        }
+        return items.OrderBy(s => (PosOf(s) - p).LengthSquared()).Take(40).ToList();
     }
 
     // ===================================================================

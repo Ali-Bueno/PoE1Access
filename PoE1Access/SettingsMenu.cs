@@ -162,8 +162,33 @@ public partial class PoE1AccessCore
         foreach (var (kind, label) in drops)
         {
             var k = kind;
-            items.Add(S("Loot: " + label, label + " on the ground", () => Synth.LootCue(k, 0f, 1f), loot));
+            items.Add(S("Loot: " + label, label + " on the ground, the mod's own sound", () => Synth.LootCue(k, 0f, 1f), loot));
         }
+
+        // The game's own drop sounds, which loot plays by default (GameSounds), from the game.
+        var gameDrops = new (string Event, string Label)[]
+        {
+            ("orb", "currency"), ("Scroll", "a scroll"), ("Gem", "a gem"), ("Flask", "a flask"), ("Map", "a map"),
+            ("DivinationCard", "a divination card"), ("Jewel", "a jewel"), ("EssenceItem", "an essence"), ("DelveFossil", "a fossil"),
+            ("Ring", "a ring"), ("Amulet", "an amulet"), ("Belt", "a belt"), ("quiver", "a quiver"),
+            ("Helm", "a helmet"), ("cap", "a cap"), ("Metal_armour", "metal body armour"), ("Leather_armour", "leather body armour"),
+            ("cloth_armour", "cloth body armour"), ("chain_armour", "chain body armour"),
+            ("chain_gloves", "metal gloves"), ("Leather_glove", "leather gloves"),
+            ("Metal_boots", "metal boots"), ("Boots", "leather boots"), ("chain_boots", "chain boots"),
+            ("Metal_shield", "a metal shield"), ("wooden_shield", "a wooden shield"), ("Metal_and_wooden_shield", "a mixed shield"),
+            ("Sword", "a sword"), ("Large_sword", "a two handed sword"), ("1HandAxe", "an axe"), ("1HandMace", "a mace"),
+            ("Maul", "a two handed mace"), ("Scepter", "a sceptre"), ("1HandDagger", "a dagger"), ("1HandClaw", "a claw"),
+            ("wand", "a wand"), ("Staff", "a staff"), ("Bow", "a bow"), ("item_drop_large", "any other item"),
+        };
+        MenuItem G(string label, string meaning, string eventPath) =>
+            new MenuItem { Label = label, Description = meaning, Play = () =>
+            {
+                if (_gameSounds == null || !_gameSounds.Available) { Say("The game's sounds cannot be played here", true); return; }
+                _gameSounds.Play(eventPath, 0f, 1f, V(Settings.LootVolume) * 1.4f * Settings.MasterVolume.Value / 100f);
+            } };
+        foreach (var (ev, label) in gameDrops)
+            items.Add(G("Game loot: " + label, label + " on the ground, the game's own drop sound", "event:/Sound Effects/ItemSounds/" + ev + ".ogg"));
+        items.Add(G("Game loot: unique", "played over a unique item's drop sound, the game's own", GameSounds.UniqueLayer));
         return items;
     }
 

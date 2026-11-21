@@ -50,6 +50,7 @@ internal sealed partial class Navigator
                 _ => null,
             };
             if (kind == null) continue;
+            if (kind == Synth.WorldCue.Exit && HiddenExit(e)) continue;   // not found yet
             long id; Vector2 g;
             try { id = e.Id; g = e.GridPosNum; } catch { continue; }
             float dist = (g - p).Length();

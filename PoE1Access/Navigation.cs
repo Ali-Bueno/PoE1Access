@@ -1246,6 +1246,21 @@ internal sealed partial class Navigator
         return d;
     }
 
+    /// <summary>You have seen the ground an exit stands on (the game sends exits before that;
+    /// until then only unexplored ground hints at it, "leads to a new exit").</summary>
+    private bool ExitSeen(Vector2 pos)
+    {
+        if (_seen == null || _grid == null) return false;
+        var c = NearestPassable((int)pos.X, (int)pos.Y, 8);
+        if (c == null) return false;
+        int i = c.Value.Item2 * _gridW + c.Value.Item1;
+        return i >= 0 && i < _seen.Length && _seen[i];
+    }
+
+    // Area transitions are left out until seen; portals (yours and others') are always there.
+    private bool HiddenExit(Entity e) =>
+        Try(() => e.Type, EntityType.Error) == EntityType.AreaTransition && !ExitSeen(Try(() => e.GridPosNum, Vector2.Zero));
+
     private void RememberExits(long now)
     {
         if (now < _nextExitMemoryMs) return;
@@ -1436,13 +1451,14 @@ internal sealed partial class Navigator
         if (cat == Cat.Death) return DeathList();
         var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
+        if (cat == Cat.Exits) list = list.Where(e => !HiddenExit(e));
         var items = list.Select(Of).ToList();
         if (cat == Cat.Exits)
         {
-            // Exits found earlier in this area and now out of the game's range.
+            // Exits seen earlier in this area and now out of the game's range.
             var live = new HashSet<long>(items.Where(s => s.E != null).Select(s => Try(() => (long)s.E.Id, 0L)));
             foreach (var kv in AreaExits())
-                if (!live.Contains(kv.Key)) items.Add(new ScanItem { Pos = kv.Value.Pos, Label = kv.Value.Name, Cat = Cat.Exits });
+                if (!live.Contains(kv.Key) && ExitSeen(kv.Value.Pos)) items.Add(new ScanItem { Pos = kv.Value.Pos, Label = kv.Value.Name, Cat = Cat.Exits });
         }
         return items.OrderBy(s => (PosOf(s) - p).LengthSquared()).Take(40).ToList();
     }

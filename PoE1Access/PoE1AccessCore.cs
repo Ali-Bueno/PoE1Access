@@ -2812,7 +2812,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 sb.Append(c);
             }
         }
-        return sb.ToString().Replace(" ,", ",").TrimStart(',', ' ');
+        // "> Connecting to login server..." (the login screen's log lines): the mark goes.
+        return sb.ToString().Replace(" ,", ",").TrimStart(',', ' ', '>').TrimStart();
     }
 
     // Joins parts into one phrase, with a pause between them.

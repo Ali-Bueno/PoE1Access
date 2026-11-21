@@ -214,10 +214,14 @@ public partial class PoE1AccessCore
 // The game's own words for a passive stat, from its passive stat descriptions
 // (Metadata/StatDescriptions/passive_skill_stat_descriptions.csd, which ExileApi cannot read on
 // the 18 Nov 2026 patch). Found 21 Nov 2026: the file record's +0x28 object holds at +0x88/+0x90
-// a list of entries by stat number (the Stats.dat row), each with its first text's length at
-// +0xC8 and the text (UTF-16) at +0xD0, inline when shorter than 8. "Your hits can't be
-// Evaded\nNever deal Critical Strikes" for resolute_technique; "{0:+d} to maximum Life" for
-// base_maximum_life. Only the first wording is known, which is the one for positive values.
+// a list of entries by stat number (the Stats.dat row). An entry's +0x10/+0x18 is its list of
+// wordings, 0xE0 bytes each (kept inside the entry when there is one), each for a range of values
+// ("{0}% increased maximum Life" for 1|#, "{0}% reduced maximum Life" for #|-1): a wording starts
+// with its ranges, and its text (UTF-16) has its length at +0xA0 and is at +0xA8, inline when
+// shorter than 8. Checked on every passive (6,872 of 8,809 stats worded this way).
+// The value is put in as the stat's name says to show it: "per_minute" per second (/60),
+// "permyriad" in percent (/100), "_ms" in seconds; a text that needs another stat's value is left
+// to StatWords. "Your hits can't be Evaded\nNever deal Critical Strikes" for resolute_technique.
 public partial class PoE1AccessCore
 {
     private long _passiveTextList, _passiveTextCount;
@@ -226,7 +230,7 @@ public partial class PoE1AccessCore
     private List<string> PassiveStatText(ExileCore.PoEMemory.FilesInMemory.StatsDat.StatRecord stat, int value)
     {
         var lines = new List<string>();
-        if (stat == null || value <= 0) return lines;
+        if (stat == null || value == 0) return lines;
         var mem = Mem;
         if (_passiveTextList == 0)
         {
@@ -254,22 +258,48 @@ public partial class PoE1AccessCore
         {
             long entry = mem.Read<long>(_passiveTextList + id * 8L);
             if (entry < 0x10000 || entry > 0x7FFF_FFFF_FFFF) return lines;
-            long len = mem.Read<long>(entry + 0xC8);
+            long first = mem.Read<long>(entry + 0x10), last = mem.Read<long>(entry + 0x18);
+            if (first < 0x10000 || last <= first || (last - first) % 0xE0 != 0 || last - first > 0xE0 * 16) return lines;
+            // The wording whose value range holds the value: a wording starts with its list of
+            // ranges, 12 bytes per stat (min, max, flags; int.MaxValue for no bound, as in "1|#").
+            // Descriptions of several stats at once ("Attacks have 15% chance to cause Bleeding",
+            // worded by three stats together) are left to StatWords.
+            long section = 0;
+            for (long sec = first; sec < last; sec += 0xE0)
+            {
+                long rb = mem.Read<long>(sec), re = mem.Read<long>(sec + 8);
+                if (rb < 0x10000 || re - rb != 12) return lines;
+                int lo = mem.Read<int>(rb), hi = mem.Read<int>(rb + 4);
+                if ((lo == int.MaxValue || value >= lo) && (hi == int.MaxValue || value <= hi)) { section = sec; break; }
+            }
+            if (section == 0) return lines;
+            long len = mem.Read<long>(section + 0xA0);
             if (len <= 0 || len > 1000) return lines;
-            long at = len < 8 ? entry + 0xD0 : mem.Read<long>(entry + 0xD0);
+            long at = len < 8 ? section + 0xA8 : mem.Read<long>(section + 0xA8);
             text = mem.ReadStringU(at, (int)len * 2 + 2) ?? "";
             if (text.Length > len) text = text.Substring(0, (int)len);
         }
         catch { return lines; }
         if (text.Length == 0 || text.Any(c => c < 0x20 && c != '\n')) return lines;
-        // Only texts with no number to fill in (keystones' rules and the like): the game may change
-        // a value before showing it (per minute to per second, hundredths...) by rules not known
-        // here, so numbers are left to StatWords, which says the stored value.
-        if (text.Contains("{")) return lines;
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"\{[1-9]")) return lines;   // needs another stat
+        if (text.Contains("{"))
+        {
+            string key = Try(() => stat.Key, "") ?? "";
+            double shown = value > 0 ? value : -value;
+            if (key.Contains("per_minute")) shown /= 60.0;
+            else if (key.Contains("permyriad")) shown /= 100.0;
+            else if (key.EndsWith("_ms")) shown /= 1000.0;
+            string number = shown.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\{0(:\+?d)?\}", m => (m.Groups[1].Success && value > 0 ? "+" : m.Groups[1].Success ? "-" : "") + number);
+            if (text.Contains("{")) return lines;
+        }
         foreach (string line in text.Split('\n'))
         {
             string c = CleanText(line);
-            if (c.Length > 0) lines.Add(c);
+            if (c.Length == 0) continue;
+            // A line broken mid-sentence ("... no" / "more than once every 0.3 seconds") is joined.
+            if (lines.Count > 0 && char.IsLower(c[0])) lines[lines.Count - 1] += " " + c;
+            else lines.Add(c);
         }
         return lines;
     }

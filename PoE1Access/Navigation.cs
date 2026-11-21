@@ -801,7 +801,7 @@ internal sealed partial class Navigator
         foreach (Entity e in Entities())
         {
             Cat cat = Category(e);
-            if (cat == Cat.None || cat == Cat.Enemies || cat == Cat.Players && IsMe(e)) continue;
+            if (cat == Cat.None || cat == Cat.Enemies || cat == Cat.Players) continue;   // players: in the scanner only
 
             long id;
             Vector2 g;

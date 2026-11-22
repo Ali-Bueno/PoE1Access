@@ -1890,7 +1890,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // the same character a quarter of a second later) is not said twice.
         long nowMs = _clock.ElapsedMilliseconds;
         if (lead.Length > 0) Say(text.Length > 0 ? JoinSpeech(new List<string> { lead, text }) : lead, true);
-        else if (text.Length > 0 && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
+        else if (text.Length > 0 && !IsFateCardText(text) && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
         _lastFocusText = text;
         _lastFocusTextMs = nowMs;
     }
@@ -2159,7 +2159,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (stableFor >= Settings.HoverDelayMs.Value && text != _lastHoverSpoken)
         {
             // A dialogue's options are read one at a time by PollDialogue, not as one list.
-            if (IsWholeOptionList(text) || IsWorldMapText(text) || _hoverQuiet) { _lastHoverSpoken = text; return; }
+            if (IsWholeOptionList(text) || IsWorldMapText(text) || _hoverQuiet || IsFateCardText(text)) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
         }

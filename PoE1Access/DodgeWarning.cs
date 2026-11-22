@@ -71,8 +71,9 @@ internal sealed partial class Navigator
             // Louder the closer, never faint for a unique.
             float near01 = 1f - Math.Min(1f, dist / EnemyCells);
             float gain = (rarity == MonsterRarity.Unique ? 0.75f : 0.45f) + 0.55f * near01;
-            float vol = (EnemyVolume?.Invoke() ?? 0.7f) * Math.Min(1f, gain);
-            _audio.Play("dodge:" + pan, () => Synth.DodgeWarning(pan), vol);
+            // Well above the other sounds, which are turned down while it plays.
+            float vol = (EnemyVolume?.Invoke() ?? 0.7f) * Math.Min(1f, gain) * 1.6f;
+            _audio.PlayPriority("dodge2:" + pan, () => Synth.DodgeWarning(pan), vol, 450);
             PluginLog.Write("Dodge warning: " + rarity + " " + internalName + " at " + dist.ToString("0") + " cells");
         }
         if (_enemyAction.Count > 400) _enemyAction.Clear();

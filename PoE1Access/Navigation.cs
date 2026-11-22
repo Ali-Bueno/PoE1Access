@@ -781,7 +781,7 @@ internal sealed partial class Navigator
                 keep.Add(it.Id);
                 var (pan, pitch) = LootSide(p, it.G, it.Dist);
                 float closeness = 1f - it.Dist / LootCells;
-                float vol = LootVolume() * 1.4f * AudioEngine.Master * (0.25f + 0.75f * closeness * closeness);
+                float vol = LootVolume() * 1.4f * AudioEngine.Master * AudioEngine.Duck * (0.25f + 0.75f * closeness * closeness);
                 if (_lootLoops.TryGetValue(it.Id, out var l) && l.File == file && PackAudio.IsPlaying(l.Channel))
                     PackAudio.SetChannel(l.Channel, pan, pitch, vol);
                 else if (PackAudio.PlayFile(file, true, pan, pitch, vol, out IntPtr ch))
@@ -812,7 +812,7 @@ internal sealed partial class Navigator
             string drop = null;
             if (GameAudio != null && GameAudio.Available && LootEvent != null && !_lootEvents.TryGetValue(it.Id, out drop))
                 _lootEvents[it.Id] = drop = Try(() => LootEvent(it.E), null);
-            float gameVol = vol * AudioEngine.Master;
+            float gameVol = vol * AudioEngine.Master * AudioEngine.Duck;
             string packFile = PackFile(kind);
             if (packFile != null && PackAudio.PlayFile(packFile, false, pan, pitch, gameVol, out _)) { }
             else if (drop != null && GameAudio.Play(drop, pan, pitch, gameVol))
@@ -1543,8 +1543,10 @@ internal sealed partial class Navigator
 
         // Exits standing on ground you have not seen yet.
         var newExits = new List<int>();
-        foreach (var (pos, _) in AreaExits().Values)
+        string areaKey = AreaKey();
+        foreach (var (pos, exitName) in AreaExits().Values)
         {
+            if (_knownPlaces.Contains(areaKey, "exit", exitName)) continue;   // listed already
             var c = NearestPassable((int)pos.X, (int)pos.Y, 8);
             if (c == null) continue;
             int ci = c.Value.Item2 * _gridW + c.Value.Item1;
@@ -1689,6 +1691,8 @@ internal sealed partial class Navigator
             }
             string r = e.RenderName;
             if (!string.IsNullOrWhiteSpace(r)) return r;
+            // An exit the game gives no name ("AreaTransition", "WaterCaveAreaTransition").
+            if (e.Type == EntityType.AreaTransition) return T("Passage", "Paso");
             if (e.Type == EntityType.IngameIcon)
             {
                 // "AuguryEncounter" -> "Augury Encounter"
@@ -1766,6 +1770,8 @@ internal sealed partial class Navigator
 
         _scanChoice = list[_scanIndex];
         string text = Describe(_scanChoice, itemName) + ", " + RouteText(p, PosOf(_scanChoice));
+        // "1 of 3": so it is known there are more (an exit found earlier is often not the nearest).
+        if (list.Count > 1) text += ", " + T($"{_scanIndex + 1} of {list.Count}", $"{_scanIndex + 1} de {list.Count}");
         if (catChanged) text = T($"{CatName(Order[_catIndex])}. {text}", $"{CatName(Order[_catIndex])}. {text}");
         _say(text);
     }

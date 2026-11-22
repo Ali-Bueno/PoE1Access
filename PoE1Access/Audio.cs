@@ -43,8 +43,25 @@ internal sealed class AudioEngine : IDisposable
         }
     }
 
+    // A warning that must be heard (the dodge warning) turns everything else down for a moment.
+    private static long _duckUntilMs;
+    private const float DuckGain = 0.3f;
+
+    /// <summary>What other sounds are scaled by now: lower while a warning plays.</summary>
+    public static float Duck => Environment.TickCount64 < _duckUntilMs ? DuckGain : 1f;
+
+    /// <summary>Plays a warning that must be heard: it takes a voice even when all are busy, and
+    /// every other sound is turned down for <paramref name="duckMs"/>.</summary>
+    public void PlayPriority(string key, Func<float[]> make, float volume, int duckMs)
+    {
+        _duckUntilMs = Environment.TickCount64 + duckMs;
+        Play(key, make, volume, true);
+    }
+
     /// <summary>Plays a cached cue. `make` builds the samples (interleaved stereo, -1..1) once.</summary>
-    public void Play(string key, Func<float[]> make, float volume)
+    public void Play(string key, Func<float[]> make, float volume) => Play(key, make, volume * Duck, false);
+
+    private void Play(string key, Func<float[]> make, float volume, bool priority)
     {
         volume *= Master;
         if (_xa == null || volume <= 0f) return;
@@ -57,6 +74,14 @@ internal sealed class AudioEngine : IDisposable
             }
 
             SourceVoice voice = GetVoice(out int slot);
+            if (voice == null && priority && _voices.Count > 0)
+            {
+                // Every voice busy: the warning takes the first one.
+                slot = 0;
+                voice = _voices[0].Voice;
+                voice.Stop();
+                voice.FlushSourceBuffers();
+            }
             if (voice == null) return;
 
             var data = DataStream.Create(pcm, true, false);
@@ -321,7 +346,15 @@ internal static class Synth
                 double env = Math.Min(1, (t - 0.12) / 0.008) * Math.Max(0, 1 - u);
                 drop = Math.Tanh(2.2 * Math.Sin(phase)) * env * 0.55;
             }
-            Put(b, i, (float)(blade + drop), g);
+            // The ring: a bright metallic strike at the start that cuts through combat noise
+            // (the low drop alone was buried under the game's sounds).
+            double ring = 0;
+            if (t < 0.22)
+            {
+                double env = Math.Min(1, t / 0.002) * Math.Exp(-t / 0.06);
+                ring = (Math.Sin(2 * Math.PI * 1760 * t) + 0.6 * Math.Sin(2 * Math.PI * 2637 * t) + 0.35 * Math.Sin(2 * Math.PI * 3951 * t)) * env * 0.22;
+            }
+            Put(b, i, (float)(blade + drop + ring), g);
         }
         // The gong under it.
         return Mix(b, Bell(pan, 98, new[] { 1.0, 2.02, 2.76, 4.07 }, 0.12, 0.22, 0.0));

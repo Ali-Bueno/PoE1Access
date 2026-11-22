@@ -73,7 +73,7 @@ public partial class PoE1AccessCore
             _fateCount = count;
             string head = string.Join(", ", new[] { title, count }.Where(s => s.Length > 0));
             int n = cards.Count;
-            Say(T($"{head}. {n} cards. Move to hear each", $"{head}. {n} cartas. Muévete para oír cada una"), true);
+            Say(n == 1 ? T($"{head}. 1 card", $"{head}. 1 carta") : T($"{head}. {n} cards. Move to hear each", $"{head}. {n} cartas. Muévete para oír cada una"), true);
             if (sel >= 0) { _fateSelected = sel; Say(_fateTexts[sel] + ", " + T($"{sel + 1} of {n}", $"{sel + 1} de {n}"), false); }
             return;
         }
@@ -87,6 +87,21 @@ public partial class PoE1AccessCore
             _fateCount = count;
             if (count.Length > 0) Say(count, false);
         }
+    }
+
+    /// <summary>The hover reader's short version of a card the Fate window reads in full ("Alchemist.
+    /// Creates boiling cauldrons of blood"): left to the Fate window, which says the reward too.</summary>
+    private bool IsFateCardText(string text)
+    {
+        if (_fateWindow == null || _fateTexts.Count == 0 || string.IsNullOrEmpty(text)) return false;
+        foreach (string card in _fateTexts)
+        {
+            int cut = card.IndexOf(',');
+            int dot = card.IndexOf('.');
+            int end = cut >= 0 && (dot < 0 || cut < dot) ? cut : dot;
+            if (end > 0 && text.StartsWith(card.Substring(0, end) + ".", StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
 
     /// <summary>Everything on the selected Fate card (for hold L3), or null when no Fate window is open.</summary>
@@ -144,7 +159,8 @@ public partial class PoE1AccessCore
                 var sk = Kids(slot);
                 string words = sk.Count > 3 ? UiText.Text(mem, sk[3]) : "";
                 if (words.Length == 0 && sk.Count > 0) words = PictureName(mem, sk[0]);
-                if (words.Length > 0) rewards.Add(words);
+                // Two lines of one reward ("additional Rare Rings | Rings ... a Speed modifier").
+                if (words.Length > 0) rewards.Add(string.Join(". ", words.Split('|').Select(w => w.Trim()).Where(w => w.Length > 0)));
             }
         string text = name + (tier.Length > 0 ? T($", tier {tier}", $", nivel {tier}") : "") + ". " + does;
         if (rewards.Count > 0) text += ". " + T("Reward: ", "Recompensa: ") + string.Join(". ", rewards);

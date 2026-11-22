@@ -11,9 +11,9 @@ namespace PoE1Access;
 /// rare and legendary equipment, quest item) and a short sound repeating from gems, scrolls,
 /// runes, chests, corpses, weapon racks and the stash.
 ///
-/// The pack ships in the "sounds" folder beside PoE1Access.exe (sounds\loot); the mod finds the
-/// files by name anywhere inside it ("chest.ogg", "legendary equipment.ogg"...), so a file of
-/// your own with the same name can replace one. Without the folder the mod's own sounds play.
+/// No sounds of this kind ship with the mod: put your own in a folder named "sounds" beside
+/// PoE1Access.exe; the mod finds the files by name anywhere inside it ("chest.ogg",
+/// "legendary equipment.ogg"...). Without the folder the mod's own sounds play.
 /// </summary>
 internal sealed class SoundPack
 {

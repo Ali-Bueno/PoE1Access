@@ -59,8 +59,6 @@ $version = (Get-Content (Join-Path $root "VERSION") -TotalCount 1).Trim()
 Set-Content (Join-Path $dist "app\version.txt") $version -Encoding ascii
 Copy-Item (Join-Path $root "Launcher\README.txt") $dist
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $dist "LICENSE.txt")
-# The sound pack for loot, chests and the stash (see PoE1Access/SoundPack.cs).
-Copy-Item (Join-Path $root "sounds") (Join-Path $dist "sounds") -Recurse
 Remove-Item -Recurse -Force $work
 Compress-Archive -Path $dist -DestinationPath (Join-Path $root "dist\PoE1Access.zip") -Force
 Get-ChildItem -Recurse (Join-Path $root "dist") | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200

@@ -97,14 +97,15 @@ Windows, prompts and class names are read in that language, and the mod speaks i
 in it too: English, Spanish, Brazilian Portuguese, French, German, Russian, Thai, Japanese,
 Korean or Traditional Chinese. A phrase not yet translated is said in English.
 
-SOUND PACK
-Loot, chests and the stash use the sound files in the sounds folder beside PoE1Access.exe, the
-way Path of Exile 2 Access uses its set. They come with the mod; you can replace any of them with
-your own (.ogg or .wav, same name; any folders inside sounds are fine). The names: gold
+YOUR OWN SOUND PACK
+You can give loot, chests and the stash sounds of your own. Make a folder named sounds beside
+PoE1Access.exe and put your sound files in it (.ogg or .wav; any folders inside it are fine).
+The mod does not come with any. The names it looks for: gold
 (currency), potion (flasks), normal equipment, magic equipment, rare equipment, legendary
 equipment (uniques) and quest item, which loop from the nearest items and get louder as you get
 closer; and gem, scroll, rune (jewels), chest, corpse, weapon rack and stash, which repeat from
-their side. A name it does not find keeps the mod's or the game's sound. Turn it off with "Loot, chests and stash use your sound pack" in the settings
+their side. A name it does not find keeps the mod's or the game's sound. Updates leave the
+sounds folder alone. Turn it off with "Loot, chests and stash use your sound pack" in the settings
 menu; the Sound glossary plays each one it found.
 
 UPDATES
@@ -169,8 +170,7 @@ CREDITS
 - Prism 0.18.3 (MPL-2.0 license), for screen reader and braille output:
   https://github.com/ethindp/prism. Its licenses are in licenses\prism.
 - The navigation design follows Path of Exile 2 Access (https://github.com/Ali-Bueno/poe2-access);
-  the mod's own sounds are synthesized. The sound pack for loot, chests and the stash (the
-  sounds folder) was made by Ali-Bueno, the author of Path of Exile 2 Access.
+  the mod's own sounds are synthesized.
 
 IF SOMETHING FAILS
 Send these files to whoever gave you the mod:

@@ -1257,6 +1257,31 @@ internal sealed partial class Navigator
         return i >= 0 && i < _seen.Length && _seen[i];
     }
 
+    // ---- Your quest's way: an exit you have found whose area your current objectives name ----
+    // ("Travel to the Submerged Passage" -> "The Submerged Passage, your quest leads there"),
+    // the link a sighted player makes from the quest tracker and the exit's name.
+    public Func<List<string>> QuestObjectives;
+    private List<string> _objectives = new List<string>();
+    private long _nextObjectivesMs;
+
+    private bool QuestLeadsTo(string exitName)
+    {
+        if (QuestObjectives == null || string.IsNullOrWhiteSpace(exitName)) return false;
+        long now = Environment.TickCount64;
+        if (now >= _nextObjectivesMs)
+        {
+            _nextObjectivesMs = now + 3000;
+            _objectives = Try(() => QuestObjectives(), null) ?? new List<string>();
+        }
+        string core = exitName.Trim();
+        if (core.StartsWith("The ", StringComparison.OrdinalIgnoreCase)) core = core.Substring(4);
+        if (core.Length < 4) return false;
+        return _objectives.Any(o => o.IndexOf(core, StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private string QuestNote(ScanItem s) =>
+        s.Cat == Cat.Exits && QuestLeadsTo(NameOf(s, _ => null)) ? T(", your quest leads there", ", tu misión lleva allí") : "";
+
     // Exits and quest things seen once, on any character (KnownPlaces): listed from then on.
     private readonly KnownPlaces _knownPlaces = new KnownPlaces();
 
@@ -1769,7 +1794,7 @@ internal sealed partial class Navigator
         if (_scanIndex >= list.Count) _scanIndex = 0;
 
         _scanChoice = list[_scanIndex];
-        string text = Describe(_scanChoice, itemName) + ", " + RouteText(p, PosOf(_scanChoice));
+        string text = Describe(_scanChoice, itemName) + QuestNote(_scanChoice) + ", " + RouteText(p, PosOf(_scanChoice));
         // "1 of 3": so it is known there are more (an exit found earlier is often not the nearest).
         if (list.Count > 1) text += ", " + T($"{_scanIndex + 1} of {list.Count}", $"{_scanIndex + 1} de {list.Count}");
         if (catChanged) text = T($"{CatName(Order[_catIndex])}. {text}", $"{CatName(Order[_catIndex])}. {text}");
@@ -1782,7 +1807,7 @@ internal sealed partial class Navigator
         if (_scanChoice == null) return false;
         Vector2 p = PlayerGrid();
         if (!StillThere(_scanChoice)) { _say(T($"{NameOf(_scanChoice, itemName)} is gone", $"{NameOf(_scanChoice, itemName)} ya no está")); _scanChoice = null; return true; }
-        _say(Describe(_scanChoice, itemName) + ", " + RouteText(p, PosOf(_scanChoice)));
+        _say(Describe(_scanChoice, itemName) + QuestNote(_scanChoice) + ", " + RouteText(p, PosOf(_scanChoice)));
         return true;
     }
 

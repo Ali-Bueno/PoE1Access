@@ -471,6 +471,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.Pack = Settings.SoundPackSounds.Value ? _soundPack : null;
                 _nav.PackAudio = _gameSounds;
                 _nav.LootEvent ??= LootEventOf;
+                _nav.QuestObjectives ??= QuestObjectives;
                 _nav.LootVolume ??= () => Settings.LootVolume.Value / 100f;
                 _nav.EnemyVolume ??= () => Settings.EnemyVolume.Value / 100f;
                 _nav.EnemySounds = Settings.EnemySounds.Value;

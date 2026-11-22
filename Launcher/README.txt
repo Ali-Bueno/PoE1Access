@@ -126,7 +126,8 @@ In game (controller, L3 = left stick click / keyboard):
   exits stay listed while you are in their area, however far you go; once you have seen one in an
   area, on any character, it is listed there from then on on every character (kept in
   app\known-places.txt); before that, unexplored ground that holds an exit you have not seen
-  yet says "leads to a new exit")
+  yet says "leads to a new exit"; an exit whose area your current quest objective names says
+  "your quest leads there")
 - Hold L3 + right stick left or right / Home, End: previous or next thing, nearest first
 - Tap L3 / Insert: where the chosen thing is now
 - Double tap L3 / F1: level and how far you are to the next, life, mana, energy shield, area,

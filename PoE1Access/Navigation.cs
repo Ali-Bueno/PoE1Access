@@ -1523,7 +1523,9 @@ internal sealed partial class Navigator
     //    "Unexplored nook"          all of it within one look (60 cells) of its edge: a dead end
     //  Large first, then ground, small, nooks; nearest first within each.
     //  An entry whose unseen ground holds an exit you have not seen yet (one the game has sent,
-    //  standing on ground you have not seen) adds "leads to a new exit", without saying where.
+    //  standing on ground you have not seen) adds "leads to a new exit", without saying where;
+    //  one that holds something the game marks for your quest, not seen yet, adds "leads to
+    //  something for your quest", without saying what.
 
     private const float RevealDisc = (float)(Math.PI * RevealCells * RevealCells);   // ~11,300 cells
     private int[] _uxStamp;
@@ -1578,10 +1580,25 @@ internal sealed partial class Navigator
             if (ci >= 0 && ci < n && !_seen[ci]) newExits.Add(ci);
         }
 
+        // Quest things standing on ground you have not seen yet (not known from before either).
+        var newQuest = new List<int>();
+        foreach (Entity e in Entities())
+        {
+            if (Try(() => e.Type, EntityType.Error) == EntityType.Monster || Category(e) != Cat.Quest) continue;
+            if (_knownPlaces.Contains(areaKey, "quest", NameOf(e, _ => null))) continue;   // listed already
+            Vector2 qp = Try(() => e.GridPosNum, Vector2.Zero);
+            if (qp == Vector2.Zero) continue;
+            var c = NearestPassable((int)qp.X, (int)qp.Y, 8);
+            if (c == null) continue;
+            int ci = c.Value.Item2 * _gridW + c.Value.Item1;
+            if (ci >= 0 && ci < n && !_seen[ci]) newQuest.Add(ci);
+        }
+
         // 2. Each unseen region behind those edges: its size, and how far it reaches from its edge.
         var regionOf = new Dictionary<int, int>();          // unseen cell -> region id
         var regions = new List<(int Size, float Reach, bool Capped)>();
         var regionHasExit = new List<bool>();
+        var regionHasQuest = new List<bool>();
         foreach (var (_, unseen) in edges)
         {
             if (regionOf.ContainsKey(unseen) || _uxStamp[unseen] > seenGen) continue;
@@ -1612,6 +1629,7 @@ internal sealed partial class Navigator
             }
             regions.Add((size, reach, false));
             regionHasExit.Add(newExits.Any(c => _uxStamp[c] == gen));
+            regionHasQuest.Add(newQuest.Any(c => _uxStamp[c] == gen));
             // Every edge cell of this region belongs to it.
             foreach (var (_, u) in edges)
                 if (_uxStamp[u] == gen) regionOf[u] = id;
@@ -1634,7 +1652,9 @@ internal sealed partial class Navigator
             else if (!capped && size < 2 * RevealDisc) { rank = 2; label = T("Small unexplored ground", "Terreno pequeño sin explorar"); }
             else if (capped || size >= 10 * RevealDisc) { rank = 0; label = T("Large unexplored ground", "Terreno grande sin explorar"); }
             else { rank = 1; label = T("Unexplored ground", "Terreno sin explorar"); }
-            if (regionHasExit[id]) label += T(", leads to a new exit", ", lleva a una salida nueva");
+            if (regionHasExit[id] && regionHasQuest[id]) label += T(", leads to a new exit and something for your quest", ", lleva a una salida nueva y a algo de tu misión");
+            else if (regionHasExit[id]) label += T(", leads to a new exit", ", lleva a una salida nueva");
+            else if (regionHasQuest[id]) label += T(", leads to something for your quest", ", lleva a algo de tu misión");
 
             entries.Add((rank, (at - p).Length(), new ScanItem { Pos = at, Label = label, Cat = Cat.Unexplored }));
             if (entries.Count >= 30) break;

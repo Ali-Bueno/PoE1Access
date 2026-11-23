@@ -119,6 +119,9 @@ public class PoE1AccessSettings : ISettings
 
     // Controller commands on L3 (tap, double tap, triple tap, hold + right stick).
     public ToggleNode ControllerCommands { get; set; } = new ToggleNode(true);
+    // Read a PlayStation controller (DualSense, DualShock 4) for the mod's L3 controls, when no
+    // XInput controller is there. Off leaves the controller to the game and Steam alone.
+    public ToggleNode ReadPlayStationController { get; set; } = new ToggleNode(true);
 
     // Keyboard scanner and guide.
     public HotkeyNodeV2 ScanPrevCategoryHotkey { get; set; } = new HotkeyNodeV2(Keys.PageUp);

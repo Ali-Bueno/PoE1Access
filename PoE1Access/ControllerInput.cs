@@ -78,8 +78,13 @@ internal sealed class ControllerInput
     /// this is merged with what XInput gives.</summary>
     public GameXInput Game;
 
-    // A PlayStation controller, used when no XInput controller is connected.
+    // A PlayStation controller, used when no XInput controller is connected (and the setting
+    // allows it: off, the mod leaves the controller alone).
     private readonly PlayStationPad _ps = new PlayStationPad();
+    public bool AllowPlayStation = true;
+
+    /// <summary>Lets go of a PlayStation controller the mod had open.</summary>
+    public void ClosePlayStation() { if (_ps.Connected) { try { _ps.Dispose(); } catch { } } }
     private bool _psLogged;
 
     private bool Read(int index, out XInputState s)
@@ -115,7 +120,7 @@ internal sealed class ControllerInput
             if (_pad < 0)
             {
                 bool found = false;
-                try { found = _ps.Open(); } catch { }
+                if (AllowPlayStation) { try { found = _ps.Open(); } catch { } }
                 if (found != _psLogged)
                 {
                     _psLogged = found;

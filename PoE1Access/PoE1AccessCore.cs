@@ -519,6 +519,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Settings.ControllerCommands.Value)
         {
             _pad.Game ??= new GameXInput(() => Mem);
+            _pad.AllowPlayStation = Settings.ReadPlayStationController.Value;
+            if (!_pad.AllowPlayStation) _pad.ClosePlayStation();
             cmd = _pad.Poll(now);
             _nav.LeftStick = _pad.LeftStick;
         }

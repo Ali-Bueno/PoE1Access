@@ -63,20 +63,18 @@ internal sealed class PlayStationPad : IDisposable
         Dispose();
         foreach (string path in HidPaths())
         {
-            var h = CreateFile(path, GenericRead | GenericWrite, FileShareRead | FileShareWrite, IntPtr.Zero, OpenExisting, 0, IntPtr.Zero);
-            if (h.IsInvalid)
-            {
-                h.Dispose();
-                h = CreateFile(path, GenericRead, FileShareRead | FileShareWrite, IntPtr.Zero, OpenExisting, 0, IntPtr.Zero);
-                if (h.IsInvalid) { h.Dispose(); continue; }
-            }
+            // First without any access, only to ask what device it is (no other device is opened
+            // for reading); then a PlayStation controller for reading only, shared, never for
+            // writing: the game and Steam keep it as before (testers' DualSense, 23 Nov 2026).
             var attr = new HiddAttributes { Size = Marshal.SizeOf<HiddAttributes>() };
-            if (!HidD_GetAttributes(h, ref attr) || attr.VendorID != Sony ||
-                !(DualSenses.Contains(attr.ProductID) || DualShocks.Contains(attr.ProductID)))
+            using (var probe = CreateFile(path, 0, FileShareRead | FileShareWrite, IntPtr.Zero, OpenExisting, 0, IntPtr.Zero))
             {
-                h.Dispose();
-                continue;
+                if (probe.IsInvalid || !HidD_GetAttributes(probe, ref attr) || attr.VendorID != Sony ||
+                    !(DualSenses.Contains(attr.ProductID) || DualShocks.Contains(attr.ProductID)))
+                    continue;
             }
+            var h = CreateFile(path, GenericRead, FileShareRead | FileShareWrite, IntPtr.Zero, OpenExisting, 0, IntPtr.Zero);
+            if (h.IsInvalid) { h.Dispose(); continue; }
             int length = 64;
             if (HidD_GetPreparsedData(h, out IntPtr pre))
             {
@@ -171,7 +169,7 @@ internal sealed class PlayStationPad : IDisposable
         finally { SetupDiDestroyDeviceInfoList(set); }
     }
 
-    private const uint GenericRead = 0x80000000, GenericWrite = 0x40000000, FileShareRead = 1, FileShareWrite = 2, OpenExisting = 3;
+    private const uint GenericRead = 0x80000000, FileShareRead = 1, FileShareWrite = 2, OpenExisting = 3;
     private const int DigcfPresent = 0x2, DigcfDeviceInterface = 0x10, HidpStatusSuccess = 0x00110000;
 
     [StructLayout(LayoutKind.Sequential)]

@@ -434,10 +434,15 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             }
             _preGameState = "";
             _lastInGameMs = now;
+            long t0 = _clock.ElapsedMilliseconds;
             PollEscape();
+            NoteSlow("escape", t0); t0 = _clock.ElapsedMilliseconds;
             if (Settings.AnnouncePanels.Value) PollPanels(now);
+            NoteSlow("panels", t0); t0 = _clock.ElapsedMilliseconds;
             if (Settings.ReadFocus.Value) PollFocus(now);
+            NoteSlow("focus", t0); t0 = _clock.ElapsedMilliseconds;
             if (Settings.ReadOnHover.Value) PollHover(now);
+            NoteSlow("hover", t0);
             Guard("socket selection", () => PollSocketSelection(now));
 
             // Navigation: silent while a panel, window or menu is open.
@@ -2953,8 +2958,22 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
     // Runs an action and reports (rate-limited) instead of letting an exception reach the HUD.
     private void Guard(string where, Action action)
     {
+        long start = _clock.ElapsedMilliseconds;
         try { action(); }
         catch (Exception ex) { Report(where, ex); }
+        NoteSlow(where, start);
+    }
+
+    // A step that holds up the game's frame for long is logged (at most every 5 seconds per step),
+    // so delays in what is said can be traced to it.
+    private readonly Dictionary<string, long> _slowLogged = new Dictionary<string, long>();
+    private void NoteSlow(string where, long start)
+    {
+        long now = _clock.ElapsedMilliseconds, took = now - start;
+        if (took < 60) return;
+        if (_slowLogged.TryGetValue(where, out long last) && now - last < 5000) return;
+        _slowLogged[where] = now;
+        PluginLog.Write($"Slow: {where} took {took} ms");
     }
 
     private T Guard<T>(string where, Func<T> func) where T : class

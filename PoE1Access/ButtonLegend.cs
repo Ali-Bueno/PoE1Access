@@ -57,18 +57,29 @@ public partial class PoE1AccessCore
     private long _bindingLastSeenMs;
     private string _bindingSlot = "";
     private string _bindingDetailsSig = "";
+    private string _bindingStickDir = "";
 
     private void PollButtonLegend(long now, bool uiBusy)
     {
         // A slot shows it is selected for only a moment, so slots are checked every tick.
         // In the skill list the slots flicker as you move, so their names are left out there.
+        if (_bindingMode)
+        {
+            var rs = _pad.RightStick;
+            string dir = rs.Length() < 0.5f ? "" : Math.Abs(rs.X) > Math.Abs(rs.Y) ? (rs.X > 0 ? "right" : "left") : (rs.Y > 0 ? "up" : "down");
+            if (dir != _bindingStickDir)
+            {
+                _bindingStickDir = dir;
+                if (dir.Length > 0) PluginLog.Write("Skill binding: right stick " + dir);
+            }
+        }
         if (_bindingMode && !_bindingListOpen && now >= _nextBindSlotPollMs)
         {
             _nextBindSlotPollMs = now + 40;
             Try(() => { PollBindingSlots(now); return 0; }, 0);
         }
         if (now < _nextLegendPollMs) return;
-        _nextLegendPollMs = now + (_bindingMode ? 100 : 250);   // a slot's mark lasts a third of a second
+        _nextLegendPollMs = now + (_bindingMode ? 40 : 250);   // a slot's mark lasts a third of a second
 
         var entries = LegendEntries(now);
         _legendNow = entries;
@@ -126,7 +137,7 @@ public partial class PoE1AccessCore
             if (!_bindingListOpen) _bindingDetailsSig = "";   // opening the list again says its skill again
             string dsig = string.Join("|", details);
             if (dsig != _bindingDetailsPending) { _bindingDetailsPending = dsig; _bindingDetailsSinceMs = now; }
-            else if (dsig != _bindingDetailsSig && details.Count > 0 && now - _bindingDetailsSinceMs >= 150)
+            else if (dsig != _bindingDetailsSig && details.Count > 0 && now - _bindingDetailsSinceMs >= 60)
             {
                 _bindingDetailsSig = dsig;
                 var say = new List<string>(details);
@@ -463,7 +474,8 @@ public partial class PoE1AccessCore
             if (!name.StartsWith("skill") || name == "skills_container") continue;
             Element twin = marks.FirstOrDefault(m => UiText.Name(mem, m) == name);
             if (!Pulsing(slot, 4) && !Pulsing(twin, 4)) continue;
-            if (name == _lastSlotSaid && now - _slotSaidMs < 1500) continue;
+            // The mark lasts about a third of a second; moving back to the same slot later says it again.
+            if (name == _lastSlotSaid && now - _slotSaidMs < 450) continue;
             _lastSlotSaid = name;
             _slotSaidMs = now;
             string skill = SlotSkill(slot);

@@ -127,6 +127,15 @@ up to date the same way. Your Exile API settings are kept. Without an internet c
 simply starts the version you have. After an update it reads what changed (the release notes of
 every version since the last one you had), and keeps them in app\whats-new.txt.
 
+TUTORIAL (OPTIONAL)
+New to the mod? The tutorial is the first entry of the mod menu: hold L3 for a second and a half
+in play. Each lesson (how the mod works, the sounds, the scanner, the guide, your character,
+menus and items, skills, areas and quests, the passive tree, and what to do if something fails)
+is a few pages, read with the right stick up and down. Some lessons end with "Try it now": move
+right on it and the menu closes, the mod asks you to use its controls one at a time, and says
+when you have. The tutorial only reads and listens: it never moves your character or presses
+anything for you. The first time you play with the mod, it says once where the tutorial is.
+
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category (among them Other

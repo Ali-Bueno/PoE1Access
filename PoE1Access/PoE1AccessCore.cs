@@ -434,6 +434,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             }
             _preGameState = "";
             _lastInGameMs = now;
+            Guard("tutorial", () => OfferTutorial(now));
             long t0 = _clock.ElapsedMilliseconds;
             PollEscape();
             NoteSlow("escape", t0); t0 = _clock.ElapsedMilliseconds;
@@ -598,10 +599,12 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 // In menus: the next tooltip line (else repeat); in play: where the scanner's choice is.
                 if (uiBusy ? !TooltipNext(1) : !_nav.SayChoice(ItemName))
                     if (_lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
+                if (!uiBusy) TutorialDid("where");
                 break;
             case ControllerInput.Command.DoubleTap:
                 // In menus: the previous tooltip line; in play: life, mana and the area.
                 if (!uiBusy || !TooltipNext(-1)) Guard("status", SayStatus);
+                if (!uiBusy) TutorialDid("status");
                 break;
             case ControllerInput.Command.Hold:
                 // The Fate window (Covens league): the selected card again.
@@ -611,6 +614,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 if (uiBusy && !TooltipAll() && !SayControlsAgain() && _lastSpoken.Length > 0) _speech.Speak(_lastSpoken, true);
                 // In play: the game's button prompts for what is around you (pick up, talk...).
                 if (!uiBusy && !SayControlsAgain()) Say(T("No button prompts on screen", "No hay indicaciones de botones en pantalla"), true);
+                if (!uiBusy) TutorialDid("prompts");
                 break;
             case ControllerInput.Command.LongHold:
                 // In the inventory: every item in the bag, or every equipment slot when the
@@ -619,20 +623,20 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 else if (inventoryOpen) Guard("inventory", SayWholeInventory);
                 break;
             case ControllerInput.Command.ScanUp:
-                if (!uiBusy) Guard("scan", () => _nav.Scan(-1, 0, now, ItemName));
+                if (!uiBusy) { Guard("scan", () => _nav.Scan(-1, 0, now, ItemName)); TutorialDid("category"); }
                 break;
             case ControllerInput.Command.ScanDown:
-                if (!uiBusy) Guard("scan", () => _nav.Scan(1, 0, now, ItemName));
+                if (!uiBusy) { Guard("scan", () => _nav.Scan(1, 0, now, ItemName)); TutorialDid("category"); }
                 break;
             case ControllerInput.Command.ScanLeft:
-                if (!uiBusy) Guard("scan", () => _nav.Scan(0, -1, now, ItemName));
+                if (!uiBusy) { Guard("scan", () => _nav.Scan(0, -1, now, ItemName)); TutorialDid("thing"); }
                 break;
             case ControllerInput.Command.ScanRight:
-                if (!uiBusy) Guard("scan", () => _nav.Scan(0, 1, now, ItemName));
+                if (!uiBusy) { Guard("scan", () => _nav.Scan(0, 1, now, ItemName)); TutorialDid("thing"); }
                 break;
             case ControllerInput.Command.Guide:
                 _guideCommandMs = now;
-                if (!uiBusy) Guard("guide", () => _nav.ToggleGuide(ItemName));
+                if (!uiBusy) { Guard("guide", () => _nav.ToggleGuide(ItemName)); TutorialDid("guide"); }
                 break;
         }
     }

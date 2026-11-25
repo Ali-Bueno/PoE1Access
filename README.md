@@ -76,6 +76,15 @@ from Steam: Steam runs the launcher, which starts the game from Steam's command 
 else as usual. The launcher offers to copy that line to the clipboard the first time it runs
 (`PoE1Access.exe --steam-setup` offers it again), and keeps it in `app\steam-launch-option.txt`.
 
+## Tutorial
+
+An optional tutorial is the first entry of the mod menu (`PoE1Access/Tutorial.cs`): ten short
+lessons on what the mod adds, read page by page, some ending with "Try it now", which closes the
+menu and waits for the player to use the mod's own L3 controls, saying when each is done. Like
+the rest of the mod it only reads and listens, and leaves the game's own buttons to the game's
+button prompts (hold L3), so it does not go out of date with the game. The first game with the
+mod says once where it is.
+
 ## Menus the mod has not seen
 
 Menus are read without knowing them: the focus reader follows the game's own selection marker

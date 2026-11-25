@@ -21,6 +21,9 @@ public class PoE1AccessSettings : ISettings
     // Speak the menu item selected with a controller or the keyboard.
     public ToggleNode ReadFocus { get; set; } = new ToggleNode(true);
 
+    // Set once the mod has said where the tutorial is (the first game with the mod).
+    public ToggleNode TutorialOffered { get; set; } = new ToggleNode(false);
+
     // How long the hovered thing must stay the same before it is spoken (milliseconds).
     // Raise it if you hear too many half-finished announcements.
     public RangeNode<int> HoverDelayMs { get; set; } = new RangeNode<int>(150, 0, 1000);

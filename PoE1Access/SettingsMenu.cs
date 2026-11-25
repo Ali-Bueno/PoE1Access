@@ -29,6 +29,8 @@ public partial class PoE1AccessCore
         public Action<int> OnChange;                  // a sample of what it controls
         public Action Play;                           // the sound glossary: plays the sound
         public string Description;                    // ...and says what it means
+        public string Text;                           // a tutorial page, read as it is
+        public Action StartPractice;                  // the tutorial's "Try it now"
     }
 
     private List<MenuItem> _menuRoot;
@@ -46,6 +48,7 @@ public partial class PoE1AccessCore
 
         return new List<MenuItem>
         {
+            TutorialMenu(),
             Sub(T("Sound volumes", "Volúmenes de sonido"),
                 Vol(T("Master volume", "Volumen general"), Settings.MasterVolume, _ => SampleSound("loot")),
                 Vol(T("Enemy, NPC and combat sounds", "Sonidos de enemigos, PNJ y combate"), Settings.EnemyVolume, _ => SampleSound("enemy")),
@@ -268,6 +271,7 @@ public partial class PoE1AccessCore
         var (items, index) = _menuStack[^1];
         MenuItem it = items[index];
         if (it.Play != null) return T($"{it.Label}, {it.Description}, {index + 1} of {items.Count}", $"{it.Label}, {it.Description}, {index + 1} de {items.Count}");
+        if (it.Text != null) return T($"{it.Text} {index + 1} of {items.Count}", $"{it.Text} {index + 1} de {items.Count}");
         string value = it.Children != null ? T("submenu", "submenú")
             : it.Toggle != null ? (it.Toggle.Value ? T("on", "activado") : T("off", "desactivado"))
             : it.Range != null ? (it.Words ?? (v => v.ToString()))(it.Range.Value)
@@ -290,6 +294,8 @@ public partial class PoE1AccessCore
 
         MenuItem it = items[index];
         if (it.Play != null) { it.Play(); return; }
+        if (it.StartPractice != null) { if (dx > 0) it.StartPractice(); else Say(DescribeMenuItem(), true); return; }
+        if (it.Text != null) { Say(DescribeMenuItem(), true); return; }
         if (it.Children != null)
         {
             if (dx < 0) { Say(DescribeMenuItem(), true); return; }

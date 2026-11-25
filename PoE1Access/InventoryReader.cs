@@ -478,6 +478,9 @@ public partial class PoE1AccessCore
         string missing = MissingRequirement(item);
         if (missing.Length > 0) lines.Add(missing);
         lines.AddRange(ItemLines(item));
+        // A map: its tier, Atlas Drops, rarity and pack size, and dangerous mods first (Atlas.cs).
+        string mapLine = Try(() => MapSummary(item, lines), "");
+        if (mapLine.Length > 0) lines.Insert(1, mapLine);
 
         _tipLines = lines;
         _tipIndex = 0;

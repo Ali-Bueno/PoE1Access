@@ -459,6 +459,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             HandleNavigationInput(now, uiBusy);
             Guard("inventory moves", () => PollInventoryMoves(now));
             Guard("sell offer", () => PollSellOffer(now));
+            Guard("map device", () => PollMapDevice(now));
+            Guard("monsters left", PollMonstersLeft);
             Guard("equipment selection", () => PollEquipmentSelection(now));
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
@@ -496,6 +498,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 _nav.EnemyDirections = Settings.EnemyDirections.Value;
                 _nav.CrosshairBeep = Settings.CrosshairBeep.Value;
                 _nav.AnnounceTarget = Settings.AnnounceTarget.Value;
+                _nav.FollowLootFilter = Settings.FollowLootFilter.Value;
+                _nav.ExploreMode = Settings.ExploreMode.Value;
             }
             // Skill binding mode (R3) keeps the guide's
             // directions quiet like a window does, so they do not talk over the skills.
@@ -547,6 +551,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         int dpad = Settings.ControllerCommands.Value ? _pad.DPadPressed : 0;
         if (dpad != 0 && !MenuOpen && Settings.PassiveFinder.Value && _openPanels != null && _openPanels.Any(t => IsGameWord(t, PassivesTitle)))
             Guard("passive finder", () => FinderStep(dpad));
+        // The Atlas finder on the D-pad, with the Atlas open (Atlas.cs).
+        if (dpad != 0 && !MenuOpen && Settings.AtlasFinder.Value && AtlasOpen())
+            Guard("atlas finder", () => AtlasStep(dpad));
 
         // The mod's settings menu: while open it takes the mod's gestures and the arrow keys.
         if (MenuOpen)

@@ -396,6 +396,8 @@ internal sealed partial class Navigator
         TickBump(now, p);
         if (AnnounceNearby) TickNearby(now, p, itemName);
         TickLabyrinth(now);
+        TickAreaLog(now);
+        PollLootLabels(now);
         if (LootKind != null) TickLoot(now, p);
         TickEnemies(now, p);
         TickNpcs(now, p);
@@ -750,6 +752,7 @@ internal sealed partial class Navigator
             try { id = e.Address; g = e.GridPosNum; } catch { continue; }
             float dist = (g - p).Length();
             if (dist > LootCells) continue;
+            if (!LootShown(e)) continue;   // hidden by the game's loot filter
             if (!_lootKinds.TryGetValue(id, out var kind))
             {
                 kind = Try(() => LootKind(e), (Synth.Loot?)null);
@@ -1447,6 +1450,7 @@ internal sealed partial class Navigator
         // marker of the mod's own, which a sighted player would not have. Monsters keep their
         // enemy sounds.
         if (t != EntityType.Monster && QuestMarked(e)) return Used(e) ? Cat.None : Cat.Quest;
+        if (IsMapDevice(e)) return Cat.Objects;   // in a hideout (Mapping.cs)
         // Trials of Ascendancy and the Labyrinth (see Labyrinth.cs).
         switch (LabObject(e))
         {
@@ -1512,6 +1516,7 @@ internal sealed partial class Navigator
         if (cat == Cat.Death) return DeathList();
         var list = Entities().Where(e => Category(e) == cat && !IsMe(e));
         if (cat == Cat.Enemies) list = list.Where(OnScreen);   // only what a sighted player sees
+        if (cat == Cat.Items) list = list.Where(LootShown);      // what the game's loot filter shows
         if (cat == Cat.Exits) list = list.Where(e => !HiddenExit(e));
         if (cat == Cat.Quest) list = list.Where(e => !HiddenQuest(e));
         var items = list.Select(Of).ToList();
@@ -1734,6 +1739,7 @@ internal sealed partial class Navigator
     {
         try
         {
+            if (IsMapDevice(e)) return T("Map device", "Dispositivo de mapas");
             LabKind lab = LabObject(e);
             if (lab != LabKind.None && lab != LabKind.Other)
             {
@@ -2036,6 +2042,8 @@ internal sealed partial class Navigator
         // new ground on), then the list is worked out again.
         if (_guideTarget.E == null && dist < 13f)
         {
+            // Explore mode: on to the next unexplored ground (Mapping.cs).
+            if (ExploreMode && _guideTarget.Cat == Cat.Unexplored) { if (!ExploreNext(p)) _guideTarget = null; return; }
             _say(T($"Arrived at {_guideName}. Scan unexplored again to go on.", $"Llegaste a {_guideName}. Escanea de nuevo lo sin explorar para seguir."));
             _guideTarget = null;
             _uxCache = null;

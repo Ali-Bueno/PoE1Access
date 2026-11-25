@@ -224,10 +224,18 @@ public partial class PoE1AccessCore
             Title = T("After the campaign: maps and the Atlas", "Después de la campaña: mapas y el Atlas"),
             Pages = new[]
             {
-                T("After Act 10 the game goes on in maps: items you put in the map device to open an area. Finishing maps opens more of the Atlas, with its own passive tree.",
-                  "Después del acto 10 el juego sigue en mapas: objetos que pones en el dispositivo de mapas para abrir un área. Terminar mapas abre más del Atlas, con su propio árbol de pasivas."),
-                T("Maps are areas like the campaign's, so the scanner, the radar and the guide work the same. The Atlas screen and the map device have not been tried with the mod yet.",
-                  "Los mapas son áreas como las de la campaña, así que el escáner, el radar y la guía funcionan igual. La pantalla del Atlas y el dispositivo de mapas aún no se han probado con el mod."),
+                T("After Act 10 the game goes on in maps: items you put in the map device, in your hideout, to open an area with six portals. A map has a tier, from 1 to 16; higher tiers are harder and give more. Killing the map's boss completes it on the Atlas, the big map of all maps.",
+                  "Después del acto 10 el juego sigue en mapas: objetos que pones en el dispositivo de mapas, en tu guarida, para abrir un área con seis portales. Un mapa tiene un nivel, del 1 al 16; los más altos son más difíciles y dan más. Matar al jefe del mapa lo completa en el Atlas, el gran mapa de todos los mapas."),
+                T("Completing maps and their bonus objectives gives Atlas passive points, for the Atlas's own tree, which starts at its centre. Each of the four Voidstones you earn from the big bosses makes the maps in a quarter of the Atlas at least tier 12.",
+                  "Completar mapas y sus objetivos extra da puntos de pasiva del Atlas, para su propio árbol, que empieza en su centro. Cada una de las cuatro Piedras del vacío que ganas de los grandes jefes hace que los mapas de una cuarta parte del Atlas sean al menos de nivel 12."),
+                T("Threads choose what a map holds: up to eight in the map device, each adding its league mechanic, such as Breach, Legion, Ritual or Abyss. Those ten mechanics only come through Threads now. Shaped Regions on the Atlas give their maps free Threads of one kind.",
+                  "Los Hilos eligen lo que tiene un mapa: hasta ocho en el dispositivo de mapas, cada uno añade su mecánica de liga, como Brecha, Legión, Ritual o Abismo. Esas diez mecánicas ahora solo llegan con Hilos. Las Regiones moldeadas del Atlas dan a sus mapas Hilos gratis de un tipo."),
+                T("A map's mods make it harder and better: Atlas Drops means more maps and Threads, rarity better items, pack size more monsters. Some mods end many builds, such as monsters reflecting damage, or you not regenerating: read a map before running it.",
+                  "Los modificadores de un mapa lo hacen más difícil y mejor: Botín del Atlas significa más mapas e Hilos, rareza mejores objetos, tamaño de grupo más monstruos. Algunos modificadores acaban con muchas configuraciones, como monstruos que reflejan daño o no regenerar: lee un mapa antes de jugarlo."),
+                T("With the mod: a map item starts with its tier, Atlas Drops, rarity and pack size, and warns of dangerous mods. The map device says what is in it. In a map, the monsters left are said as they run out. With the Atlas open, the D-pad goes through lists of maps: not completed, bonus left, Shaped Regions and unique maps.",
+                  "Con el mod: un objeto de mapa empieza con su nivel, botín del Atlas, rareza y tamaño de grupo, y avisa de modificadores peligrosos. El dispositivo de mapas dice lo que tiene. En un mapa, se dicen los monstruos que quedan al acabarse. Con el Atlas abierto, la cruceta recorre listas de mapas: sin completar, extra pendiente, Regiones moldeadas y mapas únicos."),
+                T("None of the map support has been tried in the game yet. Every map writes what the mod found to its log; send it after your first maps so it can be made exact.",
+                  "Nada del soporte de mapas se ha probado aún en el juego. Cada mapa escribe en el registro lo que el mod encontró; envíalo después de tus primeros mapas para ajustarlo."),
             },
         },
         new Lesson

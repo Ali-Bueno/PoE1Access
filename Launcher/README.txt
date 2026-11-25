@@ -196,6 +196,19 @@ In game (controller, L3 = left stick click / keyboard):
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.
 
+MAPS AND THE ATLAS (NOT TESTED YET)
+- Loot follows the game's loot filter: items it hides make no sound and are not in the scanner.
+- Explore mode: guiding to unexplored ground goes on to the next by itself ("Next: ...") until
+  "Area explored". Works in every area.
+- A map item starts with its tier, Atlas Drops, rarity and pack size, and warns of dangerous
+  mods (reflect, no regeneration, no leech, lower maximum resistances, harmful ground...).
+- The map device says what is in it as it opens and changes; it is under Objects in a hideout.
+- In a map, the monsters left are said at 50, 20, 10, 5 and none.
+- With the Atlas open, the D-pad goes through lists of maps (Not completed, Bonus objective left,
+  Shaped Regions, Unique maps), each with its base tier, state, region and where it lies.
+Each can be turned off in the Speech submenu. In maps the mod logs every kind of object it
+finds ("Area object: ..."), so the first maps show what to fix.
+
 CURRENCY AND VENDOR PRICES
 Vendors price items in currency items (scrolls, orbs and shards), not gold. Gold pays for
 passive refunds and the Currency Exchange.

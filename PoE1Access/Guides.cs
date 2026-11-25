@@ -162,6 +162,25 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Title = T("Running a map quickly", "Hacer un mapa rápido"),
+            Pages = new[]
+            {
+                T("The endgame rewards speed: the more maps you finish in an hour, the more you find. These are the mod's tools for going fast.",
+                  "El final del juego premia la velocidad: cuantos más mapas terminas en una hora, más encuentras. Estas son las herramientas del mod para ir rápido."),
+                T("Before: read the map in your bag. Its first line gives its tier, Atlas Drops, rarity and pack size, and warns of mods that are dangerous for many builds. Skip or change a map that warns of something your build cannot handle.",
+                  "Antes: lee el mapa en tu bolsa. Su primera línea da su nivel, botín del Atlas, rareza y tamaño de grupo, y avisa de modificadores peligrosos para muchas configuraciones. Salta o cambia un mapa que avise de algo que tu configuración no aguanta."),
+                T("At the map device, the mod says what is in it as you put things in: the map and each Thread. Activate it with the game's button; its portals are under Exits.",
+                  "En el dispositivo de mapas, el mod dice lo que tiene al poner cosas: el mapa y cada Hilo. Actívalo con el botón del juego; sus portales están en Salidas."),
+                T("In the map, use explore mode: choose Unexplored in the scanner, take the first entry, the biggest, and triple tap L3. When you get there the guide goes on to the next unexplored ground by itself, until it says Area explored.",
+                  "En el mapa, usa el modo exploración: elige Sin explorar en el escáner, toma la primera entrada, la más grande, y toca L3 tres veces. Al llegar, la guía sigue sola al siguiente terreno sin explorar, hasta que dice Área explorada."),
+                T("Loot follows your loot filter, so only what the game shows makes a sound. A stricter loot filter in the game's options means fewer sounds and less time picking things up.",
+                  "El botín sigue tu filtro de botín, así que solo suena lo que el juego muestra. Un filtro de botín más estricto en las opciones del juego significa menos sonidos y menos tiempo recogiendo cosas."),
+                T("The map boss is an enemy with its life said as it falls. As the map's monsters run out, the mod says how many are left. When you are done, a portal back is under Exits.",
+                  "El jefe del mapa es un enemigo cuya vida se dice a medida que baja. Cuando se acaban los monstruos del mapa, el mod dice cuántos quedan. Al terminar, un portal de vuelta está en Salidas."),
+            },
+        },
+        new Lesson
+        {
             Title = T("The character sheet and your defences", "La hoja de personaje y tus defensas"),
             Pages = new[]
             {

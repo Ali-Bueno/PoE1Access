@@ -196,6 +196,12 @@ In game (controller, L3 = left stick click / keyboard):
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.
 
+YOUR HIDEOUT (NOT TESTED YET)
+Your first hideout comes in Act 2, from Helena once she is rescued from the Chamber of Sins. Go
+there from a waypoint's world map (its hideout button). In a hideout everything you can use is
+under Objects in the scanner, and decorations are left out. At the crafting bench, each option
+is read with its cost and whether you can pay it. The stash is under Objects in towns too.
+
 MAPS AND THE ATLAS (NOT TESTED YET)
 - Loot follows the game's loot filter: items it hides make no sound and are not in the scanner.
 - Explore mode: guiding to unexplored ground goes on to the next by itself ("Next: ...") until

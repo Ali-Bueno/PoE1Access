@@ -113,6 +113,23 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Title = T("Your hideout", "Tu guarida"),
+            Pages = new[]
+            {
+                T("A hideout is your own safe place, like a town that is yours. Your first comes in Act 2: once Helena is rescued from the Chamber of Sins, she lets you choose a hideout. Later characters in your account keep the hideouts you have unlocked.",
+                  "Una guarida es tu propio lugar seguro, como una ciudad que es tuya. La primera llega en el acto 2: una vez rescatada Helena de la Cámara de los Pecados, te deja elegir una guarida. Tus personajes posteriores conservan las guaridas que has desbloqueado."),
+                T("To go there, open any waypoint: its world map has a hideout button beside the waypoints, read like the rest of the map. You can also type slash hideout in the chat. To leave, use its waypoint, a portal, or the game's Leave Hideout button.",
+                  "Para ir, abre cualquier transportador: su mapa del mundo tiene un botón de guarida junto a los transportadores, leído como el resto del mapa. También puedes escribir barra hideout en el chat. Para salir, usa su transportador, un portal o el botón Salir de la guarida del juego."),
+                T("It holds your stash, a waypoint, the crafting bench, and later the map device for the endgame. Characters you meet, such as Helena and later Kirac, come to live there and keep their windows there.",
+                  "Tiene tu alijo, un transportador, el banco de artesanía y, más adelante, el dispositivo de mapas para el final del juego. Los personajes que conoces, como Helena y más tarde Kirac, se van a vivir allí y mantienen allí sus ventanas."),
+                T("The crafting bench adds a mod to an item for currency. Its options, called recipes, are unlocked by finding them in the campaign's areas; a recipe you can pick up is listed under Objects. At the bench, each option is read with its cost and whether you can pay it.",
+                  "El banco de artesanía añade un modificador a un objeto a cambio de moneda. Sus opciones, llamadas recetas, se desbloquean al encontrarlas en las áreas de la campaña; una receta que puedes recoger se lista en Objetos del entorno. En el banco, cada opción se lee con su coste y si puedes pagarlo."),
+                T("Hideouts can be decorated, which only changes how they look; you can leave that alone. With the mod, everything you can use in a hideout is under Objects in the scanner, and its decorations are left out. None of the hideout support has been tried in the game yet.",
+                  "Las guaridas se pueden decorar, lo que solo cambia su aspecto; puedes ignorarlo. Con el mod, todo lo que puedes usar en una guarida está en Objetos del entorno en el escáner, y sus decoraciones se omiten. Nada del soporte de guaridas se ha probado aún en el juego."),
+            },
+        },
+        new Lesson
+        {
             Title = T("Trials of Ascendancy", "Pruebas de Ascendencia"),
             Pages = new[]
             {
@@ -327,6 +344,7 @@ public partial class PoE1AccessCore
 
     private void Tip(string key, string text)
     {
+        if (_mechanicsSeen == null) return;
         if (_tipSaid || _mechanicsSeen == null || !_mechanicsSeen.Add(key)) return;
         _tipSaid = true;
         try { if (_mechanicsFile != null) File.AppendAllText(_mechanicsFile, key + Environment.NewLine); } catch { }

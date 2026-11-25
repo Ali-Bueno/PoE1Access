@@ -468,6 +468,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("dialogue", () => PollDialogue(now));
             Guard("fates", () => PollFates(now));
             Guard("mechanic tips", () => PollMechanicTips(now, uiBusy || _bindingMode || MenuOpen));
+            if (!uiBusy && !MenuOpen) Guard("hideout", () => PollHideout(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
             Guard("button legend", () => PollButtonLegend(now, uiBusy));
@@ -1923,6 +1924,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         else if (text.Length > 0 && !IsFateCardText(text) && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
         _lastFocusText = text;
         _lastFocusTextMs = nowMs;
+        // At the crafting bench: the option's cost (Hideout.cs).
+        string benchCost = Try(() => BenchCost(e), "");
+        if (benchCost.Length > 0) Say(benchCost, false);
         // Its tooltip, if one appears (not for a screen's first selection, which comes with the
         // whole screen).
         if (kind != "Initial focus") TooltipAnchor(addr, lead.Length > 0 ? lead + " " + text : text);

@@ -1451,6 +1451,11 @@ internal sealed partial class Navigator
         // enemy sounds.
         if (t != EntityType.Monster && QuestMarked(e)) return Used(e) ? Cat.None : Cat.Quest;
         if (IsMapDevice(e)) return Cat.Objects;   // in a hideout (Mapping.cs)
+        // In a hideout: everything you can use is an object; decorations (not targetable) are not.
+        if (InHideout && t != EntityType.Monster && t != EntityType.Player && t != EntityType.WorldItem && t != EntityType.Npc &&
+            t != EntityType.AreaTransition && t != EntityType.Portal && t != EntityType.TownPortal && t != EntityType.Waypoint && t != EntityType.Stash &&
+            Try(() => e.IsTargetable, false) && !string.IsNullOrWhiteSpace(Try(() => e.RenderName, "")))
+            return Cat.Objects;
         // Trials of Ascendancy and the Labyrinth (see Labyrinth.cs).
         switch (LabObject(e))
         {
@@ -1480,10 +1485,11 @@ internal sealed partial class Navigator
                 return Cat.Items;
             case EntityType.Chest:
                 try { return e.IsOpened ? Cat.None : Cat.Chests; } catch { return Cat.Chests; }
-            case EntityType.Stash:
             case EntityType.Shrine:
             case EntityType.QuestObject when Used(e):
                 return Cat.None;
+            case EntityType.Stash:   // in towns and hideouts
+                return Cat.Objects;
             case EntityType.QuestObject:
             case EntityType.Door:
             case EntityType.DoorSwitch:

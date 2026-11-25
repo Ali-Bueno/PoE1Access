@@ -26,6 +26,9 @@ namespace PoE1Access;
 internal sealed partial class Navigator
 {
     public bool FollowLootFilter = true;
+
+    /// <summary>Whether you are in a hideout (set each tick; read by Category, which is static).</summary>
+    public static bool InHideout;
     public bool ExploreMode = true;
 
     private HashSet<long> _shownLoot = new HashSet<long>();
@@ -34,6 +37,7 @@ internal sealed partial class Navigator
 
     private void PollLootLabels(long now)
     {
+        InHideout = Try(() => _gc.Area.CurrentArea.IsHideout, false);
         if (now < _nextLabelPollMs) return;
         _nextLabelPollMs = now + 400;
         var shown = new HashSet<long>();

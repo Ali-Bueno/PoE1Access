@@ -184,6 +184,8 @@ public partial class PoE1AccessCore
     private MenuItem TutorialMenu()
     {
         var lessons = Lessons().Select(LessonMenu).ToList();
+        // The busiest screens and tasks, step by step with what the mod says (Guides.cs).
+        lessons.Add(new MenuItem { Label = T("Step by step", "Paso a paso"), Children = Guides().Select(LessonMenu).ToList() });
         // The game's own mechanics, in the order the game brings them in (Mechanics.cs).
         lessons.Add(new MenuItem { Label = T("Game mechanics", "Mecánicas del juego"), Children = MechanicsLessons().Select(LessonMenu).ToList() });
         return new MenuItem { Label = T("Tutorial", "Tutorial"), Children = lessons };

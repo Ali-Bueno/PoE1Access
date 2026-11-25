@@ -136,6 +136,12 @@ right on it and the menu closes, the mod asks you to use its controls one at a t
 when you have. The tutorial only reads and listens: it never moves your character or presses
 anything for you. The first time you play with the mod, it says once where the tutorial is.
 
+Step by step walks through the busiest screens and tasks with what the mod says at each step:
+reading the passive tree, the finder, your inventory and items, socketing a gem, links and
+support gems, putting skills on your buttons, vendors, the stash, quest rewards, and the
+character sheet. It says what to listen for, and leaves the game's buttons to the game's own
+prompts (hold L3 to hear them).
+
 The tutorial's last entry, Game mechanics, explains the game itself, in the order the game
 brings each thing in, and how it works with the mod: towns and quests, waypoints and portals,
 skill gems and sockets, flasks, passive points, currency and the stash, Act 2's bandits, the

@@ -90,6 +90,17 @@ GETTING STARTED
 
 When you close the game, the mod closes too.
 
+STARTING WITH THE GAME FROM STEAM
+The mod can start by itself whenever you start Path of Exile from Steam, so you do not need to
+start PoE1Access.exe first. The first time you start PoE1Access.exe, it asks whether to copy
+Steam's launch option to the clipboard. Say yes, then in your Steam library open Path of
+Exile's Properties, and on the General page paste it into Launch Options. It looks like this,
+with the folder you unzipped the mod into:
+  "C:\Games\PoE1Access\PoE1Access.exe" %command%
+It is also kept in app\steam-launch-option.txt. To be asked again, start PoE1Access.exe
+--steam-setup. If you move the mod's folder, paste the new one. To stop it, clear Launch
+Options in Steam. Starting PoE1Access.exe yourself still works as before.
+
 LANGUAGES
 
 The mod follows the language set in the game's options, after the game and the mod start again.

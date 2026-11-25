@@ -68,6 +68,14 @@ reports missing, stale and mismatched entries. New phrases in the code are writt
 `T("English", "Spanish")`; `py tools/localization/phrases.py missing <code>` lists what a table
 still lacks.
 
+## Starting with the game from Steam
+
+Set Path of Exile's launch option in Steam (Properties, General, Launch Options) to
+`"<the mod's folder>\PoE1Access.exe" %command%` and the mod starts whenever the game is started
+from Steam: Steam runs the launcher, which starts the game from Steam's command and everything
+else as usual. The launcher offers to copy that line to the clipboard the first time it runs
+(`PoE1Access.exe --steam-setup` offers it again), and keeps it in `app\steam-launch-option.txt`.
+
 ## Controls
 
 The mod only reads the controller. It cannot stop the game from seeing a press, so its

@@ -21,6 +21,8 @@ namespace PoE1AccessLauncher;
 ///     ExileApi's other bundled plugins (automation such as PickIt, flask routines, AutoQuit)
 ///     to Plugins\Disabled, once. They can be moved back by hand.
 ///  4. Starts Path of Exile through Steam if it is not running, then ExileApi's Loader.exe.
+///     Set as the game's launch option in Steam ("...\PoE1Access.exe" %command%), it starts
+///     whenever the game is started from Steam, and starts the game itself (see _gameCommand).
 ///  5. Closes ExileApi and itself when the game closes.
 ///
 /// Everything it says is spoken (NVDA or the Windows voice) and also shown in a message box
@@ -44,6 +46,14 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // Started by Steam as the game's launch option: the game's own command comes after the
+        // launcher's switches. The switches are the launcher's; the rest is passed to the game.
+        int gameAt = Array.FindIndex(args, a => a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(a));
+        if (gameAt >= 0)
+        {
+            _gameCommand = args.Skip(gameAt).ToArray();
+            args = args.Take(gameAt).ToArray();
+        }
         // The test switches may run next to a real launcher.
         bool test = args.Any(a => a.StartsWith("--", StringComparison.Ordinal) && a.EndsWith("-test", StringComparison.OrdinalIgnoreCase)) ||
                     args.Any(a => a.Equals("--setup-only", StringComparison.OrdinalIgnoreCase));
@@ -53,6 +63,16 @@ internal static class Program
         {
             try { first = single.WaitOne(TimeSpan.FromSeconds(15)); }
             catch (AbandonedMutexException) { first = true; }
+        }
+        if (!first && _gameCommand != null)
+        {
+            // The launcher asked Steam to start the game, and Steam started it through this
+            // launch option: start the game and stay until it closes, so Steam knows it runs.
+            Directory.CreateDirectory(AppDir);
+            Log("Steam started the game while the launcher runs: " + _gameCommand[0]);
+            Process g = StartGameCommand();
+            try { g?.WaitForExit(); } catch { }
+            return 0;
         }
         if (!first)
         {
@@ -102,6 +122,9 @@ internal static class Program
                 Log("Standalone test: done");
                 return 0;
             }
+
+            if (_gameCommand != null) NoteSteamLaunch();
+            else OfferSteamLaunch(args.Any(a => a.Equals("--steam-setup", StringComparison.OrdinalIgnoreCase)));
 
             if (!StartGame(out Process game)) return 1;
 
@@ -291,6 +314,8 @@ internal static class Program
             foreach (string a in args) psi.ArgumentList.Add(a);
             psi.ArgumentList.Add("--no-update");
             psi.ArgumentList.Add("--updated");
+            // The game's command from Steam goes last, as Steam gave it.
+            if (_gameCommand != null) foreach (string a in _gameCommand) psi.ArgumentList.Add(a);
             Process.Start(psi);
             return true;
         }
@@ -535,9 +560,18 @@ internal static class Program
         game = FindGame();
         if (game != null) { Log("Game already running: " + game.ProcessName); return true; }
 
-        Say(T("Starting Path of Exile through Steam.", "Iniciando Path of Exile a través de Steam."));
-        try { Open(SteamPoE1); }
-        catch (Exception ex) { Log("Steam start failed: " + ex.Message); }
+        if (_gameCommand != null)
+        {
+            // Started by Steam: start the game as Steam asked.
+            Say(T("Starting Path of Exile.", "Iniciando Path of Exile."));
+            StartGameCommand();
+        }
+        else
+        {
+            Say(T("Starting Path of Exile through Steam.", "Iniciando Path of Exile a través de Steam."));
+            try { Open(SteamPoE1); }
+            catch (Exception ex) { Log("Steam start failed: " + ex.Message); }
+        }
 
         for (int i = 0; i < 180 && game == null; i++)   // up to 3 minutes
         {
@@ -551,6 +585,114 @@ internal static class Program
         Box(msg, "Path of Exile access", MB_ICONWARNING);
         return false;
     }
+
+    // ---- Starting with the game from Steam ----
+    //
+    // Steam's launch option for Path of Exile, "<folder>\PoE1Access.exe" %command%, makes Steam
+    // start this launcher in place of the game, with the game's command after it (its exe and
+    // arguments). The launcher then starts the game from that command and everything else as
+    // usual, and stays until the game closes, so Steam shows the game as running. Steam keeps
+    // launch options in a file it rewrites as it closes, so the launcher does not set it itself:
+    // it copies it to the clipboard for you to paste into the game's Properties.
+    private static string[] _gameCommand;
+    private static readonly string SteamLaunchFile = Path.Combine(AppDir, "steam-launch-option.txt");
+    private static readonly string SteamLaunchAskedFile = Path.Combine(AppDir, "steam-launch-asked.txt");
+    private static readonly string SteamLaunchSetFile = Path.Combine(AppDir, "steam-launch-set.txt");
+
+    private static string SteamLaunchOption => "\"" + Path.Combine(Root, "PoE1Access.exe") + "\" %command%";
+
+    private static Process StartGameCommand()
+    {
+        try
+        {
+            string exe = _gameCommand[0];
+            var psi = new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe) };
+            foreach (string a in _gameCommand.Skip(1)) psi.ArgumentList.Add(a);
+            Process p = Process.Start(psi);
+            Log("Started the game from Steam's command: " + exe + ", process " + p?.Id);
+            return p;
+        }
+        catch (Exception ex)
+        {
+            Log("The game could not be started from Steam's command: " + ex.Message);
+            return null;
+        }
+    }
+
+    private static void NoteSteamLaunch()
+    {
+        try
+        {
+            if (File.Exists(SteamLaunchSetFile)) return;
+            File.WriteAllText(SteamLaunchSetFile, "Started by Steam's launch option on " + DateTime.Now);
+            Log("Started by Steam's launch option");
+        }
+        catch { }
+    }
+
+    private static bool SteamInstalled()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
+            return key?.GetValue("SteamPath") is string path && path.Length > 0;
+        }
+        catch { return false; }
+    }
+
+    // Asked once, with Steam installed and the launch option not used yet; "PoE1Access.exe
+    // --steam-setup" asks again.
+    private static void OfferSteamLaunch(bool again)
+    {
+        try
+        {
+            File.WriteAllText(SteamLaunchFile, SteamLaunchOption + Environment.NewLine);
+            if (!again && (File.Exists(SteamLaunchAskedFile) || File.Exists(SteamLaunchSetFile) || !SteamInstalled())) return;
+            File.WriteAllText(SteamLaunchAskedFile, DateTime.Now.ToString());
+            string msg = T("Path of Exile access can start by itself whenever you start Path of Exile from Steam. Copy Steam's launch option to the clipboard now? Then, in your Steam library, open Path of Exile's Properties, and on the General page paste it into Launch Options. It is also kept in app, steam-launch-option.txt. This is asked only once; start PoE1Access.exe with --steam-setup to be asked again.",
+                           "Path of Exile access puede iniciarse solo cada vez que inicias Path of Exile desde Steam. ¿Copiar ahora la opción de lanzamiento de Steam al portapapeles? Después, en tu biblioteca de Steam, abre las Propiedades de Path of Exile y, en la página General, pégala en Opciones de lanzamiento. También se guarda en app, steam-launch-option.txt. Solo se pregunta una vez; inicia PoE1Access.exe con --steam-setup para que se pregunte otra vez.");
+            Say(msg);
+            if (Box(msg, T("Start with Steam", "Iniciar con Steam"), MB_YESNO | MB_ICONQUESTION) != IDYES) { Log("Steam launch option: declined"); return; }
+            bool copied = CopyToClipboard(SteamLaunchOption);
+            Log("Steam launch option " + (copied ? "copied: " : "not copied: ") + SteamLaunchOption);
+            Say(copied ? T("Copied. Paste it into Path of Exile's Launch Options in Steam.", "Copiado. Pégalo en las Opciones de lanzamiento de Path of Exile en Steam.")
+                       : T("It could not be copied. It is in app, steam-launch-option.txt.", "No se pudo copiar. Está en app, steam-launch-option.txt."));
+        }
+        catch (Exception ex) { Log("Steam launch option not offered: " + ex.Message); }
+    }
+
+    private static bool CopyToClipboard(string text)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            if (OpenClipboard(IntPtr.Zero))
+            {
+                try
+                {
+                    EmptyClipboard();
+                    byte[] bytes = System.Text.Encoding.Unicode.GetBytes(text + "\0");
+                    IntPtr mem = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
+                    if (mem == IntPtr.Zero) return false;
+                    IntPtr ptr = GlobalLock(mem);
+                    Marshal.Copy(bytes, 0, ptr, bytes.Length);
+                    GlobalUnlock(mem);
+                    return SetClipboardData(CF_UNICODETEXT, mem) != IntPtr.Zero;
+                }
+                finally { CloseClipboard(); }
+            }
+            Thread.Sleep(100);
+        }
+        return false;
+    }
+
+    private const uint CF_UNICODETEXT = 13, GMEM_MOVEABLE = 0x2;
+    [DllImport("user32.dll")] private static extern bool OpenClipboard(IntPtr owner);
+    [DllImport("user32.dll")] private static extern bool CloseClipboard();
+    [DllImport("user32.dll")] private static extern bool EmptyClipboard();
+    [DllImport("user32.dll")] private static extern IntPtr SetClipboardData(uint format, IntPtr mem);
+    [DllImport("kernel32.dll")] private static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+    [DllImport("kernel32.dll")] private static extern IntPtr GlobalLock(IntPtr mem);
+    [DllImport("kernel32.dll")] private static extern bool GlobalUnlock(IntPtr mem);
 
     private static Process StartLoader()
     {

@@ -209,6 +209,15 @@ there from a waypoint's world map (its hideout button). In a hideout everything 
 under Objects in the scanner, and decorations are left out. At the crafting bench, each option
 is read with its cost and whether you can pay it. The stash is under Objects in towns too.
 
+QUEST ROUTE (AFTER YOUR FIRST CAMPAIGN, NOT TESTED YET)
+Once any of your characters has finished the campaign (reached the epilogue or a map), every
+character hears the way through the act's areas to the one its quest names, as the world map
+shows it: "Quest route: the Coast, then the Tidal Island. Last waypoint on the way: the Coast",
+as you enter an area and when the quest changes. Exits you have found on the way say "on your
+quest's route", and explore mode tries ground that holds an exit you have not found first. It
+never says where something is inside an area before you have found it, as the game does not
+show that either. Turn it off with "Quest route" in the Speech submenu.
+
 MAPS AND THE ATLAS (NOT TESTED YET)
 - Loot follows the game's loot filter: items it hides make no sound and are not in the scanner.
 - Explore mode: guiding to unexplored ground goes on to the next by itself ("Next: ...") until

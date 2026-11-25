@@ -468,6 +468,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("fates", () => PollFates(now));
             Guard("mechanic tips", () => PollMechanicTips(now, uiBusy || _bindingMode || MenuOpen));
             Guard("tutorials", () => PollAutoTutorial(now, uiBusy));
+            Guard("quest route", () => PollQuestRoute(now, uiBusy));
             if (!uiBusy && !MenuOpen) Guard("hideout", () => PollHideout(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));

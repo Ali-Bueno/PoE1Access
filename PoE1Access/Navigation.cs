@@ -1284,8 +1284,25 @@ internal sealed partial class Navigator
         return _objectives.Any(o => o.IndexOf(core, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
-    private string QuestNote(ScanItem s) =>
-        s.Cat == Cat.Exits && QuestLeadsTo(NameOf(s, _ => null)) ? T(", your quest leads there", ", tu misión lleva allí") : "";
+    private string QuestNote(ScanItem s)
+    {
+        if (s.Cat != Cat.Exits) return "";
+        string name = NameOf(s, _ => null);
+        if (QuestLeadsTo(name)) return T(", your quest leads there", ", tu misión lleva allí");
+        // Quest route (QuestRoute.cs): the next area on the way to your quest.
+        if (!string.IsNullOrEmpty(QuestRouteNext) && SameArea(name, QuestRouteNext)) return T(", on your quest's route", ", en la ruta de tu misión");
+        return "";
+    }
+
+    /// <summary>The next area on the way to your quest, once the campaign is done (QuestRoute.cs).</summary>
+    public string QuestRouteNext;
+
+    private static bool SameArea(string a, string b)
+    {
+        static string Core(string n) => (n ?? "").Trim().StartsWith("The ", StringComparison.OrdinalIgnoreCase) ? n.Trim().Substring(4) : (n ?? "").Trim();
+        string x = Core(a), y = Core(b);
+        return x.Length >= 4 && (x.Equals(y, StringComparison.OrdinalIgnoreCase) || x.StartsWith(y + ",", StringComparison.OrdinalIgnoreCase));
+    }
 
     // Exits and quest things seen once, on any character (KnownPlaces): listed from then on.
     private readonly KnownPlaces _knownPlaces = new KnownPlaces();

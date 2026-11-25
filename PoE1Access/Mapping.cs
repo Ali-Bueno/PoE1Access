@@ -83,7 +83,12 @@ internal sealed partial class Navigator
     private bool ExploreNext(Vector2 p)
     {
         _uxCache = null;
-        var next = UnexploredList(p).FirstOrDefault(s => (PosOf(s) - p).Length() > 20f);
+        var options = UnexploredList(p).Where(s => (PosOf(s) - p).Length() > 20f).ToList();
+        // With a quest route, ground that holds an exit you have not found comes first, as the
+        // scanner's own hint says ("leads to a new exit"), without knowing which exit it is.
+        string newExit = T("leads to a new exit", "lleva a una salida nueva");
+        var next = (!string.IsNullOrEmpty(QuestRouteNext) ? options.FirstOrDefault(s => (s.Label ?? "").IndexOf(newExit, StringComparison.OrdinalIgnoreCase) >= 0) : null)
+                   ?? options.FirstOrDefault();
         if (next == null) { _say(T("Area explored", "Área explorada")); return false; }
         _guideTarget = next;
         _scanChoice = next;

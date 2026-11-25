@@ -160,6 +160,8 @@ public partial class PoE1AccessCore
                   "Cuando entras en un área por primera vez, el mod la describe: su tamaño, lo abierta que es, dónde estás, su transportador y adónde lleva. Toca L3 dos veces para oírlo otra vez."),
                 T("The Quest kind of the scanner holds what the game marks for your quest. An exit to the area your quest names says your quest leads there.",
                   "El tipo Misión del escáner contiene lo que el juego marca para tu misión. Una salida al área que nombra tu misión dice que tu misión lleva allí."),
+                T("Once any of your characters has finished the campaign, Quest route says the way through the areas to the one your quest names, as the world map shows it: Quest route: the Coast, then the Tidal Island. Exits you have found on that way say so. Where things are inside an area is still yours to find.",
+                  "Cuando cualquiera de tus personajes ha terminado la campaña, Ruta de misión dice el camino por las áreas hasta la que nombra tu misión, como lo muestra el mapa del mundo: Ruta de misión: la Costa, después la Isla de la Marea. Las salidas que has encontrado en ese camino lo dicen. Dónde están las cosas dentro de un área sigues teniendo que encontrarlo tú."),
                 T("At a waypoint, the world map says the act and your quest as it opens, and each place as you move to it.",
                   "En un transportador, el mapa del mundo dice el acto y tu misión al abrirse, y cada lugar al que te mueves."),
             },

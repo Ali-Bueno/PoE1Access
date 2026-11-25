@@ -17,10 +17,15 @@ public partial class PoE1AccessCore
     private long _screenTextsRoot, _nextScreenTextsMs;
     private bool _deleteDialogSaid;
     private long _deleteSinceMs;
+    private string _migrationSaid = "";
+    private bool _justOpened;
 
     // A visible question anywhere on the screen (the delete confirmation), searched deeper than
     // the screen's own lines.
-    private string DeepQuestion(List<Element> tops)
+    private string DeepQuestion(List<Element> tops) => DeepText(tops, t => t.Contains('?'));
+
+    // A visible sentence anywhere on the screen that `match` accepts.
+    private string DeepText(List<Element> tops, Func<string, bool> match)
     {
         var mem = Mem;
         foreach (Element top in tops)
@@ -34,7 +39,7 @@ public partial class PoE1AccessCore
                 visited++;
                 if (d > 0 && !Try(() => UiText.VisibleLocal(mem, e), false)) continue;
                 string t = CleanText(UiText.Text(mem, e));
-                if (t.Length >= 15 && t.Contains('?') && t.Contains(' ')) return t;
+                if (t.Length >= 15 && t.Contains(' ') && match(t)) return t;
                 if (d >= 14) continue;
                 var kids = Try<IList<Element>>(() => Fresh(e)?.Children, null);
                 if (kids == null || kids.Count > 200) continue;
@@ -81,8 +86,24 @@ public partial class PoE1AccessCore
         {
             _screenTexts = texts;   // a new screen: its lines are read by the screen's own reader
             _screenTextsRoot = root.Address;
-            return;
+            _migrationSaid = "";
+            _justOpened = true;
         }
+        // A league migration waiting in the queue: a window over the character list (found
+        // 25 Nov 2026 at root's parent/9/0: "League Migration", "Your league migration request
+        // is currently in the queue. Please wait for your request to be handled.", "cancel
+        // migration") that keeps the other windows, such as deleting a character, from taking
+        // the buttons. Said when it is there, also when the screen opens with it.
+        string migration = DeepText(tops, t => t.IndexOf("migration request", StringComparison.OrdinalIgnoreCase) >= 0);
+        if (migration != null && migration != _migrationSaid)
+        {
+            _migrationSaid = migration;
+            PluginLog.Write("League migration: " + migration);
+            Say(T($"League migration: {migration} It has a cancel migration button. While it waits, other windows, such as deleting a character, may not respond.",
+                  $"Migración de liga: {migration} Tiene un botón para cancelar la migración. Mientras espera, otras ventanas, como borrar un personaje, pueden no responder."), false);
+        }
+        if (migration == null) _migrationSaid = "";
+        if (_justOpened) { _justOpened = false; return; }
         // The delete confirmation stays in the screen after it closes, so it is said when the
         // game's prompts turn to its own ("A: Delete Character", "B: Cancel"), not when its text
         // changes (seen 21 Nov 2026: said on entering the character list, and missed when opened

@@ -88,8 +88,14 @@ public partial class PoE1AccessCore
             Title = T("Currency, vendors and the stash", "Moneda, vendedores y el alijo"),
             Pages = new[]
             {
-                T("There is no gold: currency items, such as orbs and scrolls, are the money, and most of them also change items. Vendors buy your items for currency.",
-                  "No hay oro: los objetos de moneda, como orbes y pergaminos, son el dinero, y la mayoría también modifican objetos. Los vendedores compran tus objetos a cambio de moneda."),
+                T("Vendors trade in currency items, such as scrolls and orbs, not in coins: an item might cost one Orb of Transmutation, or seven Alteration Shards. Most currency also changes items, so it is both money and crafting. Vendors buy your items for currency too.",
+                  "Los vendedores comercian con objetos de moneda, como pergaminos y orbes, no con monedas: un objeto puede costar un Orbe de transmutación, o siete Fragmentos de alteración. La mayoría de la moneda también modifica objetos, así que es dinero y artesanía a la vez. Los vendedores también compran tus objetos a cambio de moneda."),
+                T("Common early currency, cheapest first: Scroll of Wisdom, which identifies an item; Portal Scroll; Orb of Transmutation, Orb of Augmentation and Orb of Alteration, for magic items; Orb of Chance; Orb of Alchemy, for rare items; and Chaos Orb. Shards join into a whole orb when you have enough.",
+                  "Moneda común al principio, de la más barata a la más cara: Pergamino de sabiduría, que identifica un objeto; Pergamino de portal; Orbe de transmutación, Orbe de aumento y Orbe de alteración, para objetos mágicos; Orbe de azar; Orbe de alquimia, para objetos raros; y Orbe del caos. Los fragmentos se unen en un orbe entero cuando tienes suficientes."),
+                T("There is also gold, picked up as you play, which pays for refunding passive points and for the Currency Exchange, not for vendors' items. A purchase takes its currency from your bag and from any stash tabs you have opened.",
+                  "También hay oro, que recoges al jugar, y que paga la devolución de puntos de pasiva y el Mercado de divisas, no los objetos de los vendedores. Una compra toma su moneda de tu bolsa y de las pestañas del alijo que hayas abierto."),
+                T("With the mod: double tap L3 in play for your gold among the rest. In any window, hold L3 and push the right stick down for your gold and every currency in your bag, and in the stash tab you have open, by name and count.",
+                  "Con el mod: toca L3 dos veces al jugar para oír tu oro con lo demás. En cualquier ventana, mantén L3 y empuja el stick derecho abajo para oír tu oro y toda la moneda de tu bolsa, y de la pestaña del alijo que tengas abierta, por nombre y cantidad."),
                 T("The stash in each town keeps items for all your characters. It clunks from its side; its windows and tabs are read like any menu.",
                   "El alijo de cada ciudad guarda objetos para todos tus personajes. Suena desde su lado; sus ventanas y pestañas se leen como cualquier menú."),
             },

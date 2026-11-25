@@ -458,6 +458,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             }
             HandleNavigationInput(now, uiBusy);
             Guard("inventory moves", () => PollInventoryMoves(now));
+            Guard("sell offer", () => PollSellOffer(now));
             Guard("equipment selection", () => PollEquipmentSelection(now));
             Guard("stat panels", () => PollStatPanels(now));
             Guard("resources", () => PollResources(now));
@@ -625,9 +626,11 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                 break;
             case ControllerInput.Command.ScanUp:
                 if (!uiBusy) { Guard("scan", () => _nav.Scan(-1, 0, now, ItemName)); TutorialDid("category"); }
+                else Guard("price", SayPriceAgain);   // in a window: the selected item's price again
                 break;
             case ControllerInput.Command.ScanDown:
                 if (!uiBusy) { Guard("scan", () => _nav.Scan(1, 0, now, ItemName)); TutorialDid("category"); }
+                else Guard("currency", SayCurrency);   // in a window: your gold and currency
                 break;
             case ControllerInput.Command.ScanLeft:
                 if (!uiBusy) { Guard("scan", () => _nav.Scan(0, -1, now, ItemName)); TutorialDid("thing"); }
@@ -732,6 +735,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
                     parts.Add(uses == 1 ? T($"{flaskName}, {uses} use", $"{flaskName}, {uses} uso") : T($"{flaskName}, {uses} uses", $"{flaskName}, {uses} usos"));
                 }
             }
+
+        int gold = Try(() => GameController.IngameState.ServerData.Gold, -1);
+        if (gold > 0) parts.Add(T($"Gold {gold}", $"Oro {gold}"));
 
         string area = Try(() => GameController.Area.CurrentArea.Name, "") ?? "";
         if (area.Length == 0) area = Try(() => GameController.Area.CurrentArea.DisplayName, "") ?? "";
@@ -843,6 +849,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (Pressed("previous item", Settings.PreviousItemHotkey, Keys.F5)) Guard("browse", () => BrowseStep(-1));
         if (Pressed("next item", Settings.NextItemHotkey, Keys.F6)) Guard("browse", () => BrowseStep(1));
         if (Pressed("switch list", Settings.SwitchListHotkey, Keys.F7)) Guard("browse", SwitchList);
+        if (Pressed("currency", Settings.CurrencyHotkey, Keys.None)) Guard("currency", SayCurrency);
 
         if (Pressed("dump items", Settings.DumpItemsHotkey, Keys.F8)) Guard("dump items", DumpItems);
         if (Pressed("dump panels", Settings.DumpPanelsHotkey, Keys.F10)) Guard("dump panels", DumpPanels);
@@ -1778,6 +1785,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // focused. Not right after a panel opened or closed, whose new elements are its own.
         var fresh = state.Keys.Where(k => !prev.ContainsKey(k)).ToList();
         Guard("tooltips", () => CatchTooltip(now, state, elements, fresh));
+        Guard("prices", () => CatchPrice(now, elements));
         if (fresh.Count > 0 && fresh.Count <= 400 && now - _panelsChangedMs > 600)
         {
             var texts = fresh.Select(k => (Key: k, Text: CleanText(UiText.Text(mem, elements[k].E)))).Where(x => x.Text.Length > 0).ToList();

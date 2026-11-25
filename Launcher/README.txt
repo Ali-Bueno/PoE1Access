@@ -196,6 +196,18 @@ In game (controller, L3 = left stick click / keyboard):
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.
 
+CURRENCY AND VENDOR PRICES
+Vendors price items in currency items (scrolls, orbs and shards), not gold. Gold pays for
+passive refunds and the Currency Exchange.
+- Double tap L3 in play: your gold, with the rest of your status.
+- In any window, hold L3 + right stick down: your gold, then every currency in your bag and in
+  the open stash tab, by name and count (CurrencyHotkey in Exile API's menu, no key by default).
+- At a vendor, an item's price is said after its description, with whether you can pay it
+  ("Price: 1 Orb of Transmutation, you have 3"). Hold L3 + right stick up: the price again.
+- In the sell window, what the vendor offers is said as it changes ("Vendor offers: ...").
+The price is read from the screen, and this has not been tried in the game yet: when no price
+is found, the mod writes what it saw to its log ("Vendor price not found").
+
 TOOLTIPS IN MENUS
 When you move to a menu entry or button that shows a tooltip, the tooltip is read after its
 name, in any menu, including new ones a game update adds. In a menu, tap L3 for its next line,

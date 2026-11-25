@@ -136,6 +136,8 @@ public class PoE1AccessSettings : ISettings
     public HotkeyNodeV2 ScanPrevHotkey { get; set; } = new HotkeyNodeV2(Keys.Home);
     public HotkeyNodeV2 ScanNextHotkey { get; set; } = new HotkeyNodeV2(Keys.End);
     public HotkeyNodeV2 WhereHotkey { get; set; } = new HotkeyNodeV2(Keys.Insert);
+    // Your gold and currency (also hold L3 + right stick down in a window); no key unless set.
+    public HotkeyNodeV2 CurrencyHotkey { get; set; } = new HotkeyNodeV2(Keys.None);
     public HotkeyNodeV2 GuideHotkey { get; set; } = new HotkeyNodeV2(Keys.Delete);
     public HotkeyNodeV2 StatusHotkey { get; set; } = new HotkeyNodeV2(Keys.F1);
 

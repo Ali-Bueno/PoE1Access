@@ -15,7 +15,8 @@ namespace PoE1Access;
 // turned off with "Tips about new game mechanics" in the Speech submenu.
 //
 // Written 25 Nov 2026 from what is known of the game; the trials' places and traps are from the
-// Path of Exile Wiki's "Trial of Ascendancy" page (last edited 24 May 2026). The trials and the
+// Path of Exile Wiki's "Trial of Ascendancy" page (last edited 24 May 2026), the Labyrinth's
+// from its "The Lord's Labyrinth" page (last edited 19 Nov 2026). The trials and the
 // Labyrinth have not been tested with the mod yet, and the lessons say so.
 public partial class PoE1AccessCore
 {
@@ -117,8 +118,8 @@ public partial class PoE1AccessCore
                   "Para el Laberinto Cruel: la Prisión en el acto 6, trampas de pinchos; la Cripta en el acto 7, cuchillas giratorias; la Cámara de los Pecados nivel 2 en el acto 7, sierras. Para el Laberinto Despiadado: la Casa de Baños en el acto 8, trampas de horno; el Túnel en el acto 9, centinelas de cuchillas; el Osario en el acto 10, trampas de dardos."),
                 T("After the campaign, harder trials appear at random in yellow and red maps; finishing one gives an Offering to the Goddess, the way into the Eternal Labyrinth. They can hold Sentinel traps, which you switch off for a while by damaging them.",
                   "Después de la campaña aparecen pruebas más difíciles al azar en mapas amarillos y rojos; terminar una da una Ofrenda a la Diosa, la entrada al Laberinto Eterno. Pueden tener trampas centinela, que se apagan un rato dañándolas."),
-                T("Traps: spikes that rise from the floor, spinning blades and sawblades that move along their tracks, blade sentries, furnaces that blast fire, and darts from the walls. Most move in a rhythm: wait, listen, then go through.",
-                  "Trampas: pinchos que salen del suelo, cuchillas giratorias y sierras que se mueven por sus raíles, centinelas de cuchillas, hornos que lanzan fuego y dardos desde las paredes. La mayoría se mueven con un ritmo: espera, escucha y pasa."),
+                T("Traps: spikes that rise from the floor, spinning blades and sawblades that move along their tracks, blade sentries, furnaces that heat the floor with lava, and darts from the walls. Most move in a rhythm: wait, listen, then go through. Each is explained in the lesson Labyrinth traps.",
+                  "Trampas: pinchos que salen del suelo, cuchillas giratorias y sierras que se mueven por sus raíles, centinelas de cuchillas, hornos que calientan el suelo con lava y dardos desde las paredes. La mayoría se mueven con un ritmo: espera, escucha y pasa. Cada una se explica en la lección Trampas del Laberinto."),
                 T("With the mod: entering one of these areas says that it has a trial and which trap. Traps have a scanner kind of their own, Traps, and the two nearest tick from their side, faster as you get closer. The plaque is listed under Objects.",
                   "Con el mod: al entrar en una de estas áreas se dice que tiene una prueba y qué trampa. Las trampas tienen su propio tipo en el escáner, Trampas, y las dos más cercanas hacen tic desde su lado, más rápido cuanto más te acercas. La placa se lista en Objetos del entorno."),
                 T("With the mod: traps have a scanner kind of their own, Traps, and the two nearest tick from their side, faster as you get closer. The plaque is listed under Objects.",
@@ -129,17 +130,76 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
-            Title = T("The Labyrinth and your Ascendancy", "El Laberinto y tu Ascendencia"),
+            Title = T("The Labyrinth: getting in and its rules", "El Laberinto: cómo entrar y sus reglas"),
             Pages = new[]
             {
-                T("With the six trials done, the Lord's Labyrinth opens from the Aspirants' Plaza in Act 3, at the statue of the Goddess, whose window lets you choose which Labyrinth to enter and shows the trials you have done. It is a run of rooms full of traps, levers, locked doors and keys, where Izaro is fought several times.",
-                  "Con las seis pruebas hechas, el Laberinto del Señor se abre desde la Plaza de los Aspirantes en el acto 3, en la estatua de la Diosa, cuya ventana te deja elegir en qué Laberinto entrar y muestra las pruebas que has hecho. Es una serie de salas llenas de trampas, palancas, puertas cerradas y llaves, donde se lucha varias veces contra Izaro."),
-                T("Four Labyrinths, each harder: the Normal one; the Cruel one, from level 40, after the Normal one and its three trials; the Merciless one, from level 50, after the Cruel one and its three trials; and the Eternal one, from level 60, after the Merciless one, for an Offering to the Goddess.",
-                  "Cuatro Laberintos, cada uno más difícil: el Normal; el Cruel, desde el nivel 40, después del Normal y sus tres pruebas; el Despiadado, desde el nivel 50, después del Cruel y sus tres pruebas; y el Eterno, desde el nivel 60, después del Despiadado, a cambio de una Ofrenda a la Diosa."),
-                T("Darkshrines along the way give a bonus for the run. Keys open locked doors and treasure. Beating Izaro at the end lets you choose your Ascendancy class, a small extra tree, with two points; harder Labyrinths later give two more each.",
-                  "Los santuarios oscuros del camino dan una bonificación para el recorrido. Las llaves abren puertas cerradas y tesoros. Vencer a Izaro al final te deja elegir tu clase de Ascendencia, un pequeño árbol extra, con dos puntos; los Laberintos más difíciles dan dos más cada uno."),
-                T("With the mod: traps, levers, keys and Darkshrines are in the scanner, and Izaro is an enemy with his life said as it falls. The Labyrinth's map and its puzzles have not been tried with the mod yet, and parts of it may be very hard to do by ear. Send the log after a try.",
-                  "Con el mod: las trampas, palancas, llaves y santuarios oscuros están en el escáner, e Izaro es un enemigo cuya vida se dice a medida que baja. El mapa del Laberinto y sus acertijos aún no se han probado con el mod, y partes pueden ser muy difíciles de hacer de oído. Envía el registro después de intentarlo."),
+                T("With the six trials done, the Statue of the Goddess in the Sarn Encampment, in Act 3, takes you to the Aspirants' Plaza. The plaza has a waypoint, so you can come back from any act. Its window lets you choose which Labyrinth to enter and shows the trials you have done.",
+                  "Con las seis pruebas hechas, la Estatua de la Diosa del Campamento de Sarn, en el acto 3, te lleva a la Plaza de los Aspirantes. La plaza tiene un transportador, así que puedes volver desde cualquier acto. Su ventana te deja elegir en qué Laberinto entrar y muestra las pruebas que has hecho."),
+                T("A Labyrinth must be done in one run, without dying. There are no waypoints or checkpoints in it. Leave it for any reason, death, a portal, logging out or a crash, and you cannot go back: you start a new one. Leaving by portal asks you first.",
+                  "Un Laberinto se hace en un solo recorrido, sin morir. No tiene transportadores ni puntos de control. Si lo dejas por cualquier motivo, morir, un portal, cerrar la sesión o un fallo, no puedes volver: empiezas uno nuevo. Salir por un portal te lo pregunta antes."),
+                T("Your stash is there just before each fight with Izaro, and at the end. Keys and the Labyrinth's own items only work in that run, and are lost when you leave.",
+                  "Tu alijo está justo antes de cada combate contra Izaro, y al final. Las llaves y los objetos propios del Laberinto solo sirven en ese recorrido, y se pierden al salir."),
+                T("The layout changes every day at midnight, world time. Every run of that Labyrinth on the same day has the same chambers in the same order, so a second try the same day follows the way you have already learned.",
+                  "La disposición cambia cada día a medianoche, hora mundial. Cada recorrido de ese Laberinto el mismo día tiene las mismas salas en el mismo orden, así que un segundo intento el mismo día sigue el camino que ya has aprendido."),
+                T("Four Labyrinths, each harder: the Normal one, area level 33; the Cruel one, from character level 40, after the Normal one and its three trials; the Merciless one, from level 50, after the Cruel one and its three trials; and the Eternal one, from level 68, after the Merciless one, which takes an Offering to the Goddess each time.",
+                  "Cuatro Laberintos, cada uno más difícil: el Normal, de nivel de área 33; el Cruel, desde el nivel de personaje 40, después del Normal y sus tres pruebas; el Despiadado, desde el nivel 50, después del Cruel y sus tres pruebas; y el Eterno, desde el nivel 68, después del Despiadado, que pide una Ofrenda a la Diosa cada vez."),
+            },
+        },
+        new Lesson
+        {
+            Title = T("The Labyrinth: chambers, keys and Izaro", "El Laberinto: salas, llaves e Izaro"),
+            Pages = new[]
+            {
+                T("The Labyrinth is a run of chambers joined by exits. A chamber's name says how many ways it has: Annex is a dead end with one, Passage has two, Halls three and Atrium four. The first word is its look: Basilica, Sepulchre, Sanitorium, Mansion, Estate or Domain.",
+                  "El Laberinto es una serie de salas unidas por salidas. El nombre de una sala dice cuántos caminos tiene: Anexo es un callejón sin salida con uno, Pasaje tiene dos, Salones tres y Atrio cuatro. La primera palabra es su aspecto: Basílica, Sepulcro, Sanatorio, Mansión, Finca o Dominio."),
+                T("By each door a pedestal shows the map of the chambers you have seen and the one behind that door, with what it holds: an Aspirant's Trial, a Forgotten Reliquary, a Golden Door, a Silver Cache, or nothing special.",
+                  "Junto a cada puerta, un pedestal muestra el mapa de las salas que has visto y la que hay detrás de esa puerta, con lo que contiene: una Prueba del Aspirante, un Relicario Olvidado, una Puerta Dorada, un Alijo de Plata o nada especial."),
+                T("Izaro is fought three times, in the Aspirant's Trials: the first ends when he is down to two thirds of his life, the second at one third, the third when he dies. Each fight has a waiting room with a stash before the arena; once in the arena you cannot go back until it is over.",
+                  "Contra Izaro se lucha tres veces, en las Pruebas del Aspirante: la primera termina cuando le queda dos tercios de su vida, la segunda un tercio, la tercera cuando muere. Cada combate tiene una sala de espera con alijo antes de la arena; una vez en la arena no puedes volver hasta que termine."),
+                T("In his fights, Izaro is helped by devices and monsters that make him stronger. Destroying them makes the fight easier; leaving them carries them to the next fight, harder, but he drops an extra Treasure Key for each one at the end. A Forgotten Reliquary's Decorative Chest holds a trinket that removes one of them.",
+                  "En sus combates, a Izaro le ayudan artefactos y monstruos que lo hacen más fuerte. Destruirlos hace el combate más fácil; dejarlos los pasa al siguiente combate, más difícil, pero al final suelta una Llave del Tesoro extra por cada uno. El Cofre Decorativo de un Relicario Olvidado tiene un abalorio que quita uno de ellos."),
+                T("A Golden Door blocks the way on and needs the Golden Key, found in the same chamber, or next to it in the Eternal Labyrinth. A Silver Cache is an optional locked room with treasure or a Darkshrine, opened with a Silver Key. Darkshrines give a bonus for the rest of the run. From the Merciless Labyrinth on, Argus, a strong monster, drops a Treasure Key.",
+                  "Una Puerta Dorada bloquea el camino y necesita la Llave Dorada, que está en la misma sala, o al lado en el Laberinto Eterno. Un Alijo de Plata es una sala cerrada opcional con tesoro o un santuario oscuro, que se abre con una Llave de Plata. Los santuarios oscuros dan una bonificación para el resto del recorrido. Desde el Laberinto Despiadado, Argus, un monstruo fuerte, suelta una Llave del Tesoro."),
+                T("A tile puzzle room shows three tiles, such as fire, lightning and ice, to step on in order; then you cross a grid stepping on tiles in that same order, over and over. A wrong tile fires darts and starts it again. Some chambers hide switches and secret passages that are not marked.",
+                  "Una sala de acertijo de baldosas muestra tres baldosas, como fuego, rayo y hielo, para pisarlas en orden; luego cruzas una cuadrícula pisando baldosas en ese mismo orden, una y otra vez. Una baldosa equivocada dispara dardos y lo reinicia. Algunas salas esconden interruptores y pasajes secretos sin marcar."),
+            },
+        },
+        new Lesson
+        {
+            Title = T("The Labyrinth: the end and your Ascendancy", "El Laberinto: el final y tu Ascendencia"),
+            Pages = new[]
+            {
+                T("After Izaro's last fight, the Ascendancy Chamber holds the Altar of Ascendancy, a Divine Font and ten chests of Izaro's Treasure.",
+                  "Después del último combate contra Izaro, la Sala de Ascendencia tiene el Altar de Ascendencia, una Fuente Divina y diez cofres del Tesoro de Izaro."),
+                T("At the Altar, your first Labyrinth lets you choose your Ascendancy class, a small extra passive tree, and each Labyrinth the first time gives two Ascendancy points: eight in all.",
+                  "En el Altar, tu primer Laberinto te deja elegir tu clase de Ascendencia, un pequeño árbol de pasivas extra, y cada Laberinto la primera vez da dos puntos de Ascendencia: ocho en total."),
+                T("The Divine Font changes one of your gems each time you finish a Labyrinth: it can turn a skill gem into a transfigured version, a different form of that skill, add quality or experience, or trade the gem for currency or Treasure Keys. Its options are a window, read like any menu.",
+                  "La Fuente Divina cambia una de tus gemas cada vez que terminas un Laberinto: puede convertir una gema de habilidad en una versión transfigurada, otra forma de esa habilidad, añadir calidad o experiencia, o cambiar la gema por moneda o Llaves del Tesoro. Sus opciones son una ventana, leída como cualquier menú."),
+                T("Each of Izaro's Treasure chests takes one Treasure Key. Keys come from chests and lockboxes in the Labyrinth, from Izaro, and from Argus.",
+                  "Cada cofre del Tesoro de Izaro necesita una Llave del Tesoro. Las llaves salen de cofres y cajas en el Laberinto, de Izaro y de Argus."),
+                T("With the mod: traps, pressure plates, levers, keys, Darkshrines, the Altar and the Font are in the scanner; chests are under Chests; Izaro is an enemy with his life said as it falls. A chamber's exits say what their name means, such as a dead end. The pedestal map and the tile puzzle have not been tried with the mod yet, and parts of the Labyrinth may be very hard by ear. Send the log after a try.",
+                  "Con el mod: las trampas, placas de presión, palancas, llaves, santuarios oscuros, el Altar y la Fuente están en el escáner; los cofres en Cofres; Izaro es un enemigo cuya vida se dice a medida que baja. Las salidas de una sala dicen lo que significa su nombre, como un callejón sin salida. El mapa de los pedestales y el acertijo de baldosas aún no se han probado con el mod, y partes del Laberinto pueden ser muy difíciles de oído. Envía el registro después de intentarlo."),
+            },
+        },
+        new Lesson
+        {
+            Title = T("Labyrinth traps", "Trampas del Laberinto"),
+            Pages = new[]
+            {
+                T("Traps hurt by a share of your life and energy shield, so they stay dangerous at any level. Each kind is first shown in one of the trials. Traps hurt monsters too, minions less.",
+                  "Las trampas hacen daño según una parte de tu vida y escudo de energía, así que siguen siendo peligrosas a cualquier nivel. Cada tipo se presenta primero en una de las pruebas. Las trampas también dañan a los monstruos, menos a los esbirros."),
+                T("Spike traps shoot up from a square of floor on a timer or when you step on their pressure plate: a quarter of your health, bleeding, and you are held in place. While up they block the way.",
+                  "Las trampas de pinchos salen de un cuadrado del suelo con un temporizador o al pisar su placa de presión: un cuarto de tu salud, sangrado, y te quedas inmovilizado. Mientras están arriba bloquean el paso."),
+                T("Sawblades run along a straight track and kill in about a second of contact; nearby levers often switch them on and off. Spinning blades follow a track that turns or runs diagonally, as deadly; levers can send them onto another track.",
+                  "Las sierras recorren un raíl recto y matan en un segundo de contacto; las palancas cercanas a menudo las encienden y apagan. Las cuchillas giratorias siguen un raíl que gira o va en diagonal, igual de mortales; las palancas pueden desviarlas a otro raíl."),
+                T("Furnace traps heat the floor with lava now and then: standing on it burns you. Fire skeletons come out of them, unharmed by the heat. Blade sentries are wide blades moving along set paths, on the ground or flying, worst at their centre.",
+                  "Las trampas de horno calientan el suelo con lava de vez en cuando: quedarte encima te quema. De ellas salen esqueletos de fuego, a los que el calor no daña. Los centinelas de cuchillas son cuchillas anchas que se mueven por caminos fijos, por el suelo o volando, peores en su centro."),
+                T("Dart traps sit on walls and pillars and fire on a timer or from a hidden pressure plate: poison, and they slow you a lot. Cleaver traps, along narrow corridors, slam a big blade down every few seconds, with strong bleeding.",
+                  "Las trampas de dardos están en paredes y pilares y disparan con un temporizador o desde una placa de presión oculta: veneno, y te ralentizan mucho. Las trampas de cuchilla, en pasillos estrechos, dejan caer una gran hoja cada pocos segundos, con un sangrado fuerte."),
+                T("Sentinel traps, only in the map trials and the Eternal Labyrinth, put an effect on the ground around them, such as draining flask charges, novas of fire, ice or lightning, slowing curses or more damage taken. Damaging one switches it off for a while.",
+                  "Las trampas centinela, solo en las pruebas de mapas y el Laberinto Eterno, ponen un efecto en el suelo a su alrededor, como quitar cargas de frasco, novas de fuego, hielo o rayo, maldiciones que ralentizan o más daño recibido. Dañar una la apaga un rato."),
+                T("Most traps move in a rhythm. With the mod, the two nearest tick from their side, faster as you get closer: stop, listen for the rhythm, then cross. Each trap is named as you come near.",
+                  "La mayoría de las trampas se mueven con un ritmo. Con el mod, las dos más cercanas hacen tic desde su lado, más rápido cuanto más te acercas: para, escucha el ritmo y cruza. Cada trampa se nombra al acercarte."),
             },
         },
         new Lesson
@@ -218,6 +278,8 @@ public partial class PoE1AccessCore
         if (id.IndexOf("Labyrinth", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Aspirant", StringComparison.OrdinalIgnoreCase) >= 0)
             Tip("labyrinth", T("Tip: this is the way to the Labyrinth, where you choose your Ascendancy. More in the tutorial, Game mechanics.", "Consejo: este es el camino al Laberinto, donde eliges tu Ascendencia. Más en el tutorial, Mecánicas del juego."));
         if (act >= 6) Tip("resistances", T("Tip: finishing Act 5 lowered your resistances for good; gear with resistances matters now. More in the tutorial, Game mechanics.", "Consejo: terminar el acto 5 bajó tus resistencias para siempre; ahora importa el equipo con resistencias. Más en el tutorial, Mecánicas del juego."));
+        if (Navigator.IsLabChamber(name))
+            Tip("labyrinth run", T("Tip: you are in the Labyrinth. Do it in one run: dying or leaving ends it. Your stash is just before each fight with Izaro. A chamber's exits say what their names mean. More in the tutorial, Game mechanics.", "Consejo: estás en el Laberinto. Hazlo en un solo recorrido: morir o salir lo termina. Tu alijo está justo antes de cada combate contra Izaro. Las salidas de una sala dicen lo que significa su nombre. Más en el tutorial, Mecánicas del juego."));
         if (id.StartsWith("MapWorlds", StringComparison.OrdinalIgnoreCase)) Tip("maps", T("Tip: this is a map, the game after the campaign. More in the tutorial, Game mechanics.", "Consejo: esto es un mapa, el juego después de la campaña. Más en el tutorial, Mecánicas del juego."));
         if (_nav != null && _nav.NearCovenCauldron(60f)) Tip("covens", T("Tip: a Coven's Cauldron is near. Beat its coven, then choose a Fate at it. More in the tutorial, Game mechanics.", "Consejo: hay un Caldero del aquelarre cerca. Vence a su aquelarre y luego elige un Destino en él. Más en el tutorial, Mecánicas del juego."));
     }

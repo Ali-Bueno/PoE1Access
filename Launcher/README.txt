@@ -148,7 +148,10 @@ game mechanics" in the Speech submenu.
 TRIALS OF ASCENDANCY AND THE LABYRINTH (NOT TESTED YET)
 Traps have a scanner kind of their own, Traps, and the two nearest tick from their side within
 about a screen, faster as you get closer (a quick metallic double tick). Trial plaques, levers,
-keys and Darkshrines are listed under Objects. This was written before anyone reached a trial
+keys and Darkshrines are listed under Objects, with the Altar of Ascendancy and the Divine Font; pressure
+plates are under Traps. In the Labyrinth, an exit to a chamber says what its name means
+("Basilica Annex, a dead end", "Sepulchre Halls, three ways", "Aspirant's Trial, a fight with
+Izaro"). This was written before anyone reached a trial
 with the mod: the mod writes every trial and Labyrinth object it finds to its log ("Labyrinth
 object: ..."), so please send the log after your first trial.
 

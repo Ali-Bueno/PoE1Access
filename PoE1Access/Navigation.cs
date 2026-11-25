@@ -1754,6 +1754,8 @@ internal sealed partial class Navigator
                 if (!string.IsNullOrEmpty(n)) return n;
             }
             string r = e.RenderName;
+            // An exit to a Labyrinth chamber says what its name means ("Basilica Annex, a dead end").
+            if (!string.IsNullOrWhiteSpace(r) && e.Type == EntityType.AreaTransition && ChamberMeaning(r) is string cm && cm.Length > 0) return r + ", " + cm;
             if (!string.IsNullOrWhiteSpace(r)) return r;
             // An exit the game gives no name ("AreaTransition", "WaterCaveAreaTransition").
             if (e.Type == EntityType.AreaTransition) return T("Passage", "Paso");

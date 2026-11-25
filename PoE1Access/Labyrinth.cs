@@ -10,6 +10,9 @@ namespace PoE1Access;
 // Trials of Ascendancy and the Lord's Labyrinth: traps, the trial's plaque, levers, keys,
 // Darkshrines and the like, for the scanner and the object sounds.
 //
+// What the traps do and how the chambers are named is from the Path of Exile Wiki ("The Lord's
+// Labyrinth", last edited 19 Nov 2026).
+//
 // NOT YET SEEN IN THE GAME (written 25 Nov 2026, before reaching a trial). The game's own names
 // for these objects were not known, so they are matched by words in their paths ("Labyrinth"
 // with "Spike", "Saw", "Blade", "Dart", "Flame", "Plaque", "Lever"...). Every object in a trial or
@@ -22,7 +25,7 @@ internal sealed partial class Navigator
 {
     public enum LabKind { None, Trap, Plaque, Lever, Key, Darkshrine, Font, Door, Other }
 
-    private static readonly string[] TrapWords = { "trap", "spike", "saw", "blade", "spinner", "roomba", "dart", "arrow", "flame", "fire", "furnace", "sentinel", "sentry", "pendulum" };
+    private static readonly string[] TrapWords = { "trap", "spike", "saw", "blade", "spinner", "spinning", "roomba", "dart", "arrow", "flame", "fire", "furnace", "sentinel", "sentry", "pendulum", "cleaver", "pressureplate", "pressure_plate" };
     private static readonly Dictionary<string, LabKind> LabKindCache = new Dictionary<string, LabKind>();
 
     /// <summary>What a Labyrinth or trial object is, from its path (cached per path).</summary>
@@ -49,7 +52,7 @@ internal sealed partial class Navigator
         if (p.Contains("darkshrine")) return LabKind.Darkshrine;
         if (p.Contains("lever") || p.Contains("switch")) return LabKind.Lever;
         if (p.Contains("key")) return LabKind.Key;
-        if (p.Contains("font")) return LabKind.Font;
+        if (p.Contains("font") || p.Contains("altar")) return LabKind.Font;   // the Divine Font, the Altar of Ascendancy
         if (p.Contains("door") || p.Contains("gate")) return LabKind.Door;
         if (TrapWords.Any(w => p.Contains(w))) return LabKind.Trap;
         return LabKind.Other;
@@ -59,12 +62,14 @@ internal sealed partial class Navigator
     public static string TrapName(string path)
     {
         string p = (path ?? "").ToLowerInvariant();
+        if (p.Contains("pressureplate") || p.Contains("pressure_plate")) return T("Pressure plate, sets off a trap", "Placa de presión, activa una trampa");
+        if (p.Contains("cleaver")) return T("Cleaver trap", "Trampa de cuchilla");
         if (p.Contains("spike")) return T("Spike trap", "Trampa de pinchos");
         if (p.Contains("sawblade") || p.Contains("saw")) return T("Sawblade", "Sierra");
         // Sentinel traps (the map trials and the Eternal Labyrinth) are switched off for a while by damaging them.
         if (p.Contains("sentinel")) return T("Sentinel trap, damage it to switch it off", "Trampa centinela, dáñala para apagarla");
         if (p.Contains("sentry")) return T("Blade sentry", "Centinela de cuchillas");
-        if (p.Contains("spinner") || p.Contains("roomba")) return T("Spinning blades", "Cuchillas giratorias");
+        if (p.Contains("spinner") || p.Contains("spinning") || p.Contains("roomba")) return T("Spinning blades", "Cuchillas giratorias");
         if (p.Contains("pendulum")) return T("Swinging blade", "Cuchilla oscilante");
         if (p.Contains("blade")) return T("Blade trap", "Trampa de cuchillas");
         if (p.Contains("dart") || p.Contains("arrow")) return T("Dart trap", "Trampa de dardos");
@@ -79,7 +84,11 @@ internal sealed partial class Navigator
         string path = Try(() => e.Path, "") ?? "";
         switch (kind)
         {
-            case LabKind.Trap: return TrapName(path);
+            // A Sentinel trap by its own name when it has one ("Unending Frost").
+            case LabKind.Trap:
+                return path.IndexOf("sentinel", StringComparison.OrdinalIgnoreCase) >= 0 && r.Length > 0
+                    ? T($"{r}, sentinel trap, damage it to switch it off", $"{r}, trampa centinela, dáñala para apagarla")
+                    : TrapName(path);
             case LabKind.Plaque: return r.Length > 0 ? T($"{r}, the trial's plaque", $"{r}, la placa de la prueba") : T("Trial plaque", "Placa de la prueba");
             case LabKind.Lever: return r.Length > 0 ? r : T("Lever", "Palanca");
             case LabKind.Key: return r.Length > 0 ? r : T("Key", "Llave");
@@ -88,6 +97,35 @@ internal sealed partial class Navigator
             case LabKind.Door: return r.Length > 0 ? r : T("Door", "Puerta");
             default: return r;
         }
+    }
+
+    // ---- The Labyrinth's chambers ----
+    //
+    // A chamber's name says its look (Estate, Domain, Basilica, Sepulchre, Sanitorium, Mansion)
+    // and how many ways it has: Annex 1 (a dead end), Passage 2, Halls 3, Atrium 4. Estate and
+    // Domain chambers have names of their own (Estate Enclosure, Path, Walkways, Crossing), whose
+    // counts are not known. The fights with Izaro are in the Aspirant's Trials.
+
+    private static readonly string[] ChamberLooks = { "Estate", "Domain", "Basilica", "Sepulchre", "Sanitorium", "Mansion" };
+
+    public static bool IsLabChamber(string name)
+    {
+        string n = (name ?? "").Trim();
+        if (n.StartsWith("Aspirant's Trial", StringComparison.OrdinalIgnoreCase)) return true;
+        return ChamberLooks.Any(l => n.StartsWith(l + " ", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>What a chamber's name means ("a dead end", "three ways"), or "".</summary>
+    public static string ChamberMeaning(string name)
+    {
+        string n = (name ?? "").Trim();
+        if (!IsLabChamber(n)) return "";
+        if (n.StartsWith("Aspirant's Trial", StringComparison.OrdinalIgnoreCase)) return T("a fight with Izaro", "un combate contra Izaro");
+        if (n.EndsWith(" Annex", StringComparison.OrdinalIgnoreCase)) return T("a dead end", "un callejón sin salida");
+        if (n.EndsWith(" Passage", StringComparison.OrdinalIgnoreCase)) return T("two ways", "dos caminos");
+        if (n.EndsWith(" Halls", StringComparison.OrdinalIgnoreCase)) return T("three ways", "tres caminos");
+        if (n.EndsWith(" Atrium", StringComparison.OrdinalIgnoreCase)) return T("four ways", "cuatro caminos");
+        return "";
     }
 
     // ---- Recording what a trial holds, for the first test there ----

@@ -434,7 +434,6 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             }
             _preGameState = "";
             _lastInGameMs = now;
-            Guard("tutorial", () => OfferTutorial(now));
             long t0 = _clock.ElapsedMilliseconds;
             PollEscape();
             NoteSlow("escape", t0); t0 = _clock.ElapsedMilliseconds;
@@ -468,6 +467,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("dialogue", () => PollDialogue(now));
             Guard("fates", () => PollFates(now));
             Guard("mechanic tips", () => PollMechanicTips(now, uiBusy || _bindingMode || MenuOpen));
+            Guard("tutorials", () => PollAutoTutorial(now, uiBusy));
             if (!uiBusy && !MenuOpen) Guard("hideout", () => PollHideout(now));
             Guard("world map", () => PollWorldMap(now));
             Guard("control hints", () => PollControlHints(now));
@@ -583,6 +583,8 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             Guard("menu", OpenMenu);
             return;
         }
+        // The tutorials' question, or a lesson playing, takes tap, double tap and hold of L3.
+        if (cmd != ControllerInput.Command.None && Try(() => TutorialInput(cmd), false)) return;
 
         // Character sheet open: L3 held + right stick (or PageUp/PageDown/Home/End) moves through
         // its stats: up/down one stat, left/right one section. The controller itself moves in the

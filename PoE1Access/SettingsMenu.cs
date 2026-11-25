@@ -62,6 +62,7 @@ public partial class PoE1AccessCore
                     OnChange = v => ApplySpeechRate(true),
                 },
                 Sw(T("Describe areas on arrival", "Describir las áreas al llegar"), Settings.DescribeAreas),
+                Sw(T("Tutorials start as you meet each part of the game", "Los tutoriales empiezan al encontrar cada parte del juego"), Settings.AutoTutorials),
                 Sw(T("Tips about new game mechanics", "Consejos sobre mecánicas nuevas del juego"), Settings.MechanicTips),
                 Sw(T("Loot follows the game's loot filter", "El botín sigue el filtro de botín del juego"), Settings.FollowLootFilter),
                 Sw(T("Explore mode: guiding to unexplored ground goes on to the next", "Modo exploración: la guía al terreno sin explorar sigue al siguiente"), Settings.ExploreMode),

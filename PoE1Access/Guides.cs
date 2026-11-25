@@ -15,6 +15,7 @@ public partial class PoE1AccessCore
     {
         new Lesson
         {
+            Key = "tree reading",
             Title = T("The passive tree: reading it", "El árbol de pasivas: cómo leerlo"),
             Pages = new[]
             {
@@ -34,6 +35,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "tree finder",
             Title = T("The passive tree: finding your way with the finder", "El árbol de pasivas: orientarte con el buscador"),
             Pages = new[]
             {
@@ -51,6 +53,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "inventory",
             Title = T("Your inventory and items", "Tu inventario y tus objetos"),
             Pages = new[]
             {
@@ -68,6 +71,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "socketing",
             Title = T("Socketing a gem, step by step", "Engarzar una gema, paso a paso"),
             Pages = new[]
             {
@@ -87,6 +91,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "links",
             Title = T("Links and support gems", "Enlaces y gemas de apoyo"),
             Pages = new[]
             {
@@ -102,6 +107,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "binding guide",
             Title = T("Putting skills on your buttons", "Poner habilidades en tus botones"),
             Pages = new[]
             {
@@ -117,6 +123,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "vendors",
             Title = T("Vendors: buying and selling", "Vendedores: comprar y vender"),
             Pages = new[]
             {
@@ -136,6 +143,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "stash",
             Title = T("The stash", "El alijo"),
             Pages = new[]
             {
@@ -149,6 +157,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "rewards",
             Title = T("Quest rewards", "Recompensas de misión"),
             Pages = new[]
             {
@@ -162,6 +171,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "map speed",
             Title = T("Running a map quickly", "Hacer un mapa rápido"),
             Pages = new[]
             {
@@ -181,6 +191,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "sheet",
             Title = T("The character sheet and your defences", "La hoja de personaje y tus defensas"),
             Pages = new[]
             {

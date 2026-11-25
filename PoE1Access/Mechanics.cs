@@ -24,6 +24,7 @@ public partial class PoE1AccessCore
     {
         new Lesson
         {
+            Key = "towns",
             Title = T("Towns, characters and quests", "Ciudades, personajes y misiones"),
             Pages = new[]
             {
@@ -37,6 +38,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "waypoints",
             Title = T("Waypoints and portals", "Transportadores y portales"),
             Pages = new[]
             {
@@ -50,6 +52,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "gems",
             Title = T("Skill gems, sockets and links", "Gemas de habilidad, engarces y enlaces"),
             Pages = new[]
             {
@@ -63,6 +66,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "flasks",
             Title = T("Flasks", "Frascos"),
             Pages = new[]
             {
@@ -74,6 +78,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "levels",
             Title = T("Levels and passive points", "Niveles y puntos de pasiva"),
             Pages = new[]
             {
@@ -85,6 +90,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "currency",
             Title = T("Currency, vendors and the stash", "Moneda, vendedores y el alijo"),
             Pages = new[]
             {
@@ -102,6 +108,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "bandits",
             Title = T("Act 2: the bandits", "Acto 2: los bandidos"),
             Pages = new[]
             {
@@ -113,6 +120,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "hideout",
             Title = T("Your hideout", "Tu guarida"),
             Pages = new[]
             {
@@ -130,6 +138,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "trials",
             Title = T("Trials of Ascendancy", "Pruebas de Ascendencia"),
             Pages = new[]
             {
@@ -153,6 +162,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "lab rules",
             Title = T("The Labyrinth: getting in and its rules", "El Laberinto: cómo entrar y sus reglas"),
             Pages = new[]
             {
@@ -170,6 +180,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "lab chambers",
             Title = T("The Labyrinth: chambers, keys and Izaro", "El Laberinto: salas, llaves e Izaro"),
             Pages = new[]
             {
@@ -189,6 +200,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "lab end",
             Title = T("The Labyrinth: the end and your Ascendancy", "El Laberinto: el final y tu Ascendencia"),
             Pages = new[]
             {
@@ -206,6 +218,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "lab traps",
             Title = T("Labyrinth traps", "Trampas del Laberinto"),
             Pages = new[]
             {
@@ -227,6 +240,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "later",
             Title = T("Later in the campaign: resistances and the Pantheon", "Más adelante en la campaña: resistencias y el Panteón"),
             Pages = new[]
             {
@@ -238,6 +252,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "maps",
             Title = T("After the campaign: maps and the Atlas", "Después de la campaña: mapas y el Atlas"),
             Pages = new[]
             {
@@ -257,6 +272,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "covens",
             Title = T("This league: the Covens", "Esta liga: los Aquelarres"),
             Pages = new[]
             {
@@ -277,19 +293,10 @@ public partial class PoE1AccessCore
 
     private void PollMechanicTips(long now, bool uiBusy)
     {
-        if (!Settings.MechanicTips.Value || uiBusy || now < _nextMechanicsMs) return;
+        if ((!Settings.MechanicTips.Value && !AutoTutorials) || uiBusy || now < _nextMechanicsMs) return;
         _nextMechanicsMs = now + 2000;
         _tipSaid = false;
-        if (_mechanicsSeen == null)
-        {
-            _mechanicsSeen = new HashSet<string>();
-            try
-            {
-                _mechanicsFile = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "mechanics-seen.txt"));
-                if (File.Exists(_mechanicsFile)) foreach (string l in File.ReadAllLines(_mechanicsFile)) _mechanicsSeen.Add(l.Trim());
-            }
-            catch { }
-        }
+        LoadMechanicsSeen();
 
         var area = Try(() => GameController.Area.CurrentArea, null);
         if (area == null) return;
@@ -345,6 +352,15 @@ public partial class PoE1AccessCore
     private void Tip(string key, string text)
     {
         if (_mechanicsSeen == null) return;
+        // With tutorials on, the lessons start instead of the tip (AutoTutorial.cs).
+        if (AutoTutorials && LessonsForTip(key) is string[] lessons)
+        {
+            if (_mechanicsSeen.Contains(key)) return;
+            SeenAdd(key);
+            Meet(lessons);
+            return;
+        }
+        if (!Settings.MechanicTips.Value) return;
         if (_tipSaid || _mechanicsSeen == null || !_mechanicsSeen.Add(key)) return;
         _tipSaid = true;
         try { if (_mechanicsFile != null) File.AppendAllText(_mechanicsFile, key + Environment.NewLine); } catch { }

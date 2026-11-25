@@ -61,6 +61,22 @@ internal sealed partial class Navigator
         return p.IndexOf("MappingDevice", StringComparison.OrdinalIgnoreCase) >= 0 || p.IndexOf("MapDevice", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
+    /// <summary>Whether a living enemy is within `cells` of you (the tutorial waits for quiet).</summary>
+    public bool EnemyNear(float cells)
+    {
+        var p = PlayerGrid();
+        foreach (Entity e in Entities())
+        {
+            if (Try(() => e.Type, EntityType.Error) != EntityType.Monster) continue;
+            if (!Try(() => e.IsHostile && e.IsAlive && e.IsTargetable, false)) continue;
+            if (Try(() => (e.GridPosNum - p).Length(), 1e9f) <= cells) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Where you stand, in grid cells.</summary>
+    public Vector2 PlayerCell() => PlayerGrid();
+
     // ---- Explore mode ----
 
     /// <summary>At unexplored ground the guide was leading to: the next one, or false when there is none.</summary>

@@ -24,6 +24,9 @@ public class PoE1AccessSettings : ISettings
     // Set once the mod has said where the tutorial is (the first game with the mod).
     public ToggleNode TutorialOffered { get; set; } = new ToggleNode(false);
 
+    // Lessons start by themselves as you meet each part of the game, once you said yes (AutoTutorial.cs).
+    public ToggleNode AutoTutorials { get; set; } = new ToggleNode(true);
+
     // A short tip the first time you meet a game mechanic (a town, a trial, the Labyrinth...).
     public ToggleNode MechanicTips { get; set; } = new ToggleNode(true);
 

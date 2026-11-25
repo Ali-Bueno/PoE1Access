@@ -17,6 +17,7 @@ public partial class PoE1AccessCore
 {
     private sealed class Lesson
     {
+        public string Key = "";   // what starts it in play (AutoTutorial.cs)
         public string Title;
         public string[] Pages;
         public (string Goal, string Ask)[] Practice = Array.Empty<(string, string)>();
@@ -24,12 +25,12 @@ public partial class PoE1AccessCore
 
     private List<(string Goal, string Ask)> _practice = new List<(string, string)>();
     private string _practiceLesson = "";
-    private long _tutorialOfferAtMs = -1;
 
     private List<Lesson> Lessons() => new List<Lesson>
     {
         new Lesson
         {
+            Key = "basics",
             Title = T("1. How the mod works", "1. Cómo funciona el mod"),
             Pages = new[]
             {
@@ -49,6 +50,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "sounds",
             Title = T("2. The sounds around you", "2. Los sonidos a tu alrededor"),
             Pages = new[]
             {
@@ -66,6 +68,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "scanner",
             Title = T("3. The scanner: what is around you", "3. El escáner: lo que te rodea"),
             Pages = new[]
             {
@@ -87,6 +90,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "guide",
             Title = T("4. The guide: getting somewhere", "4. La guía: llegar a un sitio"),
             Pages = new[]
             {
@@ -102,6 +106,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "character",
             Title = T("5. You and your character", "5. Tú y tu personaje"),
             Pages = new[]
             {
@@ -117,6 +122,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "menus",
             Title = T("6. Menus, items and tooltips", "6. Menús, objetos y descripciones"),
             Pages = new[]
             {
@@ -132,6 +138,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "skillbinding",
             Title = T("7. Skills on your buttons", "7. Habilidades en tus botones"),
             Pages = new[]
             {
@@ -145,6 +152,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "areas",
             Title = T("8. Areas, quests and travel", "8. Áreas, misiones y viajes"),
             Pages = new[]
             {
@@ -158,6 +166,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "tree",
             Title = T("9. The passive tree", "9. El árbol de pasivas"),
             Pages = new[]
             {
@@ -169,6 +178,7 @@ public partial class PoE1AccessCore
         },
         new Lesson
         {
+            Key = "help",
             Title = T("10. If something goes wrong", "10. Si algo falla"),
             Pages = new[]
             {
@@ -226,19 +236,8 @@ public partial class PoE1AccessCore
         _practice.RemoveAt(0);
         if (_practice.Count > 0) { Say(T("Well done. ", "Muy bien. ") + _practice[0].Ask, false); return; }
         PluginLog.Write("Tutorial practice done: " + _practiceLesson);
+        if (AutoTutorials) { Say(T("Well done, that is the lesson.", "Muy bien, esa es la lección."), false); return; }
         Say(T("Well done, that is the lesson. Hold L3 for a second and a half for the menu and the next lesson.",
               "Muy bien, esa es la lección. Mantén L3 un segundo y medio para el menú y la siguiente lección."), false);
-    }
-
-    // Once, a few seconds into the first game with the mod: where the tutorial is.
-    private void OfferTutorial(long now)
-    {
-        if (Settings.TutorialOffered.Value) return;
-        if (_tutorialOfferAtMs < 0) { _tutorialOfferAtMs = now + 8000; return; }
-        if (now < _tutorialOfferAtMs) return;
-        Settings.TutorialOffered.Value = true;
-        PluginLog.Write("Tutorial offered");
-        Say(T("New to Path of Exile access? There is a tutorial, if you want it: hold L3 for a second and a half for the mod menu. Tutorial is first.",
-              "¿Eres nuevo en Path of Exile access? Hay un tutorial, si lo quieres: mantén L3 un segundo y medio para el menú del mod. Tutorial es lo primero."), false);
     }
 }

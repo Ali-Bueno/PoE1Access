@@ -128,13 +128,20 @@ simply starts the version you have. After an update it reads what changed (the r
 every version since the last one you had), and keeps them in app\whats-new.txt.
 
 TUTORIAL (OPTIONAL)
-New to the mod? The tutorial is the first entry of the mod menu: hold L3 for a second and a half
-in play. Each lesson (how the mod works, the sounds, the scanner, the guide, your character,
-menus and items, skills, areas and quests, the passive tree, and what to do if something fails)
-is a few pages, read with the right stick up and down. Some lessons end with "Try it now": move
-right on it and the menu closes, the mod asks you to use its controls one at a time, and says
-when you have. The tutorial only reads and listens: it never moves your character or presses
-anything for you. The first time you play with the mod, it says once where the tutorial is.
+A few seconds into your first game with the mod, it asks whether you want tutorials: tap L3 for
+yes, double tap L3 for no. With yes, each lesson starts by itself the first time you meet what
+it is about: how the mod works at once, the scanner when you start moving, the sounds when an
+enemy first comes near, passive points when you level up, the passive tree, inventory, stash,
+character sheet, a vendor and skill binding the first time you open them, gems when one comes
+into your bag, life and flasks when your life first runs low, and towns, waypoints, the bandits,
+your hideout, the trials, the Labyrinth, resistances, maps and the Covens when you reach them.
+While a lesson plays: tap L3 for the next page, double tap to stop it (it comes back later),
+hold L3 to hear the page again. Lessons wait while an enemy is near, and each is heard once for
+all your characters (app\mechanics-seen.txt). Some end with a practice that asks you to use the
+mod's controls and says when you have. "Tutorials start as you meet each part of the game" in
+the Speech submenu turns this off; every lesson is also in the mod menu (hold L3 for a second
+and a half), first entry, Tutorial. The tutorial only reads and listens: it never moves your
+character or presses anything for you.
 
 Step by step walks through the busiest screens and tasks with what the mod says at each step:
 reading the passive tree, the finder, your inventory and items, socketing a gem, links and

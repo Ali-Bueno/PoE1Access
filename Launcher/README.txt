@@ -136,6 +136,22 @@ right on it and the menu closes, the mod asks you to use its controls one at a t
 when you have. The tutorial only reads and listens: it never moves your character or presses
 anything for you. The first time you play with the mod, it says once where the tutorial is.
 
+The tutorial's last entry, Game mechanics, explains the game itself, in the order the game
+brings each thing in, and how it works with the mod: towns and quests, waypoints and portals,
+skill gems and sockets, flasks, passive points, currency and the stash, Act 2's bandits, the
+Trials of Ascendancy, the Labyrinth and your Ascendancy, the resistance penalties and the
+Pantheon, maps and the Atlas, and this league's Covens. The first time you meet one in play (a
+town, a waypoint, a trial's traps, the way to the Labyrinth...), a short tip says what it is,
+once for all your characters (app\mechanics-seen.txt). Turn the tips off with "Tips about new
+game mechanics" in the Speech submenu.
+
+TRIALS OF ASCENDANCY AND THE LABYRINTH (NOT TESTED YET)
+Traps have a scanner kind of their own, Traps, and the two nearest tick from their side within
+about a screen, faster as you get closer (a quick metallic double tick). Trial plaques, levers,
+keys and Darkshrines are listed under Objects. This was written before anyone reached a trial
+with the mod: the mod writes every trial and Labyrinth object it finds to its log ("Labyrinth
+object: ..."), so please send the log after your first trial.
+
 CONTROLS
 In game (controller, L3 = left stick click / keyboard):
 - Hold L3 + right stick up or down / Page Up, Page Down: scanner category (among them Other

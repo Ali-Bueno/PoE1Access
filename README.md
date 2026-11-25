@@ -85,6 +85,16 @@ the rest of the mod it only reads and listens, and leaves the game's own buttons
 button prompts (hold L3), so it does not go out of date with the game. The first game with the
 mod says once where it is.
 
+## Game mechanics and the trials
+
+`PoE1Access/Mechanics.cs` holds the tutorial's Game mechanics lessons (the game's own systems,
+in the order the campaign brings them in, each with how it works with the mod) and one-time tips
+when the player first meets one (kept in `app\mechanics-seen.txt`). `PoE1Access/Labyrinth.cs`
+handles the Trials of Ascendancy and the Labyrinth: written before reaching one, it matches
+objects by words in their paths (traps get a Traps scanner kind and a ticking cue; plaques,
+levers, keys and Darkshrines go under Objects) and logs every one found as `Labyrinth object:
+<path> kind=... type=... states=...`, to be made exact from the first test.
+
 ## Menus the mod has not seen
 
 Menus are read without knowing them: the focus reader follows the game's own selection marker

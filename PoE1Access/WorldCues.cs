@@ -14,6 +14,8 @@ namespace PoE1Access;
 //   the nearest shrine you can still take: a bright shimmer;
 //   the nearest waypoint: a low droning hum; the nearest portal: a rising swirl;
 //   the nearest exit to another area: a soft rush of air; the nearest stash: a lid's clunk.
+//   the two nearest traps of a Trial of Ascendancy or the Labyrinth, within a screen: a quick
+//   metallic tick (see Labyrinth.cs).
 // Within about two screens; quiet while a window or menu is open, like the other sounds.
 internal sealed partial class Navigator
 {
@@ -32,7 +34,7 @@ internal sealed partial class Navigator
         foreach (Entity e in Entities())
         {
             EntityType t = Try(() => e.Type, EntityType.Error);
-            Synth.WorldCue? kind = t switch
+            Synth.WorldCue? kind = LabObject(e) == LabKind.Trap ? Synth.WorldCue.Trap : t switch
             {
                 EntityType.Chest => Try(() => !e.IsOpened, false) ? Synth.WorldCue.Chest : (Synth.WorldCue?)null,
                 EntityType.Shrine => Try(() => e.GetComponent<Shrine>()?.IsAvailable ?? false, false) ? Synth.WorldCue.Shrine : (Synth.WorldCue?)null,
@@ -57,6 +59,7 @@ internal sealed partial class Navigator
             if (dist > ObjectCells) continue;
             // Chests only in sight (many sit behind walls); the rest lead the way from anywhere near.
             if (kind == Synth.WorldCue.Chest && !InSight(p, g)) continue;
+            if (kind == Synth.WorldCue.Trap && dist > 60f) continue;   // traps: within about a screen
             // The sound pack's chest (or corpse, or weapon rack) and stash, when you have one.
             string file = !PackOn ? null
                 : kind == Synth.WorldCue.Chest ? Pack.File(SoundPack.ChestSound(Try(() => e.RenderName, ""), Try(() => e.Path, "")))
@@ -67,7 +70,8 @@ internal sealed partial class Navigator
 
         // The three nearest chests, the nearest one of every other kind.
         var streams = found.Where(f => f.Kind == Synth.WorldCue.Chest).OrderBy(f => f.Dist).Take(3)
-            .Concat(found.Where(f => f.Kind != Synth.WorldCue.Chest).GroupBy(f => f.Kind).Select(gr => gr.OrderBy(f => f.Dist).First()))
+            .Concat(found.Where(f => f.Kind == Synth.WorldCue.Trap).OrderBy(f => f.Dist).Take(2))
+            .Concat(found.Where(f => f.Kind != Synth.WorldCue.Chest && f.Kind != Synth.WorldCue.Trap).GroupBy(f => f.Kind).Select(gr => gr.OrderBy(f => f.Dist).First()))
             .ToList();
         var due = streams
             .Select(s => (It: s, Due: _objectNextMs.TryGetValue(s.Id, out long d) ? d : long.MinValue / 2))

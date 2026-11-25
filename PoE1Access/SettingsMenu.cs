@@ -62,6 +62,7 @@ public partial class PoE1AccessCore
                     OnChange = v => ApplySpeechRate(true),
                 },
                 Sw(T("Describe areas on arrival", "Describir las áreas al llegar"), Settings.DescribeAreas),
+                Sw(T("Tips about new game mechanics", "Consejos sobre mecánicas nuevas del juego"), Settings.MechanicTips),
                 Sw(T("Passive tree finder on the D-pad", "Buscador del árbol de pasivas en la cruceta"), Settings.PassiveFinder),
                 Sw(T("Dodge warning when a monster attacks you", "Aviso para esquivar cuando un monstruo te ataca"), Settings.DodgeWarnings),
                 Sw(T("Dodge warning for every enemy, not only rares and bosses", "Aviso para esquivar con todos los enemigos, no solo raros y jefes"), Settings.DodgeWarningsAll),
@@ -136,6 +137,7 @@ public partial class PoE1AccessCore
             S(T("Target", "Objetivo"), T("the game's target landed on an enemy", "el objetivo del juego se ha fijado en un enemigo"), Synth.Blips, enemy),
             S(T("Melee reach", "Alcance cuerpo a cuerpo"), T("an enemy came within melee reach", "un enemigo ha entrado en tu alcance cuerpo a cuerpo"), () => Synth.ReachPing(0f), enemy),
             S(T("Dodge warning", "Aviso para esquivar"), T("a monster starts an attack aimed at you: dodge", "un monstruo empieza un ataque dirigido a ti: esquiva"), () => Synth.DodgeWarning(0f), enemy),
+            S(T("Trap", "Trampa"), T("a trap of a Trial of Ascendancy or the Labyrinth, faster as you get closer", "una trampa de una Prueba de Ascendencia o del Laberinto, más rápido cuanto más cerca"), () => Synth.Object(Synth.WorldCue.Trap, 0f, 1f), loot),
             S(T("Harmful ground", "Suelo dañino"), T("you stand in burning, caustic or other harmful ground: move", "estás sobre suelo ardiente, cáustico u otro suelo dañino: muévete"), Synth.HarmfulGround, enemy),
             S(T("Your ailment", "Tu alteración"), T("you are frozen, poisoned, cursed or the like; its name follows", "estás congelado, envenenado, maldito o similar; después se dice su nombre"), Synth.Ailment, enemy),
         };

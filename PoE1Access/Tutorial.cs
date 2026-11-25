@@ -183,8 +183,14 @@ public partial class PoE1AccessCore
     // The Tutorial submenu: a submenu per lesson, its pages, then "Try it now" where it has practice.
     private MenuItem TutorialMenu()
     {
-        var lessons = new List<MenuItem>();
-        foreach (Lesson lesson in Lessons())
+        var lessons = Lessons().Select(LessonMenu).ToList();
+        // The game's own mechanics, in the order the game brings them in (Mechanics.cs).
+        lessons.Add(new MenuItem { Label = T("Game mechanics", "Mecánicas del juego"), Children = MechanicsLessons().Select(LessonMenu).ToList() });
+        return new MenuItem { Label = T("Tutorial", "Tutorial"), Children = lessons };
+    }
+
+    private MenuItem LessonMenu(Lesson lesson)
+    {
         {
             var pages = lesson.Pages.Select(p => new MenuItem { Label = "", Text = p }).ToList();
             if (lesson.Practice.Length > 0)
@@ -197,9 +203,8 @@ public partial class PoE1AccessCore
                     StartPractice = () => StartPractice(l),
                 });
             }
-            lessons.Add(new MenuItem { Label = lesson.Title, Children = pages });
+            return new MenuItem { Label = lesson.Title, Children = pages };
         }
-        return new MenuItem { Label = T("Tutorial", "Tutorial"), Children = lessons };
     }
 
     private void StartPractice(Lesson lesson)

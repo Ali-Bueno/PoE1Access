@@ -24,6 +24,9 @@ public class PoE1AccessSettings : ISettings
     // Set once the mod has said where the tutorial is (the first game with the mod).
     public ToggleNode TutorialOffered { get; set; } = new ToggleNode(false);
 
+    // A short tip the first time you meet a game mechanic (a town, a trial, the Labyrinth...).
+    public ToggleNode MechanicTips { get; set; } = new ToggleNode(true);
+
     // How long the hovered thing must stay the same before it is spoken (milliseconds).
     // Raise it if you hear too many half-finished announcements.
     public RangeNode<int> HoverDelayMs { get; set; } = new RangeNode<int>(150, 0, 1000);

@@ -395,6 +395,7 @@ internal sealed partial class Navigator
         TickGuide(now, p);
         TickBump(now, p);
         if (AnnounceNearby) TickNearby(now, p, itemName);
+        TickLabyrinth(now);
         if (LootKind != null) TickLoot(now, p);
         TickEnemies(now, p);
         TickNpcs(now, p);
@@ -1198,9 +1199,9 @@ internal sealed partial class Navigator
     // Scanner
     // ===================================================================
 
-    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Players, Enemies, Items, Chests, Objects, None }
+    public enum Cat { Quest, Death, Exits, Unexplored, Waypoints, Characters, Players, Enemies, Traps, Items, Chests, Objects, None }
 
-    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Players, Cat.Enemies, Cat.Items, Cat.Chests, Cat.Objects };
+    private static readonly Cat[] Order = { Cat.Quest, Cat.Death, Cat.Exits, Cat.Unexplored, Cat.Waypoints, Cat.Characters, Cat.Players, Cat.Enemies, Cat.Traps, Cat.Items, Cat.Chests, Cat.Objects };
 
     private static string CatName(Cat c) => c switch
     {
@@ -1212,6 +1213,7 @@ internal sealed partial class Navigator
         Cat.Characters => T("Characters", "Personajes"),
         Cat.Players => T("Other players", "Otros jugadores"),
         Cat.Enemies => T("Enemies", "Enemigos"),
+        Cat.Traps => T("Traps", "Trampas"),
         Cat.Items => T("Items", "Objetos"),
         Cat.Chests => T("Chests", "Cofres"),
         Cat.Objects => T("Objects", "Objetos del entorno"),
@@ -1445,6 +1447,17 @@ internal sealed partial class Navigator
         // marker of the mod's own, which a sighted player would not have. Monsters keep their
         // enemy sounds.
         if (t != EntityType.Monster && QuestMarked(e)) return Used(e) ? Cat.None : Cat.Quest;
+        // Trials of Ascendancy and the Labyrinth (see Labyrinth.cs).
+        switch (LabObject(e))
+        {
+            case LabKind.Trap: return Cat.Traps;
+            case LabKind.Plaque:
+            case LabKind.Lever:
+            case LabKind.Key:
+            case LabKind.Darkshrine:
+            case LabKind.Font:
+                return Cat.Objects;
+        }
         switch (t)
         {
             case EntityType.AreaTransition:
@@ -1721,6 +1734,12 @@ internal sealed partial class Navigator
     {
         try
         {
+            LabKind lab = LabObject(e);
+            if (lab != LabKind.None && lab != LabKind.Other)
+            {
+                string ln = LabName(e, lab);
+                if (ln.Length > 0) return ln;
+            }
             switch (CovenObject(e))
             {
                 case CovenKind.Cauldron:

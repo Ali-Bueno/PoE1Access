@@ -674,7 +674,7 @@ public partial class PoE1AccessCore
 
     private bool TooltipNext(int step)
     {
-        if (_tipLines.Count == 0) return false;
+        if (_tipLines.Count == 0) return MenuTipNext(step);
         int next = _tipIndex + step;
         if (next >= _tipLines.Count) { Say(T("End of tooltip", "Fin de la descripción"), true); return true; }
         if (next < 0) { Say(T($"Start of tooltip. {_tipLines[0]}", $"Inicio de la descripción. {_tipLines[0]}"), true); _tipIndex = 0; return true; }
@@ -685,7 +685,7 @@ public partial class PoE1AccessCore
 
     private bool TooltipAll()
     {
-        if (_tipLines.Count == 0) return false;
+        if (_tipLines.Count == 0) return MenuTipAll();
         Say(JoinSpeech(_tipLines), true);
         return true;
     }

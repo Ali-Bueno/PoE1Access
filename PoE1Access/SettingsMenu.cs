@@ -96,7 +96,8 @@ public partial class PoE1AccessCore
                 new MenuItem { Label = T("Melee reach distance", "Distancia de alcance cuerpo a cuerpo"), Range = Settings.ReachDistance, Words = v => v.ToString() }),
             Sub(T("Reading", "Lectura"),
                 Sw(T("Read the controller selection", "Leer la selección del mando"), Settings.ReadFocus),
-                Sw(T("Read what is under the cursor", "Leer lo que hay bajo el cursor"), Settings.ReadOnHover)),
+                Sw(T("Read what is under the cursor", "Leer lo que hay bajo el cursor"), Settings.ReadOnHover),
+                Sw(T("Read the tooltips of menus", "Leer las descripciones de los menús"), Settings.SpeakTooltips)),
             Sub(T("Sound glossary", "Glosario de sonidos"), Glossary().ToArray()),
         };
     }

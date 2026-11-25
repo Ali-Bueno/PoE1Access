@@ -1772,6 +1772,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         // A pop-up (an item's action menu): controls that were not there before, one of them
         // focused. Not right after a panel opened or closed, whose new elements are its own.
         var fresh = state.Keys.Where(k => !prev.ContainsKey(k)).ToList();
+        Guard("tooltips", () => CatchTooltip(now, state, elements, fresh));
         if (fresh.Count > 0 && fresh.Count <= 400 && now - _panelsChangedMs > 600)
         {
             var texts = fresh.Select(k => (Key: k, Text: CleanText(UiText.Text(mem, elements[k].E)))).Where(x => x.Text.Length > 0).ToList();
@@ -1887,6 +1888,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         _lastFocusAddr = addr;
         _lastFocusElement = e;
         string text = kind == "Highlight" ? DescribeHighlighted(e) : DescribeFocused(e);
+        if (text.Length == 0 && lead.Length == 0) text = Try(() => UnreadSelection(e, path), "");
 
         _focusRow = FindRow(e);
         string controlKind = "";
@@ -1901,6 +1903,9 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         else if (text.Length > 0 && !IsFateCardText(text) && !(text == _lastFocusText && nowMs - _lastFocusTextMs < 1500)) Say(text, true);
         _lastFocusText = text;
         _lastFocusTextMs = nowMs;
+        // Its tooltip, if one appears (not for a screen's first selection, which comes with the
+        // whole screen).
+        if (kind != "Initial focus") TooltipAnchor(addr, lead.Length > 0 ? lead + " " + text : text);
     }
 
     private string _lastFocusText = "";
@@ -2170,6 +2175,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
             if (IsWholeOptionList(text) || IsWorldMapText(text) || _hoverQuiet || IsFateCardText(text)) { _lastHoverSpoken = text; return; }
             _lastHoverSpoken = text;
             Say(text, true);
+            if (_hoverGeneric) TooltipAnchor(_hoverKeyHover, text);
         }
     }
 
@@ -2222,6 +2228,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         if (tipOk) CollectText(tip, 10, tipParts);
 
         _hoverQuiet = false;   // set again by DescribePassive for the finder's node
+        _hoverGeneric = false;   // items, passives and slots have their own tooltips
         if (type == ElementType.PassivePoint)
         {
             string passive = Guard("passive", () => DescribePassive(hover, tipParts));
@@ -2240,6 +2247,7 @@ public partial class PoE1AccessCore : BaseSettingsPlugin<PoE1AccessSettings>
         }
         _lastFocusWasEquipment = false;
         _tipLines.Clear();   // not an item: tap no longer steps through an old tooltip
+        _hoverGeneric = true;
 
         if (tipParts.Count > 0) return JoinSpeech(tipParts);
 

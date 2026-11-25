@@ -162,6 +162,13 @@ In game (controller, L3 = left stick click / keyboard):
 - F5, F6: previous, next item in your inventory; F7: inventory or equipment
 Every key can be changed in Exile API's menu (F12), under PoE1Access.
 
+TOOLTIPS IN MENUS
+When you move to a menu entry or button that shows a tooltip, the tooltip is read after its
+name, in any menu, including new ones a game update adds. In a menu, tap L3 for its next line,
+double tap for the previous one, and hold L3 for all of it. Turn it off with "Read the tooltips
+of menus" in the Reading submenu. If something you move to is not read at all, the mod writes
+what it found there to its log ("Unread selection"): sending the log is how it gets fixed.
+
 MOD SETTINGS MENU (spoken, as in Poe2Access)
 - Open: hold L3 for a second and a half in play, or hold F3 for a second.
 - Right stick up and down (or the arrow keys): move. Right stick left and right: open a submenu,

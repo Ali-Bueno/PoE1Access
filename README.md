@@ -76,6 +76,16 @@ from Steam: Steam runs the launcher, which starts the game from Steam's command 
 else as usual. The launcher offers to copy that line to the clipboard the first time it runs
 (`PoE1Access.exe --steam-setup` offers it again), and keeps it in `app\steam-launch-option.txt`.
 
+## Menus the mod has not seen
+
+Menus are read without knowing them: the focus reader follows the game's own selection marker
+in every element on screen, and the tooltip catcher (`PoE1Access/TooltipCatcher.cs`) reads
+whatever text appears on screen right after the selection moves, outside the selected element
+and the button prompts, as its tooltip. A tooltip box the game keeps on screen and rewrites is
+read again when its text changes. A selection with no words is named from its picture (an item,
+skill or other art file) when it has one, and logged once as `Unread selection: [path] name=...
+texts=... pictures=...`, so a screen added by a game update can be fixed from a log.
+
 ## Controls
 
 The mod only reads the controller. It cannot stop the game from seeing a press, so its

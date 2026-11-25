@@ -25,7 +25,8 @@ public class PoE1AccessSettings : ISettings
     // Raise it if you hear too many half-finished announcements.
     public RangeNode<int> HoverDelayMs { get; set; } = new RangeNode<int>(150, 0, 1000);
 
-    // Read the full tooltip (item mods, skill descriptions) when there is one.
+    // Read the tooltip that appears beside a menu entry or button when it is selected (any
+    // menu: see TooltipCatcher). Items, gems and passives are read from their data either way.
     public ToggleNode SpeakTooltips { get; set; } = new ToggleNode(true);
 
     // Describe hovered inventory items from their data (name, rarity, mods) instead of

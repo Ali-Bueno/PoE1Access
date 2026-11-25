@@ -61,12 +61,15 @@ internal sealed partial class Navigator
         string p = (path ?? "").ToLowerInvariant();
         if (p.Contains("spike")) return T("Spike trap", "Trampa de pinchos");
         if (p.Contains("sawblade") || p.Contains("saw")) return T("Sawblade", "Sierra");
-        if (p.Contains("sentry") || p.Contains("sentinel")) return T("Blade sentry", "Centinela de cuchillas");
+        // Sentinel traps (the map trials and the Eternal Labyrinth) are switched off for a while by damaging them.
+        if (p.Contains("sentinel")) return T("Sentinel trap, damage it to switch it off", "Trampa centinela, dáñala para apagarla");
+        if (p.Contains("sentry")) return T("Blade sentry", "Centinela de cuchillas");
         if (p.Contains("spinner") || p.Contains("roomba")) return T("Spinning blades", "Cuchillas giratorias");
         if (p.Contains("pendulum")) return T("Swinging blade", "Cuchilla oscilante");
         if (p.Contains("blade")) return T("Blade trap", "Trampa de cuchillas");
         if (p.Contains("dart") || p.Contains("arrow")) return T("Dart trap", "Trampa de dardos");
-        if (p.Contains("flame") || p.Contains("fire") || p.Contains("furnace")) return T("Fire trap", "Trampa de fuego");
+        if (p.Contains("furnace")) return T("Furnace trap", "Trampa de horno");
+        if (p.Contains("flame") || p.Contains("fire")) return T("Fire trap", "Trampa de fuego");
         return T("Trap", "Trampa");
     }
 

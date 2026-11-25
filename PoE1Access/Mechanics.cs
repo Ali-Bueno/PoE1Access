@@ -14,8 +14,9 @@ namespace PoE1Access;
 // has the rest. The tips seen are kept in app\mechanics-seen.txt (every character), and can be
 // turned off with "Tips about new game mechanics" in the Speech submenu.
 //
-// Written 25 Nov 2026 from what is known of the game; the trials and the Labyrinth have not been
-// tested with the mod yet, and the lessons say so.
+// Written 25 Nov 2026 from what is known of the game; the trials' places and traps are from the
+// Path of Exile Wiki's "Trial of Ascendancy" page (last edited 24 May 2026). The trials and the
+// Labyrinth have not been tested with the mod yet, and the lessons say so.
 public partial class PoE1AccessCore
 {
     private List<Lesson> MechanicsLessons() => new List<Lesson>
@@ -108,12 +109,18 @@ public partial class PoE1AccessCore
             Title = T("Trials of Ascendancy", "Pruebas de Ascendencia"),
             Pages = new[]
             {
-                T("A Trial of Ascendancy is a short stretch of traps in some areas of the campaign, ending at a plaque you touch. The six of the first part, in Acts 1 to 3, open the Labyrinth, where you choose your Ascendancy class.",
-                  "Una Prueba de Ascendencia es un tramo corto de trampas en algunas áreas de la campaña, que termina en una placa que tocas. Las seis de la primera parte, en los actos 1 a 3, abren el Laberinto, donde eliges tu clase de Ascendencia."),
-                T("The first six are usually said to be in the Lower Prison in Act 1, the Crypt and the Chamber of Sins in Act 2, and the Crematorium, the Catacombs and the Imperial Gardens in Act 3. Later trials are in Acts 6 to 10, for the harder Labyrinths.",
-                  "Se suele decir que las seis primeras están en la Prisión Inferior del acto 1, la Cripta y la Cámara de los Pecados del acto 2, y el Crematorio, las Catacumbas y los Jardines Imperiales del acto 3. Las siguientes están en los actos 6 a 10, para los Laberintos más difíciles."),
-                T("Traps: spikes that rise from the floor, sawblades and spinning blades that move along tracks, blade sentries, darts from the walls and fire. Most move in a rhythm: wait, listen, then go through.",
-                  "Trampas: pinchos que salen del suelo, sierras y cuchillas giratorias que se mueven por raíles, centinelas de cuchillas, dardos desde las paredes y fuego. La mayoría se mueven con un ritmo: espera, escucha y pasa."),
+                T("A Trial of Ascendancy is a short stretch of traps in some areas of the campaign, ending at a plaque you touch. Each trial has one kind of trap. Trials you finish count for all your characters in the league.",
+                  "Una Prueba de Ascendencia es un tramo corto de trampas en algunas áreas de la campaña, que termina en una placa que tocas. Cada prueba tiene un tipo de trampa. Las pruebas que terminas cuentan para todos tus personajes de la liga."),
+                T("The six for the first, Normal, Labyrinth: the Lower Prison in Act 1, spike traps. The Crypt Level 1 in Act 2, spinning blades. The Chamber of Sins Level 2 in Act 2, sawblades. The Crematorium in Act 3, furnace traps. The Catacombs in Act 3, blade sentries. The Imperial Gardens in Act 3, dart traps.",
+                  "Las seis del primer Laberinto, el Normal: la Prisión Inferior en el acto 1, trampas de pinchos. La Cripta nivel 1 en el acto 2, cuchillas giratorias. La Cámara de los Pecados nivel 2 en el acto 2, sierras. El Crematorio en el acto 3, trampas de horno. Las Catacumbas en el acto 3, centinelas de cuchillas. Los Jardines Imperiales en el acto 3, trampas de dardos."),
+                T("For the Cruel Labyrinth: the Prison in Act 6, spike traps; the Crypt in Act 7, spinning blades; the Chamber of Sins Level 2 in Act 7, sawblades. For the Merciless Labyrinth: the Bath House in Act 8, furnace traps; the Tunnel in Act 9, blade sentries; the Ossuary in Act 10, dart traps.",
+                  "Para el Laberinto Cruel: la Prisión en el acto 6, trampas de pinchos; la Cripta en el acto 7, cuchillas giratorias; la Cámara de los Pecados nivel 2 en el acto 7, sierras. Para el Laberinto Despiadado: la Casa de Baños en el acto 8, trampas de horno; el Túnel en el acto 9, centinelas de cuchillas; el Osario en el acto 10, trampas de dardos."),
+                T("After the campaign, harder trials appear at random in yellow and red maps; finishing one gives an Offering to the Goddess, the way into the Eternal Labyrinth. They can hold Sentinel traps, which you switch off for a while by damaging them.",
+                  "Después de la campaña aparecen pruebas más difíciles al azar en mapas amarillos y rojos; terminar una da una Ofrenda a la Diosa, la entrada al Laberinto Eterno. Pueden tener trampas centinela, que se apagan un rato dañándolas."),
+                T("Traps: spikes that rise from the floor, spinning blades and sawblades that move along their tracks, blade sentries, furnaces that blast fire, and darts from the walls. Most move in a rhythm: wait, listen, then go through.",
+                  "Trampas: pinchos que salen del suelo, cuchillas giratorias y sierras que se mueven por sus raíles, centinelas de cuchillas, hornos que lanzan fuego y dardos desde las paredes. La mayoría se mueven con un ritmo: espera, escucha y pasa."),
+                T("With the mod: entering one of these areas says that it has a trial and which trap. Traps have a scanner kind of their own, Traps, and the two nearest tick from their side, faster as you get closer. The plaque is listed under Objects.",
+                  "Con el mod: al entrar en una de estas áreas se dice que tiene una prueba y qué trampa. Las trampas tienen su propio tipo en el escáner, Trampas, y las dos más cercanas hacen tic desde su lado, más rápido cuanto más te acercas. La placa se lista en Objetos del entorno."),
                 T("With the mod: traps have a scanner kind of their own, Traps, and the two nearest tick from their side, faster as you get closer. The plaque is listed under Objects.",
                   "Con el mod: las trampas tienen su propio tipo en el escáner, Trampas, y las dos más cercanas hacen tic desde su lado, más rápido cuanto más te acercas. La placa se lista en Objetos del entorno."),
                 T("This has not been tried in a trial yet. The mod writes everything it finds there to its log; sending the log after your first trial lets it be made exact.",
@@ -125,8 +132,10 @@ public partial class PoE1AccessCore
             Title = T("The Labyrinth and your Ascendancy", "El Laberinto y tu Ascendencia"),
             Pages = new[]
             {
-                T("With the six trials done, the Lord's Labyrinth opens from the Aspirants' Plaza in Act 3, at the statue of the Goddess. It is a run of rooms full of traps, levers, locked doors and keys, where Izaro is fought several times.",
-                  "Con las seis pruebas hechas, el Laberinto del Señor se abre desde la Plaza de los Aspirantes en el acto 3, en la estatua de la Diosa. Es una serie de salas llenas de trampas, palancas, puertas cerradas y llaves, donde se lucha varias veces contra Izaro."),
+                T("With the six trials done, the Lord's Labyrinth opens from the Aspirants' Plaza in Act 3, at the statue of the Goddess, whose window lets you choose which Labyrinth to enter and shows the trials you have done. It is a run of rooms full of traps, levers, locked doors and keys, where Izaro is fought several times.",
+                  "Con las seis pruebas hechas, el Laberinto del Señor se abre desde la Plaza de los Aspirantes en el acto 3, en la estatua de la Diosa, cuya ventana te deja elegir en qué Laberinto entrar y muestra las pruebas que has hecho. Es una serie de salas llenas de trampas, palancas, puertas cerradas y llaves, donde se lucha varias veces contra Izaro."),
+                T("Four Labyrinths, each harder: the Normal one; the Cruel one, from level 40, after the Normal one and its three trials; the Merciless one, from level 50, after the Cruel one and its three trials; and the Eternal one, from level 60, after the Merciless one, for an Offering to the Goddess.",
+                  "Cuatro Laberintos, cada uno más difícil: el Normal; el Cruel, desde el nivel 40, después del Normal y sus tres pruebas; el Despiadado, desde el nivel 50, después del Cruel y sus tres pruebas; y el Eterno, desde el nivel 60, después del Despiadado, a cambio de una Ofrenda a la Diosa."),
                 T("Darkshrines along the way give a bonus for the run. Keys open locked doors and treasure. Beating Izaro at the end lets you choose your Ascendancy class, a small extra tree, with two points; harder Labyrinths later give two more each.",
                   "Los santuarios oscuros del camino dan una bonificación para el recorrido. Las llaves abren puertas cerradas y tesoros. Vencer a Izaro al final te deja elegir tu clase de Ascendencia, un pequeño árbol extra, con dos puntos; los Laberintos más difíciles dan dos más cada uno."),
                 T("With the mod: traps, levers, keys and Darkshrines are in the scanner, and Izaro is an enemy with his life said as it falls. The Labyrinth's map and its puzzles have not been tried with the mod yet, and parts of it may be very hard to do by ear. Send the log after a try.",
@@ -202,12 +211,42 @@ public partial class PoE1AccessCore
         else if (_nav != null && _nav.NearKind(EntityType.Waypoint, 50f)) Tip("waypoint", T("Tip: a waypoint is near. Touch it once and you can travel to it from any other. More in the tutorial, Game mechanics.", "Consejo: hay un transportador cerca. Tócalo una vez y podrás viajar a él desde cualquier otro. Más en el tutorial, Mecánicas del juego."));
         if (level >= 2) Tip("passives", T("Tip: levels give passive skill points, spent on the passive tree in its panel. More in the tutorial, Game mechanics.", "Consejo: los niveles dan puntos de habilidad pasiva, que se gastan en el árbol de pasivas en su panel. Más en el tutorial, Mecánicas del juego."));
         if (act == 2) Tip("bandits", T("Tip: in this act three bandit lords offer deals; killing all three gives a passive point. More in the tutorial, Game mechanics.", "Consejo: en este acto tres señores bandidos ofrecen tratos; matar a los tres da un punto de pasiva. Más en el tutorial, Mecánicas del juego."));
+        // The campaign's trials, by their area (the game's English names).
+        string trap = TrialTrap(name, act);
+        if (trap.Length > 0) Tip("trial:" + act + ":" + name, T($"This area has a Trial of Ascendancy, with {trap}. It ends at a plaque. More in the tutorial, Game mechanics.", $"Esta área tiene una Prueba de Ascendencia, con {trap}. Termina en una placa. Más en el tutorial, Mecánicas del juego."));
         if (_nav != null && _nav.TrialHere) Tip("trial", T("Tip: this area has a Trial of Ascendancy, a stretch of traps ending at a plaque. Traps tick from their side and are under Traps in the scanner. More in the tutorial, Game mechanics.", "Consejo: esta área tiene una Prueba de Ascendencia, un tramo de trampas que termina en una placa. Las trampas hacen tic desde su lado y están en Trampas en el escáner. Más en el tutorial, Mecánicas del juego."));
         if (id.IndexOf("Labyrinth", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Aspirant", StringComparison.OrdinalIgnoreCase) >= 0)
             Tip("labyrinth", T("Tip: this is the way to the Labyrinth, where you choose your Ascendancy. More in the tutorial, Game mechanics.", "Consejo: este es el camino al Laberinto, donde eliges tu Ascendencia. Más en el tutorial, Mecánicas del juego."));
         if (act >= 6) Tip("resistances", T("Tip: finishing Act 5 lowered your resistances for good; gear with resistances matters now. More in the tutorial, Game mechanics.", "Consejo: terminar el acto 5 bajó tus resistencias para siempre; ahora importa el equipo con resistencias. Más en el tutorial, Mecánicas del juego."));
         if (id.StartsWith("MapWorlds", StringComparison.OrdinalIgnoreCase)) Tip("maps", T("Tip: this is a map, the game after the campaign. More in the tutorial, Game mechanics.", "Consejo: esto es un mapa, el juego después de la campaña. Más en el tutorial, Mecánicas del juego."));
         if (_nav != null && _nav.NearCovenCauldron(60f)) Tip("covens", T("Tip: a Coven's Cauldron is near. Beat its coven, then choose a Fate at it. More in the tutorial, Game mechanics.", "Consejo: hay un Caldero del aquelarre cerca. Vence a su aquelarre y luego elige un Destino en él. Más en el tutorial, Mecánicas del juego."));
+    }
+
+    // The campaign's Trials of Ascendancy (Path of Exile Wiki, 24 May 2026): the trap of the trial
+    // in an area, or "" when it has none.
+    private static string TrialTrap(string areaName, int act)
+    {
+        string n = (areaName ?? "").Trim();
+        if (n.StartsWith("The ", StringComparison.OrdinalIgnoreCase)) n = n.Substring(4);
+        string spikes = T("spike traps", "trampas de pinchos"), spinning = T("spinning blades", "cuchillas giratorias"),
+               saws = T("sawblades", "sierras"), furnace = T("furnace traps", "trampas de horno"),
+               sentries = T("blade sentries", "centinelas de cuchillas"), darts = T("dart traps", "trampas de dardos");
+        return (n.ToLowerInvariant(), act) switch
+        {
+            ("lower prison", 1) => spikes,
+            ("crypt level 1", 2) => spinning,
+            ("chamber of sins level 2", 2) => saws,
+            ("crematorium", 3) => furnace,
+            ("catacombs", 3) => sentries,
+            ("imperial gardens", 3) => darts,
+            ("prison", 6) => spikes,
+            ("crypt", 7) => spinning,
+            ("chamber of sins level 2", 7) => saws,
+            ("bath house", 8) => furnace,
+            ("tunnel", 9) => sentries,
+            ("ossuary", 10) => darts,
+            _ => "",
+        };
     }
 
     private void Tip(string key, string text)
